@@ -6,9 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
+## [1.0.3] - 2026-07-20
 
-- Removed the Symfony 7 demo (`demo/symfony7`); the maintained sample is `demo/symfony8` only. Bundle support for Symfony 7.x is unchanged.
+### Fixed
+
+- Changelog now reflects restoration of `demo/symfony7` (incorrect Unreleased note from `1.0.1` era removed).
+
+## [1.0.2] - 2026-07-20
+
+### Fixed
+
+- Restored the Symfony 7 demo (`demo/symfony7`) that was accidentally removed in `1.0.1`.
 
 ## [1.0.1] - 2026-07-20
 
