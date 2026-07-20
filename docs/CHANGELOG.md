@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Removed the Symfony 7 demo (`demo/symfony7`); the maintained sample is `demo/symfony8` only. Bundle support for Symfony 7.x is unchanged.
+
 ## [1.0.1] - 2026-07-20
 
 ### Changed
