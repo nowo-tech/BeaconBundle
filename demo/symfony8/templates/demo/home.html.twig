@@ -19,7 +19,8 @@
     <ul>
         <li><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a> — breadcrumbs attached to the next event</li>
         <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code>send.user</code>; log in first)</li>
-        <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans</li>
+        <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans (no N+1)</li>
+        <li><a href="{{ path('demo_transaction_nplus1') }}">GET /transaction-nplus1</a> — 6 similar DB spans → Beacon N+1 group</li>
         <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error forwarded via <code>monolog_handler.enabled</code></li>
     </ul>
 

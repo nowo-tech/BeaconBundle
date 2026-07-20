@@ -195,7 +195,7 @@ final class DemoController extends AbstractController
     }
 
     /**
-     * Capture a performance transaction with sample spans.
+     * Capture a performance transaction with sample spans (not enough repeats for N+1).
      */
     #[Route(path: '/transaction', name: 'demo_transaction', methods: ['GET'])]
     public function transaction(BeaconClientInterface $beacon): Response
@@ -231,7 +231,47 @@ final class DemoController extends AbstractController
 
         return $this->renderReport(
             heading: 'Performance transaction',
-            description: 'Sent a transaction envelope with two spans. Check Beacon → Performance.',
+            description: 'Sent a transaction envelope with two spans. Check Beacon → Performance. For N+1 detection use /transaction-nplus1.',
+            enabled: $beacon->isEnabled(),
+            eventId: $eventId,
+            level: 'info',
+        );
+    }
+
+    /**
+     * Capture a transaction with ≥5 similar DB spans so Beacon flags an N+1 group.
+     */
+    #[Route(path: '/transaction-nplus1', name: 'demo_transaction_nplus1', methods: ['GET'])]
+    public function transactionNPlusOne(BeaconClientInterface $beacon): Response
+    {
+        $start = microtime(true);
+        $spans = [];
+        $cursor = $start;
+        for ($i = 1; $i <= 6; ++$i) {
+            usleep(2000);
+            $next = microtime(true);
+            $spans[] = [
+                'op' => 'db.sql.query',
+                'description' => \sprintf('SELECT * FROM product WHERE id = %d', $i),
+                'span_id' => bin2hex(random_bytes(8)),
+                'start_timestamp' => $cursor,
+                'timestamp' => $next,
+            ];
+            $cursor = $next;
+        }
+        $end = microtime(true);
+
+        $eventId = $beacon->captureTransaction(
+            'demo.nplus1.products',
+            $start,
+            $end,
+            $spans,
+            ['demo' => true, 'route' => 'demo_transaction_nplus1', 'nplus1' => true],
+        );
+
+        return $this->renderReport(
+            heading: 'N+1 performance transaction',
+            description: 'Sent 6 similar db.sql.query spans. Beacon marks an N+1 group when ≥5 repeats match after normalizing IDs. Open Beacon → Performance → filter “N+1 only”.',
             enabled: $beacon->isEnabled(),
             eventId: $eventId,
             level: 'info',

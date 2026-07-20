@@ -1,8 +1,14 @@
-.PHONY: help up down build install shell logs test test-coverage cache-clear update-bundle ensure-up restart verify assets
+.PHONY: help up down build install shell logs test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon
+
+# Sibling checkout: repositories/other/symfony-beacon (override with BEACON_REPO=...)
+# demo/symfony8 → demo → BeaconBundle → bundles → repositories → other/symfony-beacon
+BEACON_REPO ?= $(abspath ../../../../other/symfony-beacon)
+CLIENT_ENV := $(BEACON_REPO)/.demo-client.env
 
 help:
 	@echo "Symfony 8 Demo - Beacon Bundle"
-	@echo "  make up             Start containers + install + build assets"
+	@echo "  make up             Start containers + install + build assets + sync DSN"
+	@echo "  make sync-beacon    Copy BEACON_DSN from symfony-beacon .demo-client.env"
 	@echo "  make down           Stop containers"
 	@echo "  make restart        Restart containers"
 	@echo "  make build          Build image (no cache)"
@@ -13,9 +19,13 @@ help:
 	@echo "  make test           Run tests"
 	@echo "  make test-coverage  Run tests with coverage"
 	@echo "  make update-bundle  Update nowo-tech/beacon-bundle and clear cache"
+	@echo ""
+	@echo "  BEACON_REPO=$(BEACON_REPO)"
 
 up:
 	@if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || true; fi
+	@if [ -f "$(CLIENT_ENV)" ]; then $(MAKE) sync-beacon; \
+	else echo "Note: missing $(CLIENT_ENV) — in symfony-beacon run: make bootstrap, then here: make sync-beacon && make restart"; fi
 	docker-compose up -d
 	@echo "Waiting for container to be ready..."
 	@sleep 5
@@ -26,6 +36,28 @@ up:
 	@PORT=$$(grep "^PORT=" .env 2>/dev/null | cut -d= -f2 | tr -d '\r'); \
 	[ -z "$$PORT" ] && PORT=$$(grep "^PORT=" .env.example 2>/dev/null | cut -d= -f2 | tr -d '\r'); \
 	echo "Demo started at: http://localhost:$$PORT"
+
+sync-beacon:
+	@if [ ! -f "$(CLIENT_ENV)" ]; then \
+		echo "Missing $(CLIENT_ENV)"; \
+		echo "In symfony-beacon: make up && make bootstrap"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then cp .env.example .env; fi
+	@DSN=$$(grep -E '^BEACON_DSN=' "$(CLIENT_ENV)" | head -1 | cut -d= -f2- | tr -d '\r'); \
+	if [ -z "$$DSN" ]; then echo "BEACON_DSN empty in $(CLIENT_ENV)"; exit 1; fi; \
+	if grep -qE '^BEACON_DSN=' .env; then \
+		sed -i.bak -E "s|^BEACON_DSN=.*|BEACON_DSN=$$DSN|" .env && rm -f .env.bak; \
+	else \
+		printf '\nBEACON_DSN=%s\n' "$$DSN" >> .env; \
+	fi; \
+	echo "Synced BEACON_DSN from $(CLIENT_ENV)"; \
+	echo "BEACON_DSN=$$DSN"; \
+	if docker-compose exec -T php true 2>/dev/null; then \
+		echo "Reloading php container env..."; \
+		docker-compose up -d --force-recreate php >/dev/null; \
+	fi
+
 ensure-up:
 	@if ! docker-compose exec -T php true 2>/dev/null; then \
 		echo "Starting demo container..."; \

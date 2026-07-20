@@ -139,6 +139,14 @@ nowo_beacon:
 - No breaking changes to existing capture APIs.
 - Apps without Messenger are unaffected (listener is not registered when the Messenger event class is missing).
 
-## Upgrading from 1.4.0 to the next release
+## Upgrading from 1.4.0 to 1.4.1
+
+Demo / docs only. **No consumer API or config changes.**
+
+- Local pairing with [symfony-beacon](https://github.com/nowo-tech/symfony-beacon) `v0.7.0+`: run `make bootstrap` on the server, then in `demo/symfony8` use `make sync-beacon` (or `make up`).
+- Optional: hit `/transaction-nplus1` to exercise Beacon N+1 performance UI.
+- Override the Beacon checkout path with `BEACON_REPO=/path/to/symfony-beacon` if repos are not siblings under `repositories/`.
+
+## Upgrading from 1.4.1 to the next release
 
 No upgrade notes yet.
