@@ -33,6 +33,9 @@ use function is_string;
  */
 final class NowoBeaconExtension extends Extension implements PrependExtensionInterface
 {
+    /**
+     * Prepends MonologBundle handler config when `monolog_handler.enabled` is true.
+     */
     public function prepend(ContainerBuilder $container): void
     {
         if (!$container->hasExtension('monolog')) {
@@ -63,6 +66,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         ]);
     }
 
+    /**
+     * Registers Beacon services from processed `nowo_beacon` configuration.
+     *
+     * @param array<int, mixed> $configs
+     */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
@@ -175,11 +183,17 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         }
     }
 
+    /**
+     * Extension alias (`nowo_beacon`).
+     */
     public function getAlias(): string
     {
         return Configuration::ALIAS;
     }
 
+    /**
+     * Wire a no-op client and remove automatic listeners.
+     */
     private function registerNullClient(ContainerBuilder $container): void
     {
         $null = new Definition(NullBeaconClient::class);

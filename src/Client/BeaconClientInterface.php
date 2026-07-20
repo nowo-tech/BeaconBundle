@@ -11,6 +11,9 @@ use Throwable;
  */
 interface BeaconClientInterface
 {
+    /**
+     * Whether the client will attempt to send envelopes.
+     */
     public function isEnabled(): bool;
 
     /**
@@ -28,6 +31,8 @@ interface BeaconClientInterface
      *
      * @param array<string, mixed> $extra
      * @param list<string>|null $fingerprint
+     *
+     * @return string|null Event id when accepted by the local builder (null when disabled)
      */
     public function captureMessage(
         string $message,
@@ -59,6 +64,8 @@ interface BeaconClientInterface
      *     timestamp?: float
      * }> $spans
      * @param array<string, mixed> $extra
+     *
+     * @return string|null Event id when accepted by the local builder (null when disabled)
      */
     public function captureTransaction(
         string $transactionName,

@@ -11,16 +11,25 @@ use Throwable;
  */
 final class NullBeaconClient implements BeaconClientInterface
 {
+    /**
+     * {@inheritdoc}
+     */
     public function isEnabled(): bool
     {
         return false;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureException(Throwable $throwable, array $extra = [], ?array $fingerprint = null): ?string
     {
         return null;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureMessage(
         string $message,
         string $level = 'error',
@@ -30,6 +39,9 @@ final class NullBeaconClient implements BeaconClientInterface
         return null;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function addBreadcrumb(
         string $message,
         string $category = 'default',
@@ -38,6 +50,9 @@ final class NullBeaconClient implements BeaconClientInterface
     ): void {
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureTransaction(
         string $transactionName,
         float $startTimestamp,

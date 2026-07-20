@@ -12,6 +12,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * Sample routes that exercise BeaconBundle capture APIs against a local Beacon DSN.
+ */
 final class DemoController extends AbstractController
 {
     public function __construct(
@@ -24,12 +27,18 @@ final class DemoController extends AbstractController
     ) {
     }
 
+    /**
+     * Demo home with links to capture scenarios.
+     */
     #[Route(path: '/', name: 'homepage', methods: ['GET'])]
     public function home(): Response
     {
         return $this->render('demo/home.html.twig');
     }
 
+    /**
+     * Capture an info-level message.
+     */
     #[Route(path: '/report', name: 'demo_report', methods: ['GET'])]
     public function report(BeaconClientInterface $beacon): Response
     {
@@ -47,6 +56,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Capture an error-level message.
+     */
     #[Route(path: '/report-error', name: 'demo_report_error', methods: ['GET'])]
     public function reportError(BeaconClientInterface $beacon): Response
     {
@@ -64,6 +76,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Manually capture a RuntimeException.
+     */
     #[Route(path: '/exception', name: 'demo_exception', methods: ['GET'])]
     public function exception(BeaconClientInterface $beacon): Response
     {
@@ -82,18 +97,27 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Throw an uncaught exception for the automatic HTTP listener.
+     */
     #[Route(path: '/boom', name: 'demo_boom', methods: ['GET'])]
     public function boom(): never
     {
         throw new \RuntimeException('Beacon demo listener exception.');
     }
 
+    /**
+     * Throw an ignored InvalidArgumentException (500 without Beacon ingest).
+     */
     #[Route(path: '/boom-ignored', name: 'demo_boom_ignored', methods: ['GET'])]
     public function boomIgnored(): never
     {
         throw new InvalidArgumentException('Beacon demo ignored exception.');
     }
 
+    /**
+     * Capture a message with a custom fingerprint and breadcrumbs.
+     */
     #[Route(path: '/fingerprint', name: 'demo_fingerprint', methods: ['GET'])]
     public function fingerprint(BeaconClientInterface $beacon): Response
     {
@@ -125,6 +149,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Attach breadcrumbs then capture a message.
+     */
     #[Route(path: '/breadcrumbs', name: 'demo_breadcrumbs', methods: ['GET'])]
     public function breadcrumbs(BeaconClientInterface $beacon): Response
     {
@@ -144,6 +171,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Capture a message that may include authenticated user context (`send.user`).
+     */
     #[Route(path: '/user', name: 'demo_user', methods: ['GET'])]
     public function userContext(BeaconClientInterface $beacon): Response
     {
@@ -164,6 +194,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Capture a performance transaction with sample spans.
+     */
     #[Route(path: '/transaction', name: 'demo_transaction', methods: ['GET'])]
     public function transaction(BeaconClientInterface $beacon): Response
     {
@@ -205,6 +238,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * Log an error through Monolog so BeaconMonologHandler can forward it.
+     */
     #[Route(path: '/monolog', name: 'demo_monolog', methods: ['GET'])]
     public function monolog(\Psr\Log\LoggerInterface $logger, BeaconClientInterface $beacon): Response
     {
@@ -221,6 +257,9 @@ final class DemoController extends AbstractController
         );
     }
 
+    /**
+     * JSON runtime status for the wired Beacon client.
+     */
     #[Route(path: '/status', name: 'demo_status', methods: ['GET'])]
     public function status(BeaconClientInterface $beacon): JsonResponse
     {
@@ -232,6 +271,8 @@ final class DemoController extends AbstractController
     }
 
     /**
+     * Render a shared Twig report page for demo captures.
+     *
      * @param list<string>|null $fingerprint
      */
     private function renderReport(

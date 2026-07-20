@@ -20,6 +20,9 @@ final class SecurityUserContextProvider implements UserContextProviderInterface
     ) {
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getUserContext(): ?array
     {
         if (!$this->tokenStorage instanceof TokenStorageInterface) {

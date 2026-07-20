@@ -23,6 +23,9 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
     }
 
+    /**
+     * Forward a Monolog record to Beacon (exception context preferred).
+     */
     protected function write(LogRecord $record): void
     {
         if (!$this->client->isEnabled()) {
@@ -47,6 +50,9 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
         $this->client->captureMessage($record->message, $this->mapLevel($record), $extra);
     }
 
+    /**
+     * Map Monolog levels to Beacon string levels (`info` / `warning` / `error`).
+     */
     private function mapLevel(LogRecord $record): string
     {
         return match ($record->level) {

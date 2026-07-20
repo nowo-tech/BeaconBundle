@@ -30,6 +30,8 @@ final class BeaconClientFactory
     }
 
     /**
+     * Create a live client or {@see NullBeaconClient} after the DSN env value is resolved.
+     *
      * @param array{
      *     environment?: bool,
      *     release?: bool,
@@ -40,7 +42,7 @@ final class BeaconClientFactory
      *     runtime?: bool,
      *     framework?: bool,
      *     os?: bool
-     * } $send
+     * } $send Outbound context switches (`send.*`)
      */
     public function create(
         bool $enabled,

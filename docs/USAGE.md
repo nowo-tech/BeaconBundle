@@ -47,7 +47,7 @@ final class CheckoutController
 
 Manual APIs return the locally generated event id or `null` when the client is disabled.
 
-With default `send.stacktrace: true`, `captureMessage()` includes a current PHP stacktrace and `culprit` (no `Throwable` required). With `send.request: true`, HTTP events also attach `request` / `contexts.request` when a request is active.
+With default `send.stacktrace: true`, `captureMessage()` includes a current PHP stacktrace and `culprit` (no `Throwable` required). When source files are readable, frames may also include `abs_path` and ≈5 lines of source context. With `send.request: true`, HTTP events also attach `request` / `contexts.request` when a request is active.
 
 ## Breadcrumbs
 

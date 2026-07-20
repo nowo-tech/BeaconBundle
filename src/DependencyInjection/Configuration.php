@@ -17,6 +17,9 @@ final class Configuration implements ConfigurationInterface
 {
     public const ALIAS = 'nowo_beacon';
 
+    /**
+     * Builds the `nowo_beacon` configuration tree.
+     */
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder(self::ALIAS);

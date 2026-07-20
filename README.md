@@ -20,7 +20,8 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 - Optional `kernel.exception` listener for uncaught HTTP exceptions
 - `ignore_exceptions` support for listener-side filtering
 - Configurable outbound context (`send.*`: stacktrace, request, user, PHP/Symfony versions, OS, …)
-- Message events can include current stacktrace; HTTP events attach request URL/method when available
+- Message events can include current stacktrace; frames may include source context when files are readable
+- HTTP events attach request URL/method (and safe headers) when available
 - Breadcrumbs (`addBreadcrumb`) and performance transactions (`captureTransaction`)
 - Optional console error listener and optional Monolog handler
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)

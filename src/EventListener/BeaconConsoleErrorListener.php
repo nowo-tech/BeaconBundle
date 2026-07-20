@@ -25,11 +25,17 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
     ) {
     }
 
+    /**
+     * @return array<string, array{0: string, 1: int}>
+     */
     public static function getSubscribedEvents(): array
     {
         return [ConsoleEvents::ERROR => ['onConsoleError', 0]];
     }
 
+    /**
+     * Capture the console error unless ignored or the client is disabled.
+     */
     public function onConsoleError(ConsoleErrorEvent $event): void
     {
         if (!$this->enabled || !$this->client->isEnabled()) {
@@ -48,6 +54,9 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
         ]);
     }
 
+    /**
+     * Whether `$throwable` matches any configured ignore class.
+     */
     private function shouldIgnore(Throwable $throwable): bool
     {
         foreach ($this->ignoreExceptions as $class) {

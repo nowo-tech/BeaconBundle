@@ -10,6 +10,8 @@ namespace Nowo\BeaconBundle\Context;
 interface UserContextProviderInterface
 {
     /**
+     * Build a minimal user snapshot for the `user` envelope field.
+     *
      * @return array{id?: string, username?: string, email?: string}|null
      */
     public function getUserContext(): ?array;

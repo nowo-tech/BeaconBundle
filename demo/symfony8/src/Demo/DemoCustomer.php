@@ -15,6 +15,9 @@ final class DemoCustomer implements \Stringable
     ) {
     }
 
+    /**
+     * Human-readable label for dump / Twig samples.
+     */
     public function __toString(): string
     {
         return \sprintf('Customer #%d (%s)', $this->id, $this->name);

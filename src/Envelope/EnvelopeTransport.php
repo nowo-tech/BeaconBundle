@@ -27,11 +27,17 @@ final class EnvelopeTransport
     ) {
     }
 
+    /**
+     * Logger used for ingest failures (NullLogger when none was injected).
+     */
     private function logger(): LoggerInterface
     {
         return $this->logger ?? new NullLogger();
     }
 
+    /**
+     * POST an Envelope body to Beacon. Returns true on HTTP 2xx.
+     */
     public function send(string $envelopeBody): bool
     {
         $options = [
@@ -72,6 +78,9 @@ final class EnvelopeTransport
         }
     }
 
+    /**
+     * DSN used to build the ingest URL and envelope header.
+     */
     public function getDsn(): BeaconDsn
     {
         return $this->dsn;

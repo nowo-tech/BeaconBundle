@@ -28,6 +28,11 @@ This repository has three layers that should move together:
 | US-03 | As an operator, I want uncaught HTTP exceptions to be reported automatically so I can see production failures without wrapping every controller. |
 | US-04 | As a maintainer, I want clear release, security, and upgrade docs so the bundle is easy to ship safely. |
 | US-05 | As a contributor, I want demo routes and E2E guidance so I can validate success, listener, TLS, disabled, and rejected-ingest scenarios locally. |
+| US-06 | As an application developer, I want breadcrumbs, transactions, and configurable `send.*` context so Beacon receives richer events. |
+
+## Language
+
+Integrator documentation under `docs/`, root `README.md`, and product specs under `specs/` are maintained in **English**.
 
 ## Engram
 

@@ -25,6 +25,8 @@ final readonly class SendOptions
     }
 
     /**
+     * Build SendOptions from the `nowo_beacon.send` config array.
+     *
      * @param array{
      *     environment?: bool,
      *     release?: bool,

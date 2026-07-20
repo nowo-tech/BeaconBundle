@@ -26,31 +26,49 @@ final class BeaconDsn
     ) {
     }
 
+    /**
+     * URL scheme (`http` or `https`).
+     */
     public function getScheme(): string
     {
         return $this->scheme;
     }
 
+    /**
+     * Public key (DSN userinfo username).
+     */
     public function getPublicKey(): string
     {
         return $this->publicKey;
     }
 
+    /**
+     * Optional secret key (DSN userinfo password).
+     */
     public function getSecretKey(): ?string
     {
         return $this->secretKey;
     }
 
+    /**
+     * Hostname from the DSN authority.
+     */
     public function getHost(): string
     {
         return $this->host;
     }
 
+    /**
+     * Explicit port when present in the DSN.
+     */
     public function getPort(): ?int
     {
         return $this->port;
     }
 
+    /**
+     * Numeric Beacon project id.
+     */
     public function getProjectId(): int
     {
         return $this->projectId;

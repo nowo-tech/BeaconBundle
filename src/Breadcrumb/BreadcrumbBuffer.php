@@ -20,6 +20,8 @@ final class BreadcrumbBuffer implements ResetInterface
     private array $items = [];
 
     /**
+     * Append a breadcrumb (oldest entries drop when the buffer exceeds the max size).
+     *
      * @param array<string, mixed> $data
      */
     public function add(
@@ -44,6 +46,8 @@ final class BreadcrumbBuffer implements ResetInterface
     }
 
     /**
+     * Current breadcrumb items in insertion order.
+     *
      * @return list<array{timestamp: float, type: string, category: string, level: string, message: string, data: array<string, mixed>}>
      */
     public function all(): array
@@ -51,11 +55,17 @@ final class BreadcrumbBuffer implements ResetInterface
         return $this->items;
     }
 
+    /**
+     * Remove all buffered breadcrumbs.
+     */
     public function clear(): void
     {
         $this->items = [];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function reset(): void
     {
         $this->clear();

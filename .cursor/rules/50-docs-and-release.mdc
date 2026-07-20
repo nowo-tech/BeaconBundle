@@ -12,6 +12,8 @@ Prefer:
 - updating CHANGELOG and UPGRADING together for notable user-facing changes
 - preserving existing document structure and tone
 - keeping examples consistent with actual defaults and routes in this bundle
+- **English** for all public docs (`docs/`, `README.md`, `specs/`, Flex recipe texts)
 
 Do not invent features, versions, or commands that are not present in the repository.
 Do not remove past release history unless explicitly requested.
+Do not author integrator-facing documentation in Spanish (or other languages) unless explicitly requested.

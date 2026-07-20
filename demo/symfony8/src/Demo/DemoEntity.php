@@ -15,11 +15,17 @@ final class DemoEntity
     ) {
     }
 
+    /**
+     * Demo entity identifier.
+     */
     public function getId(): int
     {
         return $this->id;
     }
 
+    /**
+     * Demo email used as a readable label in sample payloads.
+     */
     public function getEmail(): string
     {
         return $this->email;

@@ -10,8 +10,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
+/**
+ * Demo form login / logout endpoints for authenticated user-context samples.
+ */
 final class SecurityController extends AbstractController
 {
+    /**
+     * Show the demo login form and handle authentication errors.
+     */
     #[Route(path: '/login', name: 'login', methods: ['GET', 'POST'])]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
@@ -26,6 +32,9 @@ final class SecurityController extends AbstractController
         ]);
     }
 
+    /**
+     * Logout route placeholder; the firewall handles the actual logout.
+     */
     #[Route(path: '/logout', name: 'logout', methods: ['GET'])]
     public function logout(): void
     {

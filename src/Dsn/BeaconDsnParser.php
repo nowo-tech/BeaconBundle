@@ -13,6 +13,8 @@ use function sprintf;
 final class BeaconDsnParser
 {
     /**
+     * Parse and validate a Beacon DSN string.
+     *
      * @throws InvalidBeaconDsnException
      */
     public function parse(string $dsn): BeaconDsn

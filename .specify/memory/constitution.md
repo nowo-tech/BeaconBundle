@@ -20,4 +20,6 @@ Follow declared PHP/Symfony ranges in `composer.json` and README badges.
 ## Governance
 Amendments update this file, baseline spec when principles affect behavior, and `CHANGELOG.md` when consumer-visible.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-07 | **Last Amended**: 2026-07-07
+Public product specs and integrator documentation are written in **English**.
+
+**Version**: 1.0.1 | **Ratified**: 2026-07-07 | **Last Amended**: 2026-07-20

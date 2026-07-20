@@ -114,6 +114,10 @@ nowo_beacon:
 
 - No breaking API changes to `captureException` / `captureMessage` / `captureTransaction`.
 
-## Upgrading from 1.3.0 to the next release
+## Upgrading from 1.3.0 to 1.3.1
 
-No further release yet. When upgrading past `v1.3.0`, read the new [`CHANGELOG.md`](CHANGELOG.md) section and follow any migration notes published there.
+- Documentation / PHPDoc / spec inventory sync only. **No consumer API or config changes.**
+
+## Upgrading from 1.3.1 to the next release
+
+No further release yet. When upgrading past `v1.3.1`, read the new [`CHANGELOG.md`](CHANGELOG.md) section and follow any migration notes published there.

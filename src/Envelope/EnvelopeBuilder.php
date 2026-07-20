@@ -14,11 +14,14 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
 use Throwable;
 
+use function array_key_exists;
+use function count;
 use function is_array;
 use function is_string;
 
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const DIRECTORY_SEPARATOR;
+use const FILE_IGNORE_NEW_LINES;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 use const PHP_OS_FAMILY;
@@ -45,6 +48,8 @@ final class EnvelopeBuilder
     }
 
     /**
+     * Build a 3-line NDJSON envelope for an event (message and/or exception).
+     *
      * @param array<string, mixed> $extra
      * @param list<string>|null $fingerprint
      */
@@ -487,6 +492,9 @@ final class EnvelopeBuilder
         return $this->sourceLineCache[$file] = $lines;
     }
 
+    /**
+     * Whether the path looks like application code (excludes vendor/cache/node_modules).
+     */
     private function isInApp(?string $file): bool
     {
         if ($file === null || $file === '') {
@@ -503,12 +511,17 @@ final class EnvelopeBuilder
         return true;
     }
 
+    /**
+     * Best-effort culprit from the top exception frame.
+     */
     private function guessCulprit(Throwable $throwable): string
     {
         return $this->formatCulprit($throwable->getTrace(), $throwable->getFile(), $throwable->getLine());
     }
 
     /**
+     * Human-readable culprit (class::method or file:line fallback).
+     *
      * @param list<array<string, mixed>> $trace
      */
     private function formatCulprit(array $trace, string $file, int $line): string
@@ -526,6 +539,8 @@ final class EnvelopeBuilder
     }
 
     /**
+     * Encode a payload as a single JSON line for the envelope.
+     *
      * @param array<string, mixed> $data
      */
     private function encode(array $data): string
@@ -538,6 +553,9 @@ final class EnvelopeBuilder
         return $json;
     }
 
+    /**
+     * 32-character hex event id.
+     */
     private function generateEventId(): string
     {
         return bin2hex(random_bytes(16));

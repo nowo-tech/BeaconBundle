@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: Draft
+**Status**: Completed (Symfony 8-only demo shipped; `demo/symfony7` removed)
 
 **Input**: User description: "solo demo symfony 8"
 

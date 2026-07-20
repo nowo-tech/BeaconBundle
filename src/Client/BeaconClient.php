@@ -26,11 +26,17 @@ final class BeaconClient implements BeaconClientInterface
     ) {
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function isEnabled(): bool
     {
         return $this->enabled;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureException(Throwable $throwable, array $extra = [], ?array $fingerprint = null): ?string
     {
         if (!$this->enabled) {
@@ -51,6 +57,9 @@ final class BeaconClient implements BeaconClientInterface
         return $this->extractEventId($body);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureMessage(
         string $message,
         string $level = 'error',
@@ -75,6 +84,9 @@ final class BeaconClient implements BeaconClientInterface
         return $this->extractEventId($body);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function addBreadcrumb(
         string $message,
         string $category = 'default',
@@ -84,6 +96,9 @@ final class BeaconClient implements BeaconClientInterface
         $this->breadcrumbBuffer?->add($message, $category, $level, $data);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function captureTransaction(
         string $transactionName,
         float $startTimestamp,
@@ -109,11 +124,17 @@ final class BeaconClient implements BeaconClientInterface
         return $this->extractEventId($body);
     }
 
+    /**
+     * Parsed DSN used by the underlying transport.
+     */
     public function getDsn(): BeaconDsn
     {
         return $this->transport->getDsn();
     }
 
+    /**
+     * Reads `event_id` from the first envelope header line.
+     */
     private function extractEventId(string $envelopeBody): ?string
     {
         $firstLine = strtok($envelopeBody, "\n");

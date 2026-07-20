@@ -24,6 +24,9 @@ final class BeaconExceptionListener implements EventSubscriberInterface
     ) {
     }
 
+    /**
+     * @return array<string, array{0: string, 1: int}>
+     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -31,6 +34,9 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * Capture the uncaught exception unless ignored or the client is disabled.
+     */
     public function onKernelException(ExceptionEvent $event): void
     {
         if (!$this->enabled || !$this->client->isEnabled()) {
@@ -53,6 +59,9 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         $this->client->captureException($throwable, $extra);
     }
 
+    /**
+     * Whether `$throwable` matches any configured ignore class.
+     */
     private function shouldIgnore(Throwable $throwable): bool
     {
         foreach ($this->ignoreExceptions as $class) {
