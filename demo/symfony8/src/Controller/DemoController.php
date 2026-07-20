@@ -97,12 +97,16 @@ final class DemoController extends AbstractController
     #[Route(path: '/fingerprint', name: 'demo_fingerprint', methods: ['GET'])]
     public function fingerprint(BeaconClientInterface $beacon): Response
     {
+        $beacon->addBreadcrumb('Opened fingerprint demo', 'navigation', 'info');
+        $beacon->addBreadcrumb('Custom grouping sample', 'demo', 'info', ['group' => 'group-1']);
+
         $eventId = $beacon->captureMessage(
             'Beacon demo fingerprinted message',
             'error',
             [
                 'demo' => true,
                 'route' => 'demo_fingerprint',
+                'note' => 'Message events include current stacktrace + request when send.* defaults are on.',
             ],
             [
                 'demo',
@@ -113,7 +117,7 @@ final class DemoController extends AbstractController
 
         return $this->renderReport(
             heading: 'Fingerprint demo',
-            description: 'Captured a message with a custom fingerprint for grouping.',
+            description: 'Captured a message with custom fingerprint, breadcrumbs, request context, and current stacktrace (no Throwable).',
             enabled: $beacon->isEnabled(),
             eventId: $eventId,
             level: 'error',
@@ -209,7 +213,7 @@ final class DemoController extends AbstractController
         return $this->renderReport(
             heading: 'Monolog demo',
             description: $beacon->isEnabled()
-                ? 'Logged an error via Monolog. Enable nowo_beacon.monolog_handler.enabled to forward it to Beacon.'
+                ? 'Logged an error via Monolog; BeaconMonologHandler forwards it when monolog_handler.enabled is true.'
                 : 'Beacon client is disabled; Monolog still logged locally.',
             enabled: $beacon->isEnabled(),
             eventId: null,

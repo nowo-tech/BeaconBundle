@@ -7,12 +7,12 @@
 
     <h2 class="h5 mt-4">Messages &amp; exceptions</h2>
     <ul>
-        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info)</li>
-        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error)</li>
-        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code></li>
-        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — listener capture (shows Symfony 500; event is sent)</li>
+        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info) + current stacktrace / request</li>
+        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error) + current stacktrace / request</li>
+        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code> (exception frames)</li>
+        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — listener capture (shows Symfony 500; event is sent with request)</li>
         <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> — ignored by listener (500, <strong>not</strong> sent)</li>
-        <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint grouping</li>
+        <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint + breadcrumbs + stacktrace</li>
     </ul>
 
     <h2 class="h5 mt-4">Context &amp; performance</h2>
@@ -20,7 +20,7 @@
         <li><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a> — breadcrumbs attached to the next event</li>
         <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code>send.user</code>; log in first)</li>
         <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans</li>
-        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — PSR logger sample (wire <code>monolog_handler</code> + Monolog to forward to Beacon)</li>
+        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error forwarded via <code>monolog_handler.enabled</code></li>
     </ul>
 
     <h2 class="h5 mt-4">Status</h2>

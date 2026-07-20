@@ -119,7 +119,7 @@ final class EnvelopeBuilderTest extends TestCase
     public function testOmitsEmptyReleaseExtraAndFingerprint(): void
     {
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
-        $builder = new EnvelopeBuilder('prod', '', 'app-host');
+        $builder = new EnvelopeBuilder('prod', '', 'app-host', new SendOptions(stacktrace: false, request: false));
         $body    = $builder->buildEventEnvelope($dsn, '', 'info', null, [], []);
 
         [, , $payload] = $this->decodeEnvelope($body);
@@ -131,6 +131,41 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertArrayNotHasKey('fingerprint', $payload);
         self::assertArrayNotHasKey('exception', $payload);
         self::assertArrayNotHasKey('culprit', $payload);
+        self::assertArrayNotHasKey('stacktrace', $payload);
+        self::assertArrayNotHasKey('request', $payload);
+    }
+
+    public function testMessageEventsIncludeCurrentStacktraceWhenEnabled(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $builder = new EnvelopeBuilder('test', null, 'ci-host');
+        $body    = $builder->buildEventEnvelope($dsn, 'Beacon demo fingerprinted message', 'error');
+
+        [, , $payload] = $this->decodeEnvelope($body);
+
+        self::assertArrayNotHasKey('exception', $payload);
+        self::assertArrayHasKey('stacktrace', $payload);
+        self::assertNotEmpty($payload['stacktrace']['frames']);
+        self::assertIsString($payload['culprit']);
+        self::assertSame('Beacon demo fingerprinted message', $payload['message']);
+    }
+
+    public function testAttachesHttpRequestContextWhenAvailable(): void
+    {
+        $dsn   = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $stack = new \Symfony\Component\HttpFoundation\RequestStack();
+        $stack->push(\Symfony\Component\HttpFoundation\Request::create('https://demo.test/fingerprint?x=1', 'GET'));
+        $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, $stack);
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'with request'));
+
+        self::assertSame('GET', $payload['request']['method']);
+        self::assertStringContainsString('/fingerprint', $payload['request']['url']);
+        self::assertSame('x=1', $payload['request']['query_string']);
+        self::assertSame('GET', $payload['contexts']['request']['method']);
+        self::assertSame('GET', $payload['extra']['request_method']);
+        self::assertArrayHasKey('headers', $payload['request']);
+        self::assertSame('demo.test', $payload['request']['headers']['host']);
     }
 
     public function testPreservesProvidedLevelValues(): void

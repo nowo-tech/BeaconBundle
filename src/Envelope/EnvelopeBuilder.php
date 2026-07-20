@@ -10,9 +10,15 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
 use Throwable;
 
+use function is_array;
+use function is_string;
+
+use const DEBUG_BACKTRACE_IGNORE_ARGS;
+use const DIRECTORY_SEPARATOR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 use const PHP_OS_FAMILY;
@@ -30,6 +36,7 @@ final class EnvelopeBuilder
         private readonly SendOptions $sendOptions = new SendOptions(),
         private readonly ?UserContextProviderInterface $userContextProvider = null,
         private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
+        private readonly ?RequestStack $requestStack = null,
     ) {
     }
 
@@ -98,6 +105,7 @@ final class EnvelopeBuilder
             $payload['fingerprint'] = $fingerprint;
         }
 
+        $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
         if ($throwable instanceof Throwable) {
@@ -110,6 +118,8 @@ final class EnvelopeBuilder
             if ($message === '') {
                 $payload['message'] = $throwable->getMessage();
             }
+        } elseif ($this->sendOptions->stacktrace) {
+            $this->attachCurrentStacktrace($payload);
         }
 
         $itemHeader = ['type' => 'event', 'content_type' => 'application/json'];
@@ -168,6 +178,7 @@ final class EnvelopeBuilder
             $payload['extra'] = $extra;
         }
 
+        $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
         $itemHeader = ['type' => 'transaction', 'content_type' => 'application/json'];
@@ -175,6 +186,95 @@ final class EnvelopeBuilder
         return $this->encode($envelopeHeader) . "\n"
             . $this->encode($itemHeader) . "\n"
             . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachRequest(array &$payload): void
+    {
+        if (!$this->sendOptions->request || !$this->requestStack instanceof RequestStack) {
+            return;
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof \Symfony\Component\HttpFoundation\Request) {
+            return;
+        }
+
+        $requestContext = [
+            'url'          => $request->getUri(),
+            'method'       => $request->getMethod(),
+            'query_string' => $request->getQueryString() ?? '',
+        ];
+
+        $headers = [];
+        foreach ([
+            'host',
+            'user-agent',
+            'accept',
+            'accept-language',
+            'accept-encoding',
+            'content-type',
+            'origin',
+            'referer',
+            'x-requested-with',
+        ] as $headerName) {
+            if ($request->headers->has($headerName)) {
+                $headers[$headerName] = (string) $request->headers->get($headerName);
+            }
+        }
+        if ($headers !== []) {
+            $requestContext['headers'] = $headers;
+        }
+
+        $payload['request'] = $requestContext;
+
+        if (!isset($payload['contexts']) || !is_array($payload['contexts'])) {
+            $payload['contexts'] = [];
+        }
+        $payload['contexts']['request'] = $requestContext;
+
+        // Keep listener-style keys when callers did not already set them in extra.
+        if (!isset($payload['extra']) || !is_array($payload['extra'])) {
+            $payload['extra'] = [];
+        }
+        $payload['extra'] += [
+            'request_uri'    => $requestContext['url'],
+            'request_method' => $requestContext['method'],
+        ];
+    }
+
+    /**
+     * Attaches a current PHP stacktrace for message events (no Throwable).
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function attachCurrentStacktrace(array &$payload): void
+    {
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+        $trace = array_values(array_filter(
+            $trace,
+            static function (array $frame): bool {
+                $class = isset($frame['class']) && is_string($frame['class']) ? $frame['class'] : '';
+                $file  = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : '';
+
+                if ($class !== '' && str_starts_with($class, 'Nowo\\BeaconBundle\\')) {
+                    return false;
+                }
+
+                return $file === '' || !str_contains($file, DIRECTORY_SEPARATOR . 'BeaconBundle' . DIRECTORY_SEPARATOR);
+            },
+        ));
+
+        if ($trace === []) {
+            return;
+        }
+
+        $payload['stacktrace'] = [
+            'frames' => $this->framesFromPhpTrace($trace),
+        ];
+        $payload['culprit'] = $this->formatCulprit($trace, (string) ($trace[0]['file'] ?? 'unknown'), (int) ($trace[0]['line'] ?? 0));
     }
 
     /**
@@ -267,17 +367,42 @@ final class EnvelopeBuilder
         ];
 
         foreach ($trace as $frame) {
-            $frames[] = [
-                'filename' => $frame['file'] ?? '[internal]',
-                'lineno'   => $frame['line'] ?? 0,
-                'function' => isset($frame['class'], $frame['type'], $frame['function'])
-                    ? $frame['class'] . $frame['type'] . $frame['function']
-                    : ($frame['function'] ?? null),
-                'in_app' => isset($frame['file']),
-            ];
+            $frames[] = $this->normalizeFrame($frame);
         }
 
         return array_reverse($frames);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $trace
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function framesFromPhpTrace(array $trace): array
+    {
+        $frames = [];
+        foreach ($trace as $frame) {
+            $frames[] = $this->normalizeFrame($frame);
+        }
+
+        return array_reverse($frames);
+    }
+
+    /**
+     * @param array<string, mixed> $frame
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeFrame(array $frame): array
+    {
+        return [
+            'filename' => $frame['file'] ?? '[internal]',
+            'lineno'   => $frame['line'] ?? 0,
+            'function' => isset($frame['class'], $frame['type'], $frame['function'])
+                ? $frame['class'] . $frame['type'] . $frame['function']
+                : ($frame['function'] ?? null),
+            'in_app' => isset($frame['file']),
+        ];
     }
 
     private function guessCulprit(Throwable $throwable): string

@@ -3,16 +3,32 @@
 # Empty DSN disables reporting.
 #
 # Format: https://PUBLIC_KEY@host:port/PROJECT_ID
-# Example (local Beacon): https://9cb5e28adc3ed7a40052e2a17e327220@localhost:9444/1
+# Example (local Beacon): https://PUBLIC@localhost:9444/1
+# Docker → Beacon HTTP ingest: http://PUBLIC@host.docker.internal:9081/1
 nowo_beacon:
     enabled: true
     dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
-    # release: '%env(default::BEACON_RELEASE)%'
+    release: '%env(string:default::BEACON_RELEASE)%'
     verify_peer: true
     register_error_listener: true
+    register_console_listener: true
     ignore_exceptions:
         - InvalidArgumentException
+    # Full outbound context for the sample app (production apps should keep send.user false unless needed).
+    send:
+        environment: true
+        release: true
+        server_name: true
+        stacktrace: true
+        request: true
+        user: false
+        runtime: true
+        framework: true
+        os: true
+    monolog_handler:
+        enabled: true
+        level: error
 
 when@dev:
     nowo_beacon:

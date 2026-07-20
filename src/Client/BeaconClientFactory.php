@@ -11,6 +11,7 @@ use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -24,6 +25,7 @@ final class BeaconClientFactory
         private readonly ?LoggerInterface $logger = null,
         private readonly ?UserContextProviderInterface $userContextProvider = null,
         private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
+        private readonly ?RequestStack $requestStack = null,
     ) {
     }
 
@@ -64,6 +66,7 @@ final class BeaconClientFactory
             $sendOptions,
             $this->userContextProvider,
             $this->breadcrumbBuffer,
+            $this->requestStack,
         );
         $transport = new EnvelopeTransport(
             $this->httpClient,

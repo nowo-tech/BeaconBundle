@@ -47,6 +47,8 @@ final class CheckoutController
 
 Manual APIs return the locally generated event id or `null` when the client is disabled.
 
+With default `send.stacktrace: true`, `captureMessage()` includes a current PHP stacktrace and `culprit` (no `Throwable` required). With `send.request: true`, HTTP events also attach `request` / `contexts.request` when a request is active.
+
 ## Breadcrumbs
 
 ```php
@@ -140,7 +142,7 @@ when@dev:
 | Manual exception | Valid DSN | `GET /exception` | Demo renders the captured exception event id; Beacon receives the event. |
 | Listener capture | `register_error_listener: true` and valid DSN | `GET /boom` | Request fails with `500`; the uncaught exception is reported by the listener. |
 | Ignored exception | `ignore_exceptions` contains `InvalidArgumentException` | `GET /boom-ignored` | Request fails with `500`; the exception is intentionally not reported by the listener. |
-| Fingerprint | Valid DSN | `GET /fingerprint` | Event is sent with a custom fingerprint to influence grouping. |
+| Fingerprint | Valid DSN | `GET /fingerprint` | Event is sent with a custom fingerprint, breadcrumbs, current stacktrace, and request context. |
 | Breadcrumbs | Valid DSN | `GET /breadcrumbs` | Event includes `breadcrumbs.values`. |
 | User context | Valid DSN, logged in, `send.user: true` | `GET /user` | Event includes `user` when authenticated. |
 | Transaction | Valid DSN | `GET /transaction` | Performance transaction appears in Beacon. |

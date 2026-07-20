@@ -89,6 +89,7 @@ final class NowoBeaconExtension extends Extension
             '$logger'              => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$userContextProvider' => new Reference(UserContextProviderInterface::class),
             '$breadcrumbBuffer'    => new Reference(BreadcrumbBuffer::class),
+            '$requestStack'        => new Reference('request_stack', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
         ]);
         $factory->setAutowired(false);
         $factory->setPublic(false);

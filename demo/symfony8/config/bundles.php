@@ -11,4 +11,5 @@ return [
     Nowo\TwigInspectorBundle\NowoTwigInspectorBundle::class => ['dev' => true, 'test' => true],
     Nowo\PasswordToggleBundle\NowoPasswordToggleBundle::class => ['all' => true],
     Nowo\BeaconBundle\NowoBeaconBundle::class => ['all' => true],
+    Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
 ];

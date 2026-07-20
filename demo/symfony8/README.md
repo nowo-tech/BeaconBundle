@@ -28,10 +28,10 @@ Configure `BEACON_DSN` in `.env` before testing real delivery. Leave it empty to
 - `/exception` manual `captureException()`
 - `/boom` uncaught listener-driven exception
 - `/boom-ignored` uncaught ignored `InvalidArgumentException`
-- `/fingerprint` custom fingerprint example
+- `/fingerprint` custom fingerprint + breadcrumbs + message stacktrace
 - `/breadcrumbs` breadcrumbs then capture
 - `/user` authenticated user context (`send.user`; log in first)
 - `/transaction` performance transaction capture
-- `/monolog` Monolog handler demo (when enabled)
+- `/monolog` Monolog handler demo (`monolog_handler.enabled: true` in sample config)
 - `/status` JSON runtime status
 - `/login` demo users (`debugger` / `debug`, `viewer` / `viewer`); after login redirects to `/user`

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-20
+
+### Added
+
+- `captureMessage()` attaches current PHP stacktrace when `send.stacktrace` is true (BeaconBundle frames filtered out).
+- HTTP `request` / `contexts.request` (url, method, query, safe headers such as Host/User-Agent) on events and transactions when `send.request` is true and a request is available.
+- Demo: full `send.*`, `release` / `BEACON_RELEASE`, `symfony/monolog-bundle` + Monolog handler enabled, richer `/fingerprint` sample.
+
+### Changed
+
+- Demo and Flex recipe document complete outbound context defaults (`send.*`, console listener, optional Monolog).
+
 ## [1.1.1] - 2026-07-20
 
 ### Fixed
@@ -97,7 +109,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.5...v1.0.6

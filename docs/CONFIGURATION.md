@@ -33,7 +33,7 @@ nowo_beacon:
     enabled: true
     dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
-    release: null
+    release: '%env(string:default::BEACON_RELEASE)%'
     server_name: null
     verify_peer: true
     timeout: 5.0
@@ -58,16 +58,16 @@ nowo_beacon:
 | Key | Default | Meaning |
 |-----|---------|---------|
 | `enabled` | `true` | Master switch. Effective sending still requires a non-empty DSN. |
-| `dsn` | `''` | Full Beacon DSN. Prefer `%env(default::BEACON_DSN)%`. |
+| `dsn` | `''` | Full Beacon DSN. Prefer `%env(string:default::BEACON_DSN)%`. |
 | `environment` | `%kernel.environment%` | Environment tag sent with events. |
-| `release` | `null` | Optional release string such as app version or git SHA. |
+| `release` | `null` | Optional release string such as app version or git SHA. Prefer `%env(string:default::BEACON_RELEASE)%`. |
 | `server_name` | `null` | Optional server/host tag. When null, the bundle falls back to the host name. |
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
 | `timeout` | `5.0` | HTTP timeout in seconds. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console automatic listeners. |
-| `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` (requires `monolog/monolog` + wire in `monolog.handlers`). |
+| `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` tagged as `monolog.handler` (requires `monolog/monolog`). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
 
 ### `send.*` context switches
@@ -79,8 +79,8 @@ Each flag controls whether that category is attached to outbound events:
 | `send.environment` | `true` | `environment` |
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
-| `send.stacktrace` | `true` | Stack frames + `culprit` |
-| `send.request` | `true` | `extra.request_uri` / `request_method` from the automatic listener |
+| `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out) |
+| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |
 | `send.framework` | `true` | `contexts.framework` (Symfony version when available) |

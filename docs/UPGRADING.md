@@ -86,6 +86,19 @@ nowo_beacon:
 
 - Sample-app fix only (`demo/symfony8` login redirect). No consumer API or config changes.
 
-## Upgrading from 1.1.1 to the next release
+## Upgrading from 1.1.1 to 1.2.0
+
+### Richer message events
+
+- With default `send.stacktrace: true`, `captureMessage()` now includes a current `stacktrace` (and `culprit`). Disable with `send.stacktrace: false` if you only want exception frames.
+- With default `send.request: true`, events/transactions include `request` + `contexts.request` when an HTTP request is active (CLI remains unchanged).
+- No breaking API changes; payload shape is richer under the existing defaults.
+
+### Demo / recipe
+
+- Sample app adds `symfony/monolog-bundle`, enables Monolog forwarding (`monolog_handler.enabled: true`), and documents `BEACON_RELEASE`.
+- Flex recipe ships explicit `send.*` defaults and `release: '%env(string:default::BEACON_RELEASE)%'`.
+
+## Upgrading from 1.2.0 to the next release
 
 No upgrade notes yet.

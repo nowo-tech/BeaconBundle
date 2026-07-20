@@ -6,7 +6,8 @@
         "config/": "%CONFIG_DIR%/"
     },
     "env": {
-        "BEACON_DSN": ""
+        "BEACON_DSN": "",
+        "BEACON_RELEASE": ""
     },
     "gitignore": [
         "/.env.local",

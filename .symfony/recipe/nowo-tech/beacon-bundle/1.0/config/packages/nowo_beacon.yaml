@@ -8,22 +8,26 @@ nowo_beacon:
     enabled: true
     dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
-    # release: '%env(default::BEACON_RELEASE)%'
+    release: '%env(string:default::BEACON_RELEASE)%'
     verify_peer: true
     # Set false only for local self-signed HTTPS:
     # when@dev:
     #     nowo_beacon:
     #         verify_peer: false
     register_error_listener: true
+    register_console_listener: true
     ignore_exceptions: []
     # Per-category outbound context (user is opt-in; may include PII):
-    # send:
-    #     environment: true
-    #     release: true
-    #     server_name: true
-    #     stacktrace: true
-    #     request: true
-    #     user: false
-    #     runtime: true
-    #     framework: true
-    #     os: true
+    send:
+        environment: true
+        release: true
+        server_name: true
+        stacktrace: true   # exceptions + current stack for captureMessage()
+        request: true      # HTTP url/method when a request is available
+        user: false
+        runtime: true
+        framework: true
+        os: true
+    # monolog_handler:
+    #     enabled: true
+    #     level: error
