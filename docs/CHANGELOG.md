@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- CI: remove `composer config platform.php 8.4` for Symfony 8 jobs (Composer treats `8.4` as `8.4.0`, which fails Symfony 8.1’s `php >=8.4.1` requirement).
+
 ## [1.0.4] - 2026-07-20
 
 ### Added
