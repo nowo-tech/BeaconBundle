@@ -118,7 +118,10 @@ release-check-demos:
 
 composer-sync: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer validate --strict
-	$(COMPOSE) exec -T $(SERVICE_PHP) composer update --no-install
+	@echo "Aligning composer.lock for PHP 8.2 / Symfony 7.x (CI code-style + local install)…"
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer config platform.php 8.2.32
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer update --no-install --no-interaction
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer config --unset platform.php
 
 clean: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) sh -c "rm -rf vendor .phpunit.cache coverage coverage.xml .php-cs-fixer.cache"

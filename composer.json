@@ -82,8 +82,7 @@
         "root-version": "1.0.0-dev",
         "allow-plugins": {
             "phpstan/extension-installer": true
-        },
-        "platform": {}
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

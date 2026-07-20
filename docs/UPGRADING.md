@@ -155,4 +155,4 @@ Bugfix only. **No consumer API or config changes.**
 
 ## Upgrading from 1.4.2 to the next release
 
-No upgrade notes yet.
+- No consumer API changes expected from the `composer.lock` / CI PHP 8.2 install fix (dev tooling only).

@@ -112,8 +112,16 @@ jobs:
           php-version: '8.2'
           tools: composer:v2, cs2pr
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Install dependencies (Symfony 7.4 for PHP 8.2)
+        run: |
+          composer require \
+            symfony/config:^7.4 \
+            symfony/dependency-injection:^7.4 \
+            symfony/http-client:^7.4 \
+            symfony/http-kernel:^7.4 \
+            symfony/framework-bundle:^7.4 \
+            --no-interaction --no-update
+          composer update symfony/* --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
       - name: Fix code style
         run: composer cs-fix
@@ -151,8 +159,16 @@ jobs:
           php-version: '8.2'
           tools: composer:v2, cs2pr
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Install dependencies (Symfony 7.4 for PHP 8.2)
+        run: |
+          composer require \
+            symfony/config:^7.4 \
+            symfony/dependency-injection:^7.4 \
+            symfony/http-client:^7.4 \
+            symfony/http-kernel:^7.4 \
+            symfony/framework-bundle:^7.4 \
+            --no-interaction --no-update
+          composer update symfony/* --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
       - name: Check code style
         run: composer cs-check

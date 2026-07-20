@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- CI / `composer.lock`: keep the lock on Symfony **7.4** so `composer install` works on PHP 8.2 (code-style jobs). `make composer-sync` pins `platform.php` to 8.2 while refreshing the lock; Symfony 8 remains covered by the matrix `composer update` path.
+
 ## [1.4.2] - 2026-07-20
 
 ### Fixed
