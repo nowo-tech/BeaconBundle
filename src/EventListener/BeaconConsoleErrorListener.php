@@ -8,6 +8,7 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Throwable;
 
 use function is_string;
 
@@ -47,7 +48,7 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
         ]);
     }
 
-    private function shouldIgnore(\Throwable $throwable): bool
+    private function shouldIgnore(Throwable $throwable): bool
     {
         foreach ($this->ignoreExceptions as $class) {
             if (!is_string($class) || $class === '') {

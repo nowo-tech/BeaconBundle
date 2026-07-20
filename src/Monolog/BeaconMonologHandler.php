@@ -51,8 +51,8 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
     {
         return match ($record->level) {
             Level::Debug, Level::Info, Level::Notice => 'info',
-            Level::Warning => 'warning',
-            default => 'error',
+            Level::Warning                           => 'warning',
+            default                                  => 'error',
         };
     }
 }

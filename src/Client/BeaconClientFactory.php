@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Client;
 
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendOptions;
-use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -55,9 +55,9 @@ final class BeaconClientFactory
             return new NullBeaconClient();
         }
 
-        $parsed    = $this->parser->parse($dsn);
+        $parsed      = $this->parser->parse($dsn);
         $sendOptions = SendOptions::fromArray($send);
-        $builder   = new EnvelopeBuilder(
+        $builder     = new EnvelopeBuilder(
             $environment,
             $release,
             $serverName,

@@ -45,10 +45,10 @@ final class EnvelopeBuilder
         array $extra = [],
         ?array $fingerprint = null,
     ): string {
-        $eventId   = $this->generateEventId();
+        $eventId    = $this->generateEventId();
         $occurredAt = new DateTimeImmutable('now');
-        $sentAt    = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
-        $timestamp = (float) $occurredAt->format('U.u');
+        $sentAt     = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $timestamp  = (float) $occurredAt->format('U.u');
 
         $envelopeHeader = [
             'event_id' => $eventId,
@@ -83,7 +83,7 @@ final class EnvelopeBuilder
             $payload['contexts'] = $contexts;
         }
 
-        if ($this->sendOptions->user && $this->userContextProvider !== null) {
+        if ($this->sendOptions->user && $this->userContextProvider instanceof UserContextProviderInterface) {
             $user = $this->userContextProvider->getUserContext();
             if ($user !== null && $user !== []) {
                 $payload['user'] = $user;
@@ -100,7 +100,7 @@ final class EnvelopeBuilder
 
         $this->attachBreadcrumbs($payload);
 
-        if ($throwable !== null) {
+        if ($throwable instanceof Throwable) {
             $payload['exception'] = [
                 'values' => $this->serializeExceptions($throwable),
             ];
@@ -149,13 +149,13 @@ final class EnvelopeBuilder
         ];
 
         $payload = [
-            'event_id'         => $eventId,
-            'type'             => 'transaction',
-            'transaction'      => $transactionName,
-            'start_timestamp'  => $startTimestamp,
-            'timestamp'        => $endTimestamp,
-            'platform'         => 'php',
-            'spans'            => $spans,
+            'event_id'        => $eventId,
+            'type'            => 'transaction',
+            'transaction'     => $transactionName,
+            'start_timestamp' => $startTimestamp,
+            'timestamp'       => $endTimestamp,
+            'platform'        => 'php',
+            'spans'           => $spans,
         ];
 
         if ($this->sendOptions->environment) {
@@ -182,7 +182,7 @@ final class EnvelopeBuilder
      */
     private function attachBreadcrumbs(array &$payload): void
     {
-        if ($this->breadcrumbBuffer === null) {
+        if (!$this->breadcrumbBuffer instanceof BreadcrumbBuffer) {
             return;
         }
 
@@ -234,7 +234,7 @@ final class EnvelopeBuilder
         $values  = [];
         $current = $throwable;
 
-        while ($current !== null) {
+        while ($current instanceof Throwable) {
             $entry = [
                 'type'  => $current::class,
                 'value' => $current->getMessage(),

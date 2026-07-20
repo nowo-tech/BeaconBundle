@@ -55,7 +55,7 @@ final class ConfigurationTest extends TestCase
                 RuntimeException::class,
                 InvalidArgumentException::class,
             ],
-            'send'                    => [
+            'send' => [
                 'user'       => true,
                 'stacktrace' => false,
                 'request'    => false,

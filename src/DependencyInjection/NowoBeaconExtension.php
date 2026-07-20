@@ -42,7 +42,7 @@ final class NowoBeaconExtension extends Extension
         $serverName  = is_string($config['server_name'] ?? null) && $config['server_name'] !== ''
             ? $config['server_name']
             : (gethostname() ?: 'unknown');
-        $send        = $config['send'] ?? [];
+        $send = $config['send'] ?? [];
 
         // Literal DSNs contain "://"; env placeholders / %env(...)% do not.
         $isLiteralDsn = str_contains($dsn, '://');

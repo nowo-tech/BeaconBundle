@@ -43,7 +43,7 @@ final class BeaconDsnParser
         }
 
         $host = strtolower($parts['host']);
-        $port = isset($parts['port']) ? (int) $parts['port'] : null;
+        $port = isset($parts['port']) ? $parts['port'] : null;
         if ($port !== null && ($port < 1 || $port > 65535)) {
             throw new InvalidBeaconDsnException(sprintf('Invalid DSN port "%d".', $port));
         }

@@ -126,7 +126,6 @@ final class EnvelopeTransportTest extends TestCase
             $dsn,
             true,
             5.0,
-            null,
         );
 
         self::assertFalse($transport->send("header\nitem\npayload\n"));

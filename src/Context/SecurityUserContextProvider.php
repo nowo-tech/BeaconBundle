@@ -22,12 +22,12 @@ final class SecurityUserContextProvider implements UserContextProviderInterface
 
     public function getUserContext(): ?array
     {
-        if ($this->tokenStorage === null) {
+        if (!$this->tokenStorage instanceof TokenStorageInterface) {
             return null;
         }
 
         $token = $this->tokenStorage->getToken();
-        if ($token === null) {
+        if (!$token instanceof \Symfony\Component\Security\Core\Authentication\Token\TokenInterface) {
             return null;
         }
 

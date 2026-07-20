@@ -14,13 +14,13 @@ final class SecurityUserContextProviderTest extends TestCase
 {
     public function testReturnsNullWithoutTokenStorage(): void
     {
-        self::assertNull((new SecurityUserContextProvider(null))->getUserContext());
+        self::assertNull((new SecurityUserContextProvider())->getUserContext());
     }
 
     public function testReturnsUserSummary(): void
     {
-        $user = new InMemoryUser('alice@example.com', null, ['ROLE_USER']);
-        $token = new UsernamePasswordToken($user, 'main', $user->getRoles());
+        $user    = new InMemoryUser('alice@example.com', null, ['ROLE_USER']);
+        $token   = new UsernamePasswordToken($user, 'main', $user->getRoles());
         $storage = new TokenStorage();
         $storage->setToken($token);
 

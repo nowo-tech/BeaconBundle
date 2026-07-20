@@ -6,6 +6,9 @@ namespace Nowo\BeaconBundle\Breadcrumb;
 
 use Symfony\Contracts\Service\ResetInterface;
 
+use function array_slice;
+use function count;
+
 /**
  * Request-scoped breadcrumb trail attached to the next captured event/transaction.
  */

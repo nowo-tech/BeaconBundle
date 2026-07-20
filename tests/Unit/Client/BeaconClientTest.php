@@ -81,10 +81,10 @@ final class BeaconClientTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
 
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
-        $buffer = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $buffer  = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
         $builder = new EnvelopeBuilder('test', null, 'ci', new \Nowo\BeaconBundle\Envelope\SendOptions(), null, $buffer);
-        $client = new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $buffer);
+        $client  = new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $buffer);
 
         $client->addBreadcrumb('pre');
         $txId = $client->captureTransaction('demo.tx', 1.0, 2.0, [], ['k' => 1]);

@@ -21,14 +21,13 @@ security:
             form_login:
                 login_path: login
                 check_path: login
-                default_target_path: demo_debug
+                default_target_path: demo_user
                 enable_csrf: true
             logout:
                 path: logout
                 target: homepage
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
-        - { path: ^/debug, roles: ROLE_USER }
         - { path: ^/, roles: PUBLIC_ACCESS }
 
 when@dev:

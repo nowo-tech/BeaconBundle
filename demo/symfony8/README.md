@@ -29,4 +29,9 @@ Configure `BEACON_DSN` in `.env` before testing real delivery. Leave it empty to
 - `/boom` uncaught listener-driven exception
 - `/boom-ignored` uncaught ignored `InvalidArgumentException`
 - `/fingerprint` custom fingerprint example
+- `/breadcrumbs` breadcrumbs then capture
+- `/user` authenticated user context (`send.user`; log in first)
+- `/transaction` performance transaction capture
+- `/monolog` Monolog handler demo (when enabled)
 - `/status` JSON runtime status
+- `/login` demo users (`debugger` / `debug`, `viewer` / `viewer`); after login redirects to `/user`

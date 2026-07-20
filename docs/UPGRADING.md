@@ -82,6 +82,10 @@ nowo_beacon:
 - No breaking changes to existing `captureException` / `captureMessage` call sites.
 - Apps without Monolog are unaffected when `monolog_handler.enabled` stays `false`.
 
-## Upgrading from 1.1.0 to the next release
+## Upgrading from 1.1.0 to 1.1.1
+
+- Sample-app fix only (`demo/symfony8` login redirect). No consumer API or config changes.
+
+## Upgrading from 1.1.1 to the next release
 
 No upgrade notes yet.

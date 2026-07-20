@@ -23,7 +23,7 @@ final class BeaconConsoleErrorListenerTest extends TestCase
         $client->expects(self::once())->method('captureException');
 
         $listener = new BeaconConsoleErrorListener($client, true, []);
-        $command = $this->createMock(Command::class);
+        $command  = $this->createMock(Command::class);
         $command->method('getName')->willReturn('app:demo');
 
         $event = new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('boom'), $command);
@@ -37,7 +37,7 @@ final class BeaconConsoleErrorListenerTest extends TestCase
         $client->expects(self::never())->method('captureException');
 
         $listener = new BeaconConsoleErrorListener($client, true, [RuntimeException::class]);
-        $event = new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('skip'), null);
+        $event    = new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('skip'));
         $listener->onConsoleError($event);
     }
 
@@ -48,7 +48,7 @@ final class BeaconConsoleErrorListenerTest extends TestCase
         $client->expects(self::never())->method('captureException');
 
         $listener = new BeaconConsoleErrorListener($client, false, []);
-        $listener->onConsoleError(new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('x'), null));
+        $listener->onConsoleError(new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('x')));
         self::assertArrayHasKey(ConsoleEvents::ERROR, BeaconConsoleErrorListener::getSubscribedEvents());
     }
 }

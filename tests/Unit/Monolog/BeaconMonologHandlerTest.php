@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Monolog;
 
+use DateTimeImmutable;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
@@ -25,7 +26,7 @@ final class BeaconMonologHandlerTest extends TestCase
 
         $handler = new BeaconMonologHandler($client, Level::Error);
         $handler->handle(new LogRecord(
-            datetime: new \DateTimeImmutable(),
+            datetime: new DateTimeImmutable(),
             channel: 'app',
             level: Level::Error,
             message: 'boom log',
@@ -37,13 +38,13 @@ final class BeaconMonologHandlerTest extends TestCase
     public function testForwardsExceptionContext(): void
     {
         $exception = new RuntimeException('x');
-        $client = $this->createMock(BeaconClientInterface::class);
+        $client    = $this->createMock(BeaconClientInterface::class);
         $client->method('isEnabled')->willReturn(true);
         $client->expects(self::once())->method('captureException')->with($exception, self::isType('array'));
 
         $handler = new BeaconMonologHandler($client, Level::Error);
         $handler->handle(new LogRecord(
-            datetime: new \DateTimeImmutable(),
+            datetime: new DateTimeImmutable(),
             channel: 'app',
             level: Level::Error,
             message: 'with exception',

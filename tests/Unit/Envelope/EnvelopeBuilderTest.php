@@ -67,9 +67,9 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testRespectsSendOptionsOmissionsAndUserOptIn(): void
     {
-        $dsn = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn          = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
         $userProvider = new class implements UserContextProviderInterface {
-            public function getUserContext(): ?array
+            public function getUserContext(): array
             {
                 return ['id' => '42', 'username' => 'alice', 'email' => 'alice@example.com'];
             }
@@ -92,7 +92,7 @@ final class EnvelopeBuilderTest extends TestCase
             $userProvider,
         );
 
-        $body = $builder->buildEventEnvelope($dsn, 'msg', 'error', new RuntimeException('no frames'));
+        $body          = $builder->buildEventEnvelope($dsn, 'msg', 'error', new RuntimeException('no frames'));
         [, , $payload] = $this->decodeEnvelope($body);
 
         self::assertArrayNotHasKey('environment', $payload);
@@ -188,7 +188,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testAttachesBreadcrumbsAndClearsBuffer(): void
     {
-        $dsn = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
         $buffer = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
         $buffer->add('step-1', 'demo');
         $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(), null, $buffer);
@@ -202,10 +202,10 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testBuildTransactionEnvelope(): void
     {
-        $dsn = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
-        $builder = new EnvelopeBuilder('test', null, 'ci');
-        $start = 1000.0;
-        $end = 1000.25;
+        $dsn                = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $builder            = new EnvelopeBuilder('test', null, 'ci');
+        $start              = 1000.0;
+        $end                = 1000.25;
         [, $item, $payload] = $this->decodeEnvelope($builder->buildTransactionEnvelope(
             $dsn,
             'demo.checkout',
@@ -213,11 +213,11 @@ final class EnvelopeBuilderTest extends TestCase
             $end,
             [
                 [
-                    'op' => 'db.query',
-                    'description' => 'SELECT 1',
-                    'span_id' => 'abc123',
+                    'op'              => 'db.query',
+                    'description'     => 'SELECT 1',
+                    'span_id'         => 'abc123',
                     'start_timestamp' => $start,
-                    'timestamp' => $start + 0.1,
+                    'timestamp'       => $start + 0.1,
                 ],
             ],
             ['demo' => true],

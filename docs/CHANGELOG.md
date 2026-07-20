@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-20
+
+### Fixed
+
+- Demo Symfony 8: post-login redirect targeted missing route `demo_debug`; now redirects to `demo_user` (`/user`). Removed obsolete `/debug` access-control rule.
+
+### Changed
+
+- Applied PHP-CS-Fixer / Rector cleanups on sources and tests (no public API changes).
+- Demo and README docs list 1.1.x routes (breadcrumbs, user, transaction, monolog) and accurate feature bullets.
+
 ## [1.1.0] - 2026-07-20
 
 ### Added
@@ -86,7 +97,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.4...v1.0.5
