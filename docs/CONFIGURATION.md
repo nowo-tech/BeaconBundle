@@ -67,7 +67,7 @@ nowo_beacon:
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console automatic listeners. |
-| `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` tagged as `monolog.handler` (requires `monolog/monolog`). |
+| `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
 
 ### `send.*` context switches
@@ -79,7 +79,7 @@ Each flag controls whether that category is attached to outbound events:
 | `send.environment` | `true` | `environment` |
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
-| `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out) |
+| `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). |
 | `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9ea707aba6dad3b8ab56cb168daf9a5d",
+    "content-hash": "8eff00fb10bc8d4762b56756a98eba1b",
     "packages": [
         {
             "name": "monolog/monolog",
@@ -115,7 +115,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "8c4e71e232d586b573626aef94f2381256e98b1b"
+                "reference": "6b1c8abb17ccee0f784296303e21b0a9af8eb5ac"
             },
             "require": {
                 "php": ">=8.2 <8.6",

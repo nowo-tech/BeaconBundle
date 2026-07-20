@@ -29,6 +29,9 @@ use const PHP_VERSION;
  */
 final class EnvelopeBuilder
 {
+    /** @var array<string, list<string>|null> */
+    private array $sourceLineCache = [];
+
     public function __construct(
         private readonly string $environment = 'prod',
         private readonly ?string $release = null,
@@ -37,6 +40,7 @@ final class EnvelopeBuilder
         private readonly ?UserContextProviderInterface $userContextProvider = null,
         private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
         private readonly ?RequestStack $requestStack = null,
+        private readonly int $stackContextLines = 5,
     ) {
     }
 
@@ -359,12 +363,11 @@ final class EnvelopeBuilder
         $frames = [];
         $trace  = $throwable->getTrace();
 
-        $frames[] = [
-            'filename' => $throwable->getFile(),
-            'lineno'   => $throwable->getLine(),
+        $frames[] = $this->normalizeFrame([
+            'file'     => $throwable->getFile(),
+            'line'     => $throwable->getLine(),
             'function' => null,
-            'in_app'   => true,
-        ];
+        ]);
 
         foreach ($trace as $frame) {
             $frames[] = $this->normalizeFrame($frame);
@@ -395,14 +398,109 @@ final class EnvelopeBuilder
      */
     private function normalizeFrame(array $frame): array
     {
-        return [
-            'filename' => $frame['file'] ?? '[internal]',
-            'lineno'   => $frame['line'] ?? 0,
+        $file = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : null;
+        $line = isset($frame['line']) ? (int) $frame['line'] : 0;
+
+        $normalized = [
+            'filename' => $file ?? '[internal]',
+            'lineno'   => $line,
             'function' => isset($frame['class'], $frame['type'], $frame['function'])
                 ? $frame['class'] . $frame['type'] . $frame['function']
                 : ($frame['function'] ?? null),
-            'in_app' => isset($frame['file']),
+            'in_app' => $this->isInApp($file),
         ];
+
+        if ($file !== null) {
+            $normalized['abs_path'] = $file;
+        }
+
+        if ($this->sendOptions->stacktrace && $file !== null && $line > 0) {
+            $normalized += $this->readSourceContext($file, $line);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array{
+     *     pre_context?: list<string>,
+     *     context_line?: string,
+     *     post_context?: list<string>
+     * }
+     */
+    private function readSourceContext(string $file, int $lineno): array
+    {
+        $lines = $this->loadSourceLines($file);
+        if ($lines === null) {
+            return [];
+        }
+
+        $index = $lineno - 1;
+        if ($index < 0 || $index >= count($lines)) {
+            return [];
+        }
+
+        $context = max(0, $this->stackContextLines);
+        $start   = max(0, $index - $context);
+        $end     = min(count($lines) - 1, $index + $context);
+
+        $pre = [];
+        for ($i = $start; $i < $index; ++$i) {
+            $pre[] = $lines[$i];
+        }
+
+        $post = [];
+        for ($i = $index + 1; $i <= $end; ++$i) {
+            $post[] = $lines[$i];
+        }
+
+        return [
+            'pre_context'  => $pre,
+            'context_line' => $lines[$index],
+            'post_context' => $post,
+        ];
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function loadSourceLines(string $file): ?array
+    {
+        if (array_key_exists($file, $this->sourceLineCache)) {
+            return $this->sourceLineCache[$file];
+        }
+
+        if ($file === '' || !is_file($file) || !is_readable($file)) {
+            return $this->sourceLineCache[$file] = null;
+        }
+
+        $size = filesize($file);
+        if ($size === false || $size > 1_048_576) {
+            return $this->sourceLineCache[$file] = null;
+        }
+
+        $lines = file($file, FILE_IGNORE_NEW_LINES);
+        if ($lines === false) {
+            return $this->sourceLineCache[$file] = null;
+        }
+
+        return $this->sourceLineCache[$file] = $lines;
+    }
+
+    private function isInApp(?string $file): bool
+    {
+        if ($file === null || $file === '') {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $file);
+        foreach (['/vendor/', '/var/cache/', '/node_modules/'] as $exclude) {
+            if (str_contains($normalized, $exclude)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function guessCulprit(Throwable $throwable): string

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-20
+
+### Added
+
+- Stack frames include source context (`pre_context`, `context_line`, `post_context`, `abs_path`) when the file is readable (≈5 lines around the crash site)
+
+### Fixed
+
+- `monolog_handler.enabled` now prepends a `type: service` Monolog handler (the `monolog.handler` tag alone is not wired by MonologBundle).
+
 ## [1.2.0] - 2026-07-20
 
 ### Added
@@ -109,7 +119,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.6...v1.1.0

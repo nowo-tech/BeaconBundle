@@ -18,6 +18,7 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 
@@ -30,8 +31,38 @@ use function is_string;
  * DSN values coming from `%env(...)%` are resolved at runtime via {@see BeaconClientFactory}
  * so an empty `BEACON_DSN` disables reporting without failing container compilation.
  */
-final class NowoBeaconExtension extends Extension
+final class NowoBeaconExtension extends Extension implements PrependExtensionInterface
 {
+    public function prepend(ContainerBuilder $container): void
+    {
+        if (!$container->hasExtension('monolog')) {
+            return;
+        }
+
+        $configs = $container->getExtensionConfig($this->getAlias());
+        $config  = $this->processConfiguration(new Configuration(), $configs);
+        $monolog = $config['monolog_handler'] ?? [];
+
+        if (!(bool) ($monolog['enabled'] ?? false)) {
+            return;
+        }
+
+        if (!class_exists(\Monolog\Handler\AbstractProcessingHandler::class)) {
+            return;
+        }
+
+        // MonologBundle only wires handlers declared in monolog.handlers (the monolog.handler tag is not enough).
+        $container->prependExtensionConfig('monolog', [
+            'handlers' => [
+                'nowo_beacon' => [
+                    'type'  => 'service',
+                    'id'    => BeaconMonologHandler::class,
+                    'level' => (string) ($monolog['level'] ?? 'error'),
+                ],
+            ],
+        ]);
+    }
+
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
@@ -140,7 +171,6 @@ final class NowoBeaconExtension extends Extension
                 '$level'  => (string) ($monolog['level'] ?? 'error'),
             ]);
             $handler->setPublic(false);
-            $handler->addTag('monolog.handler');
             $container->setDefinition(BeaconMonologHandler::class, $handler);
         }
     }

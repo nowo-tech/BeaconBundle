@@ -150,6 +150,52 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('Beacon demo fingerprinted message', $payload['message']);
     }
 
+    public function testExceptionFramesIncludeSourceContext(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'beacon-src-');
+        self::assertNotFalse($tmp);
+        file_put_contents($tmp, "line-one\nline-two THROW_HERE\nline-three\nline-four\n");
+
+        try {
+            $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+            $builder = new EnvelopeBuilder('test', null, 'ci-host');
+            $method  = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+            $method->setAccessible(true);
+
+            /** @var array<string, mixed> $frame */
+            $frame = $method->invoke($builder, [
+                'file'     => $tmp,
+                'line'     => 2,
+                'function' => 'demo',
+            ]);
+
+            self::assertSame($tmp, $frame['abs_path']);
+            self::assertSame(2, $frame['lineno']);
+            self::assertSame('line-two THROW_HERE', $frame['context_line']);
+            self::assertSame(['line-one'], $frame['pre_context']);
+            self::assertSame(['line-three', 'line-four'], $frame['post_context']);
+            self::assertTrue($frame['in_app']);
+        } finally {
+            @unlink($tmp);
+        }
+    }
+
+    public function testVendorPathsAreNotInApp(): void
+    {
+        $builder = new EnvelopeBuilder('test', null, 'ci-host');
+        $method  = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+        $method->setAccessible(true);
+
+        /** @var array<string, mixed> $frame */
+        $frame = $method->invoke($builder, [
+            'file'     => '/app/vendor/symfony/http-kernel/HttpKernel.php',
+            'line'     => 10,
+            'function' => 'handle',
+        ]);
+
+        self::assertFalse($frame['in_app']);
+    }
+
     public function testAttachesHttpRequestContextWhenAvailable(): void
     {
         $dsn   = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');

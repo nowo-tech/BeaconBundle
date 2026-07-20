@@ -99,6 +99,21 @@ nowo_beacon:
 - Sample app adds `symfony/monolog-bundle`, enables Monolog forwarding (`monolog_handler.enabled: true`), and documents `BEACON_RELEASE`.
 - Flex recipe ships explicit `send.*` defaults and `release: '%env(string:default::BEACON_RELEASE)%'`.
 
-## Upgrading from 1.2.0 to the next release
+## Upgrading from 1.2.0 to 1.3.0
 
-No upgrade notes yet.
+### Stack source context
+
+- With `send.stacktrace: true`, frames may include `abs_path`, `pre_context`, `context_line`, and `post_context` when the PHP file is readable (≈5 lines of context). No config flag; disable stacktraces entirely with `send.stacktrace: false` if you do not want file contents in payloads.
+- Pair with **symfony-beacon `v0.5.0+`** to render source snippets in the Issues UI.
+
+### Monolog handler wiring
+
+- If you enabled `monolog_handler` but never saw Monolog records in Beacon, upgrade: the handler is now registered via `monolog.handlers` automatically. Remove any manual `type: service` duplicate if you added one by hand.
+
+### Compatibility
+
+- No breaking API changes to `captureException` / `captureMessage` / `captureTransaction`.
+
+## Upgrading from 1.3.0 to the next release
+
+No further release yet. When upgrading past `v1.3.0`, read the new [`CHANGELOG.md`](CHANGELOG.md) section and follow any migration notes published there.
