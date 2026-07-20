@@ -1,0 +1,8 @@
+  Beacon Bundle installed.
+
+  Set BEACON_DSN to your Symfony Beacon instance, e.g.:
+    BEACON_DSN=https://PUBLIC_KEY@beacon.example.com:9444/1
+
+  Empty BEACON_DSN disables reporting.
+
+  Docs: https://github.com/nowo-tech/BeaconBundle

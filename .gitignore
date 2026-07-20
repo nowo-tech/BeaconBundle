@@ -1,0 +1,37 @@
+# Dependencies
+/vendor
+/node_modules
+/.pnpm-store
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+/coverage
+/coverage.xml
+/coverage-php.txt
+
+# PHP tool caches
+/.php-cs-fixer.cache
+/.phpunit.cache
+/.phpunit.result.cache
+
+# Archives / compressed
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Demo app artifacts
+/demo/*/vendor
+/demo/*/var
+/demo/*/.env
+/demo/*/.env.local
+/demo/*/.pnpm-store
+/demo/*/node_modules
+/demo/*/public/build
+/.cursor/sandbox.json

@@ -1,0 +1,11 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Nowo\BeaconBundle\Dsn\BeaconDsnParser: ~
+
+    Nowo\BeaconBundle\EventListener\BeaconExceptionListener:
+        tags:
+            - { name: kernel.event_subscriber }

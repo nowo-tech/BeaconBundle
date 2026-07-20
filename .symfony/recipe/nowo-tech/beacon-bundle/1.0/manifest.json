@@ -1,0 +1,15 @@
+{
+    "bundles": {
+        "Nowo\\BeaconBundle\\NowoBeaconBundle": ["all"]
+    },
+    "copy-from-recipe": {
+        "config/": "%CONFIG_DIR%/"
+    },
+    "env": {
+        "BEACON_DSN": ""
+    },
+    "gitignore": [
+        "/.env.local",
+        "/.env.*.local"
+    ]
+}
