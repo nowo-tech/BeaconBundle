@@ -16,6 +16,7 @@ use Throwable;
 
 use function array_key_exists;
 use function count;
+use function dirname;
 use function is_array;
 use function is_string;
 
@@ -264,16 +265,7 @@ final class EnvelopeBuilder
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         $trace = array_values(array_filter(
             $trace,
-            static function (array $frame): bool {
-                $class = isset($frame['class']) && is_string($frame['class']) ? $frame['class'] : '';
-                $file  = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : '';
-
-                if ($class !== '' && str_starts_with($class, 'Nowo\\BeaconBundle\\')) {
-                    return false;
-                }
-
-                return $file === '' || !str_contains($file, DIRECTORY_SEPARATOR . 'BeaconBundle' . DIRECTORY_SEPARATOR);
-            },
+            fn (array $frame): bool => !$this->isBeaconBundleImplementationFrame($frame),
         ));
 
         if ($trace === []) {
@@ -284,6 +276,32 @@ final class EnvelopeBuilder
             'frames' => $this->framesFromPhpTrace($trace),
         ];
         $payload['culprit'] = $this->formatCulprit($trace, (string) ($trace[0]['file'] ?? 'unknown'), (int) ($trace[0]['line'] ?? 0));
+    }
+
+    /**
+     * True for BeaconBundle implementation frames (not tests or host app code).
+     *
+     * Must not match any path segment named "BeaconBundle" — CI checkouts live under
+     * `…/BeaconBundle/BeaconBundle/…`, which would wipe the entire backtrace.
+     *
+     * @param array<string, mixed> $frame
+     */
+    private function isBeaconBundleImplementationFrame(array $frame): bool
+    {
+        $class = isset($frame['class']) && is_string($frame['class']) ? $frame['class'] : '';
+        if ($class !== '' && str_starts_with($class, 'Nowo\\BeaconBundle\\')) {
+            return true;
+        }
+
+        $file = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : '';
+        if ($file === '') {
+            return false;
+        }
+
+        // EnvelopeBuilder lives in src/Envelope → package src/ root.
+        $srcRoot = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($file, $srcRoot);
     }
 
     /**

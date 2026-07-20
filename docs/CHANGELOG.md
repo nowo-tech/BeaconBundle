@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-20
+
+### Fixed
+
+- Message `stacktrace` attachment no longer drops the entire backtrace when the package path contains `BeaconBundle` (e.g. GitHub Actions checkout `…/BeaconBundle/BeaconBundle/…`).
+
 ## [1.4.1] - 2026-07-20
 
 ### Added
@@ -145,7 +151,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.0...v1.3.1

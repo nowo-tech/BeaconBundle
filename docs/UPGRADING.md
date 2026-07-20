@@ -147,6 +147,12 @@ Demo / docs only. **No consumer API or config changes.**
 - Optional: hit `/transaction-nplus1` to exercise Beacon N+1 performance UI.
 - Override the Beacon checkout path with `BEACON_REPO=/path/to/symfony-beacon` if repos are not siblings under `repositories/`.
 
-## Upgrading from 1.4.1 to the next release
+## Upgrading from 1.4.1 to 1.4.2
+
+Bugfix only. **No consumer API or config changes.**
+
+- Message events with `send.stacktrace: true` again include `stacktrace` / `culprit` when the package is checked out under a path that contains `BeaconBundle` (typical GitHub Actions layout).
+
+## Upgrading from 1.4.2 to the next release
 
 No upgrade notes yet.
