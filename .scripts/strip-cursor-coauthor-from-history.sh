@@ -37,8 +37,9 @@ if [ -n "$(git replace -l 2>/dev/null || true)" ]; then
 fi
 
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter \
-  'sed -e "/^Co-authored-by: Cursor <cursoragent@cursor.com>$/d" -e "/^Co-authored-by:.*cursoragent@cursor\.com$/d"' \
-  "${REF}"
+  'sed -E -e "/^Co-authored-by:[[:space:]]*.*[Cc]ursor/Id" -e "/^Co-authored-by:[[:space:]]*.*@cursor\.(com|so)/Id" -e "/^Made-with:[[:space:]]*[Cc]ursor/Id"' \
+  --tag-name-filter cat \
+  -- --all
 
 "${CHECK_SCRIPT}" "${REF}"
 

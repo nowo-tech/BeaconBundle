@@ -1,0 +1,11 @@
+---
+description: Never add Cursor co-author trailers to git commits
+alwaysApply: true
+---
+
+Never add `Co-authored-by: Cursor` / `cursoragent@cursor.com` / `@cursor.com` / `Made-with: Cursor` trailers to git commits in this repository.
+
+When creating commits:
+- Do not pass Cursor co-author trailers to `git commit`
+- Prefer repository hooks via `make setup-hooks` (`.githooks/`)
+- If a trailer appears, strip it before push; use `make check-no-cursor-coauthor`

@@ -106,9 +106,10 @@ strip-cursor-coauthor-from-history:
 	@./.scripts/strip-cursor-coauthor-from-history.sh
 
 setup-hooks:
-	@chmod +x .githooks/commit-msg 2>/dev/null || true
+	@chmod +x .githooks/commit-msg .githooks/prepare-commit-msg 2>/dev/null || true
+	@chmod +x .scripts/check-no-cursor-coauthor.sh .scripts/strip-cursor-coauthor-from-history.sh 2>/dev/null || true
 	@git config core.hooksPath .githooks
-	@echo "✅ Git hooks installed (.githooks — includes commit-msg for REQ-GIT-001)."
+	@echo "✅ Git hooks installed (.githooks — strips Cursor Co-authored-by / Made-with trailers)."
 
 release-check: check-no-cursor-coauthor ensure-up composer-sync cs-fix cs-check rector-dry phpstan test-coverage release-check-demos
 

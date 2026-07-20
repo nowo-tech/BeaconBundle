@@ -23,7 +23,7 @@ if [ -n "${TOPLEVEL}" ] && [ "$(cd "${TOPLEVEL}" && pwd -P)" != "${HERE}" ]; the
   exit 1
 fi
 
-PATTERN='(^Co-authored-by: Cursor <cursoragent@cursor.com>$|^Co-authored-by:.*cursoragent@cursor\.com| Co-authored-by: Cursor <cursoragent@cursor.com>| Co-authored-by:.*cursoragent@cursor\.com)'
+PATTERN='(^Co-authored-by:[[:space:]]*.*[Cc]ursor|^Co-authored-by:[[:space:]]*.*@cursor\.(com|so)|^Co-authored-by: Cursor <cursoragent@cursor.com>$|^Made-with:[[:space:]]*[Cc]ursor| Co-authored-by: Cursor <cursoragent@cursor.com>| Co-authored-by:.*cursoragent@cursor\.com)'
 
 # Use --no-replace-objects so local `git replace` refs cannot hide dirty history
 # that CI (fresh clone) would still see.
