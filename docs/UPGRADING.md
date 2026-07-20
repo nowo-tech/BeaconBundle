@@ -21,8 +21,10 @@ Minimal first-install config:
 ```yaml
 nowo_beacon:
     enabled: true
-    dsn: '%env(default::BEACON_DSN)%'
+    dsn: '%env(string:default::BEACON_DSN)%'
 ```
+
+Prefer `%env(string:default::BEACON_DSN)%` so an empty env value resolves to `""` instead of `null`.
 
 ## Upgrading from 1.0.0 to 1.0.1
 
@@ -30,6 +32,18 @@ nowo_beacon:
 - Require Symfony **7.0+** or **8.x** (Symfony 6.x is no longer supported).
 - No public API changes.
 
-## Upgrading from 1.0.1 to the next release
+## Upgrading within 1.0.1 → 1.0.5
+
+- **1.0.2–1.0.3**: documentation / sample-app restore only; no consumer code changes.
+- **1.0.4**: empty or unset `BEACON_DSN` disables the client at runtime without failing container compilation. Update config to `%env(string:default::BEACON_DSN)%` if you still use a bare `%env(BEACON_DSN)%` that can be empty.
+- **1.0.5**: CI-only fix; no consumer changes.
+
+## Upgrading to 1.0.6
+
+- The repository sample app is **only** `demo/symfony8` (`http://localhost:8011`). `demo/symfony7` was removed.
+- Bundle Composer constraints are unchanged: Symfony **`^7.0 || ^8.0`** remains supported for applications.
+- No public API changes.
+
+## Upgrading from 1.0.6 to the next release
 
 No upgrade notes yet.

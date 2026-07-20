@@ -202,9 +202,9 @@ BeaconBundle logs transport failures (`warning` for non-2xx, `error` for network
 - [ ] Automatic listener enabled **or** manual `capture*` called
 - [ ] Event visible in the Beacon project UI
 
-## Demo apps in this repository
+## Demo app in this repository
 
-FrankenPHP demos under `demo/symfony7` and `demo/symfony8` already include BeaconBundle. Copy `.env.example` → `.env`, set `BEACON_DSN`, then:
+The FrankenPHP demo under `demo/symfony8` already includes BeaconBundle. Copy `.env.example` → `.env`, set `BEACON_DSN`, then:
 
 ```bash
 make -C demo/symfony8 up

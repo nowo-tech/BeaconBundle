@@ -12,16 +12,16 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "673ca2e885c543ffb23457d4cbc84187d5c5b8b6"
+                "reference": "dd79d5e013f49e441e22521a256bf37ed9bc07c8"
             },
             "require": {
-                "php": ">=8.1 <8.6",
+                "php": ">=8.2 <8.6",
                 "psr/log": "^1.0 || ^2.0 || ^3.0",
-                "symfony/config": "^6.0 || ^7.0 || ^8.0",
-                "symfony/dependency-injection": "^6.0 || ^7.0 || ^8.0",
-                "symfony/framework-bundle": "^6.0 || ^7.0 || ^8.0",
-                "symfony/http-client": "^6.0 || ^7.0 || ^8.0",
-                "symfony/http-kernel": "^6.0 || ^7.0 || ^8.0"
+                "symfony/config": "^7.0 || ^8.0",
+                "symfony/dependency-injection": "^7.0 || ^8.0",
+                "symfony/framework-bundle": "^7.0 || ^8.0",
+                "symfony/http-client": "^7.0 || ^8.0",
+                "symfony/http-kernel": "^7.0 || ^8.0"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.0",
@@ -31,7 +31,7 @@
                 "phpstan/phpstan-symfony": "^2.0",
                 "phpunit/phpunit": "^10.0 || ^11.0",
                 "rector/rector": "^2.0",
-                "symfony/yaml": "^6.0 || ^7.0 || ^8.0"
+                "symfony/yaml": "^7.0 || ^8.0"
             },
             "suggest": {
                 "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml"
