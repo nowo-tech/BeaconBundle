@@ -2,9 +2,9 @@
 
 ## Requirements
 
-- PHP `>=8.1 <8.6`
-- Symfony components compatible with `^6.0 || ^7.0 || ^8.0`
-- Officially covered Symfony minors include `7.4`, `8.0`, and `8.1`
+- PHP `>=8.2 <8.6`
+- Symfony components compatible with `^7.0 || ^8.0`
+- Officially covered Symfony minors include `7.0`, `7.4`, `8.0`, and `8.1`
 
 ## Composer
 

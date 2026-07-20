@@ -20,8 +20,6 @@ That is the production-style worker setup. In local dev, the demo uses `Caddyfil
 
 ## Running the demo
 
-### Symfony 8
-
 ```bash
 cd demo/symfony8
 cp .env.example .env
@@ -35,18 +33,6 @@ The demo reads `PORT` from `.env` (default `8011`) and prints:
 ```text
 Demo started at: http://localhost:<PORT>
 ```
-
-### Symfony 7
-
-If your checkout contains `demo/symfony7`, use the same flow from that directory:
-
-```bash
-cd demo/symfony7
-cp .env.example .env
-make up
-```
-
-At the time of writing, this repository ships the Symfony 8 demo. Keep this document accurate if a Symfony 7 demo is reintroduced later.
 
 ## Beacon server for local E2E
 

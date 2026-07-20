@@ -4,8 +4,8 @@
 [![Packagist Version](https://img.shields.io/packagist/v/nowo-tech/beacon-bundle.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
 [![Packagist Downloads](https://img.shields.io/packagist/dt/nowo-tech/beacon-bundle.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
 [![License](https://img.shields.io/packagist/l/nowo-tech/beacon-bundle.svg)](LICENSE)
-[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
-[![Symfony 7.4 | 8.0 | 8.1+](https://img.shields.io/badge/Symfony-7.4%20%7C%208.0%20%7C%208.1%2B-000000.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml)
+[![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
+[![Symfony 7 | 8.0 | 8.1+](https://img.shields.io/badge/Symfony-7%20%7C%208.0%20%7C%208.1%2B-000000.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/nowo-tech/BeaconBundle.svg?style=social)](https://github.com/nowo-tech/BeaconBundle/stargazers)
 [![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#tests-and-coverage)
 

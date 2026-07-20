@@ -18,8 +18,6 @@ The demo includes:
 - Dedicated `Makefile` (`demo/symfony8/Makefile`)
 - Beacon routes for success, listener, fingerprint, ignored-exception, and disabled-mode scenarios
 
-The repository currently ships the Symfony 8 demo application. If a Symfony 7 demo is added again, keep this file and `docs/DEMO-FRANKENPHP.md` in sync.
-
 ## Release checks
 
 ```bash
