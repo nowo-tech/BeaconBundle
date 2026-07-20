@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-20
+
+### Added
+
+- Configurable `send.*` switches for outbound context (environment, release, server name, stacktrace, request, user, runtime/PHP, framework/Symfony, OS).
+- Event payloads include fractional `timestamp`, ISO-8601 `datetime` (microseconds), and `contexts` (runtime / framework / os).
+- Optional authenticated `user` context via Security token storage (`send.user`, default `false`).
+- Breadcrumbs via `BeaconClientInterface::addBreadcrumb()` (attached to the next event/transaction, then cleared).
+- Performance transactions via `captureTransaction()` (Envelope item `type: transaction`).
+- Optional console error listener (`register_console_listener`, default `true`).
+- Optional Monolog handler (`monolog_handler.enabled`, requires `monolog/monolog`).
+- Demo routes: `/breadcrumbs`, `/user`, `/transaction`, `/monolog` (Symfony 8 sample).
+
+### Changed
+
+- Envelope `sent_at` / event `datetime` use microsecond precision.
+- Demo `.env.example` documents HTTP ingest via `host.docker.internal:9081` for local Symfony Beacon.
+
+### Fixed
+
+- `BeaconConsoleErrorListener` constructor defaults so autowiring does not fail when arguments are not yet set.
+- Do not autoload `BeaconMonologHandler` unless Monolog’s `AbstractProcessingHandler` is available (avoids 500 in apps without `monolog/monolog`).
+
 ## [1.0.6] - 2026-07-20
 
 ### Removed
@@ -63,8 +86,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-### Changed
-
-- Documentation and examples now use Beacon-specific terminology consistently.
-- README was rewritten as the canonical product entry point with DSN format, quick start, FrankenPHP, and documentation links.
-- Demo app text, pages, and route matrix were aligned with BeaconBundle instead of legacy bundle wording.
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.6...v1.1.0
+[1.0.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.5...v1.0.6
+[1.0.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.0.0

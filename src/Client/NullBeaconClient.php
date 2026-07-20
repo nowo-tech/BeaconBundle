@@ -29,4 +29,22 @@ final class NullBeaconClient implements BeaconClientInterface
     ): ?string {
         return null;
     }
+
+    public function addBreadcrumb(
+        string $message,
+        string $category = 'default',
+        string $level = 'info',
+        array $data = [],
+    ): void {
+    }
+
+    public function captureTransaction(
+        string $transactionName,
+        float $startTimestamp,
+        float $endTimestamp,
+        array $spans = [],
+        array $extra = [],
+    ): ?string {
+        return null;
+    }
 }

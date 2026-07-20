@@ -29,6 +29,8 @@ final class BeaconClientTest extends TestCase
         self::assertFalse($client->isEnabled());
         self::assertNull($client->captureMessage('x'));
         self::assertNull($client->captureException(new RuntimeException('x')));
+        self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
+        $client->addBreadcrumb('noop');
     }
 
     public function testCaptureMessagePostsEnvelope(): void
@@ -68,6 +70,27 @@ final class BeaconClientTest extends TestCase
 
         $body = (string) ($requests[0]['options']['body'] ?? '');
         self::assertStringContainsString('"dsn":"https://pubkey@beacon.example.com:9444/5"', $body);
+    }
+
+    public function testBreadcrumbsAndTransaction(): void
+    {
+        $requests = [];
+        $http     = new MockHttpClient(static function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = $options;
+
+            return new MockResponse('', ['http_code' => 200]);
+        });
+
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $buffer = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
+        $builder = new EnvelopeBuilder('test', null, 'ci', new \Nowo\BeaconBundle\Envelope\SendOptions(), null, $buffer);
+        $client = new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $buffer);
+
+        $client->addBreadcrumb('pre');
+        $txId = $client->captureTransaction('demo.tx', 1.0, 2.0, [], ['k' => 1]);
+        self::assertNotNull($txId);
+        self::assertStringContainsString('"type":"transaction"', (string) ($requests[0]['body'] ?? ''));
+        self::assertStringContainsString('pre', (string) ($requests[0]['body'] ?? ''));
     }
 
     public function testCaptureExceptionPostsEnvelope(): void

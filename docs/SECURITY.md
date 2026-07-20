@@ -43,7 +43,8 @@ The bundle already includes several defensive defaults:
 Residual risk to remember:
 
 - The client can generate a local event id even if delivery later fails. Treat the Beacon UI or server logs as the source of truth for accepted events.
-- The automatic listener captures request URI and method as extra context. Do not put secrets into URLs.
+- The automatic listener captures request URI and method as extra context when `send.request` is true. Do not put secrets into URLs. Disable `send.request` if URLs are sensitive.
+- `send.user` is off by default. Enabling it may transmit personal data (user identifier / email) to your Beacon host; keep it aligned with your privacy policy and legal pages.
 
 ## Supported Versions
 

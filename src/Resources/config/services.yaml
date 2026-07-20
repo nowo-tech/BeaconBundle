@@ -6,6 +6,14 @@ services:
 
     Nowo\BeaconBundle\Dsn\BeaconDsnParser: ~
 
+    Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer:
+        tags:
+            - { name: kernel.reset, method: reset }
+
     Nowo\BeaconBundle\EventListener\BeaconExceptionListener:
+        tags:
+            - { name: kernel.event_subscriber }
+
+    Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener:
         tags:
             - { name: kernel.event_subscriber }

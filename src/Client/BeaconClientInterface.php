@@ -7,7 +7,7 @@ namespace Nowo\BeaconBundle\Client;
 use Throwable;
 
 /**
- * Public API for reporting events to a Beacon instance.
+ * Public API for reporting events and transactions to a Beacon instance.
  */
 interface BeaconClientInterface
 {
@@ -34,5 +34,37 @@ interface BeaconClientInterface
         string $level = 'error',
         array $extra = [],
         ?array $fingerprint = null,
+    ): ?string;
+
+    /**
+     * Record a breadcrumb for the next captured event/transaction.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function addBreadcrumb(
+        string $message,
+        string $category = 'default',
+        string $level = 'info',
+        array $data = [],
+    ): void;
+
+    /**
+     * Capture a performance transaction (Beacon envelope item type `transaction`).
+     *
+     * @param list<array{
+     *     op?: string,
+     *     description?: string,
+     *     span_id?: string,
+     *     start_timestamp?: float,
+     *     timestamp?: float
+     * }> $spans
+     * @param array<string, mixed> $extra
+     */
+    public function captureTransaction(
+        string $transactionName,
+        float $startTimestamp,
+        float $endTimestamp,
+        array $spans = [],
+        array $extra = [],
     ): ?string;
 }

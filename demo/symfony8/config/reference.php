@@ -1138,6 +1138,22 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     timeout?: float|Param, // HTTP timeout in seconds for ingest requests. // Default: 5.0
  *     register_error_listener?: bool|Param, // When true, register a kernel.exception listener that reports uncaught exceptions. // Default: true
  *     ignore_exceptions?: list<scalar|Param|null>,
+ *     register_console_listener?: bool|Param, // When true, report uncaught console command errors (ConsoleEvents::ERROR). // Default: true
+ *     monolog_handler?: array{ // Optional Monolog handler (requires monolog/monolog). Disabled by default.
+ *         enabled?: bool|Param, // Default: false
+ *         level?: scalar|Param|null, // Minimum Monolog level to forward (e.g. error, warning). // Default: "error"
+ *     },
+ *     send?: array{ // Opt-in/out switches for categories of context attached to outbound events.
+ *         environment?: bool|Param, // Send environment tag. // Default: true
+ *         release?: bool|Param, // Send release / code version when configured. // Default: true
+ *         server_name?: bool|Param, // Send server hostname tag. // Default: true
+ *         stacktrace?: bool|Param, // Send stack frames and culprit for exceptions. // Default: true
+ *         request?: bool|Param, // Send request URI and method from the automatic exception listener. // Default: true
+ *         user?: bool|Param, // Send authenticated user summary (may include PII). Disabled by default. // Default: false
+ *         runtime?: bool|Param, // Send PHP runtime version in contexts.runtime. // Default: true
+ *         framework?: bool|Param, // Send Symfony version in contexts.framework when available. // Default: true
+ *         os?: bool|Param, // Send OS family/version in contexts.os. // Default: true
+ *     },
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,

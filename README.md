@@ -7,7 +7,7 @@
 [![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
 [![Symfony 7 | 8.0 | 8.1+](https://img.shields.io/badge/Symfony-7%20%7C%208.0%20%7C%208.1%2B-000000.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/nowo-tech/BeaconBundle.svg?style=social)](https://github.com/nowo-tech/BeaconBundle/stargazers)
-[![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#tests-and-coverage)
+[![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen.svg)](#tests-and-coverage)
 
 Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon), the self-hosted error-tracking server from Nowo. BeaconBundle sends Envelope requests to any Beacon host described by a DSN and provides both manual APIs and an optional automatic exception listener.
 
@@ -19,6 +19,8 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 - Manual APIs through `BeaconClientInterface`
 - Optional `kernel.exception` listener for uncaught HTTP exceptions
 - `ignore_exceptions` support for listener-side filtering
+- Configurable outbound context (`send.*`: stacktrace, request, user, PHP/Symfony versions, OS, …)
+- Precise timestamps (fractional Unix + ISO-8601 with microseconds)
 - Local FrankenPHP demo for success, failure, and listener scenarios
 
 ## Installation
@@ -48,7 +50,19 @@ nowo_beacon:
     timeout: 5.0
     register_error_listener: true
     ignore_exceptions: []
+    send:
+        environment: true
+        release: true
+        server_name: true
+        stacktrace: true
+        request: true
+        user: false          # opt-in; may include PII
+        runtime: true        # PHP version
+        framework: true      # Symfony version
+        os: true
 ```
+
+See [Configuration](docs/CONFIGURATION.md) for the full `send.*` reference.
 
 For local self-signed HTTPS only:
 

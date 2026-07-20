@@ -121,6 +121,102 @@ final class DemoController extends AbstractController
         );
     }
 
+    #[Route(path: '/breadcrumbs', name: 'demo_breadcrumbs', methods: ['GET'])]
+    public function breadcrumbs(BeaconClientInterface $beacon): Response
+    {
+        $beacon->addBreadcrumb('Opened demo home', 'navigation', 'info');
+        $beacon->addBreadcrumb('Clicked breadcrumbs demo', 'ui', 'info', ['route' => 'demo_breadcrumbs']);
+        $eventId = $beacon->captureMessage('Beacon demo with breadcrumbs', 'info', [
+            'demo' => true,
+            'route' => 'demo_breadcrumbs',
+        ]);
+
+        return $this->renderReport(
+            heading: 'Breadcrumbs demo',
+            description: 'Two breadcrumbs were recorded and attached to this event (cleared after send).',
+            enabled: $beacon->isEnabled(),
+            eventId: $eventId,
+            level: 'info',
+        );
+    }
+
+    #[Route(path: '/user', name: 'demo_user', methods: ['GET'])]
+    public function userContext(BeaconClientInterface $beacon): Response
+    {
+        $eventId = $beacon->captureMessage('Beacon demo user context', 'info', [
+            'demo' => true,
+            'route' => 'demo_user',
+            'authenticated' => $this->getUser() !== null,
+        ]);
+
+        return $this->renderReport(
+            heading: 'User context demo',
+            description: $this->getUser()
+                ? 'send.user is enabled in demos: the authenticated user summary is attached when present.'
+                : 'No authenticated user. Log in via /login then reopen this route to attach user context.',
+            enabled: $beacon->isEnabled(),
+            eventId: $eventId,
+            level: 'info',
+        );
+    }
+
+    #[Route(path: '/transaction', name: 'demo_transaction', methods: ['GET'])]
+    public function transaction(BeaconClientInterface $beacon): Response
+    {
+        $start = microtime(true);
+        usleep(12000);
+        $mid = microtime(true);
+        usleep(8000);
+        $end = microtime(true);
+
+        $eventId = $beacon->captureTransaction(
+            'demo.checkout',
+            $start,
+            $end,
+            [
+                [
+                    'op' => 'demo.work',
+                    'description' => 'simulate checkout step',
+                    'span_id' => bin2hex(random_bytes(8)),
+                    'start_timestamp' => $start,
+                    'timestamp' => $mid,
+                ],
+                [
+                    'op' => 'db.query',
+                    'description' => 'SELECT demo',
+                    'span_id' => bin2hex(random_bytes(8)),
+                    'start_timestamp' => $mid,
+                    'timestamp' => $end,
+                ],
+            ],
+            ['demo' => true, 'route' => 'demo_transaction'],
+        );
+
+        return $this->renderReport(
+            heading: 'Performance transaction',
+            description: 'Sent a transaction envelope with two spans. Check Beacon → Performance.',
+            enabled: $beacon->isEnabled(),
+            eventId: $eventId,
+            level: 'info',
+        );
+    }
+
+    #[Route(path: '/monolog', name: 'demo_monolog', methods: ['GET'])]
+    public function monolog(\Psr\Log\LoggerInterface $logger, BeaconClientInterface $beacon): Response
+    {
+        $logger->error('Beacon demo Monolog error', ['demo' => true, 'route' => 'demo_monolog']);
+
+        return $this->renderReport(
+            heading: 'Monolog demo',
+            description: $beacon->isEnabled()
+                ? 'Logged an error via Monolog. Enable nowo_beacon.monolog_handler.enabled to forward it to Beacon.'
+                : 'Beacon client is disabled; Monolog still logged locally.',
+            enabled: $beacon->isEnabled(),
+            eventId: null,
+            level: 'error',
+        );
+    }
+
     #[Route(path: '/status', name: 'demo_status', methods: ['GET'])]
     public function status(BeaconClientInterface $beacon): JsonResponse
     {

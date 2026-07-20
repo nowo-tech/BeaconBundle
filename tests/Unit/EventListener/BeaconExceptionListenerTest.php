@@ -90,6 +90,22 @@ final class BeaconExceptionListenerTest extends TestCase
         }));
     }
 
+    public function testOmitsRequestExtraWhenSendRequestIsDisabled(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client
+            ->expects(self::once())
+            ->method('captureException')
+            ->with(
+                self::isInstanceOf(RuntimeException::class),
+                [],
+            );
+
+        $listener = new BeaconExceptionListener($client, true, [], false);
+        $listener->onKernelException($this->createEvent(new RuntimeException('boom')));
+    }
+
     private function createEvent(Throwable $throwable): ExceptionEvent
     {
         $kernel = $this->createMock(HttpKernelInterface::class);

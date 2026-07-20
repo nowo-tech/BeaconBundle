@@ -10,10 +10,13 @@ nowo_beacon:
     environment: '%kernel.environment%'
     # release: '%env(default::BEACON_RELEASE)%'
     verify_peer: true
-    # Set false only for local self-signed HTTPS:
-    # when@dev:
-    #     nowo_beacon:
-    #         verify_peer: false
     register_error_listener: true
     ignore_exceptions:
         - InvalidArgumentException
+
+when@dev:
+    nowo_beacon:
+        # Local Beacon often uses self-signed TLS on :9444; HTTP :9081 needs no TLS.
+        verify_peer: false
+        send:
+            user: true

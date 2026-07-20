@@ -3,16 +3,32 @@
 {% block body %}
 <div class="container py-5">
     <h1 class="mb-3">Beacon Bundle demo</h1>
-    <p class="lead">Report events to any Symfony Beacon instance via <code>BEACON_DSN</code> and exercise the main success and failure scenarios.</p>
+    <p class="lead">Report events to any Symfony Beacon instance via <code>BEACON_DSN</code>. The matrix below maps each route to the scenario it exercises.</p>
+
+    <h2 class="h5 mt-4">Messages &amp; exceptions</h2>
     <ul>
-        <li><a href="{{ path('demo_report') }}">GET /report</a> - capture an <code>info</code> message</li>
-        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> - capture an <code>error</code> message</li>
-        <li><a href="{{ path('demo_exception') }}">GET /exception</a> - capture a manual exception and show its event id</li>
-        <li><a href="{{ path('demo_boom') }}">GET /boom</a> - throw a <code>RuntimeException</code> for the listener</li>
-        <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> - throw an ignored <code>InvalidArgumentException</code></li>
-        <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> - capture a message with a custom fingerprint</li>
-        <li><a href="{{ path('demo_status') }}">GET /status</a> - JSON status for <code>enabled</code>, <code>has_dsn</code>, and <code>environment</code></li>
+        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info)</li>
+        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error)</li>
+        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code></li>
+        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — listener capture (shows Symfony 500; event is sent)</li>
+        <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> — ignored by listener (500, <strong>not</strong> sent)</li>
+        <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint grouping</li>
     </ul>
-    <p class="text-muted small mb-0">Set <code>BEACON_DSN=https://PUBLIC@host:port/PROJECT_ID</code> in <code>.env</code>. Leave it empty to disable reporting. For local self-signed HTTPS Beacon servers, set <code>verify_peer: false</code> in <code>when@dev</code> only.</p>
+
+    <h2 class="h5 mt-4">Context &amp; performance</h2>
+    <ul>
+        <li><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a> — breadcrumbs attached to the next event</li>
+        <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code>send.user</code>; log in first)</li>
+        <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans</li>
+        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — PSR logger sample (wire <code>monolog_handler</code> + Monolog to forward to Beacon)</li>
+    </ul>
+
+    <h2 class="h5 mt-4">Status</h2>
+    <ul>
+        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code>enabled</code> / <code>has_dsn</code> / <code>environment</code></li>
+        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code>send.user</code></li>
+    </ul>
+
+    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC@localhost:9444/…</code> from the host). Empty DSN disables reporting. Local TLS: <code>verify_peer: false</code> in <code>when@dev</code>.</p>
 </div>
 {% endblock %}

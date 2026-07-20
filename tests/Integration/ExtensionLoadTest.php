@@ -79,6 +79,9 @@ final class ExtensionLoadTest extends TestCase
         self::assertEquals(new Reference(BeaconClientInterface::class), $listenerDefinition->getArgument('$client'));
         self::assertTrue($listenerDefinition->getArgument('$enabled'));
         self::assertSame([RuntimeException::class], $listenerDefinition->getArgument('$ignoreExceptions'));
+        self::assertTrue($listenerDefinition->getArgument('$sendRequest'));
+        self::assertArrayHasKey('user', $clientDefinition->getArgument('$send'));
+        self::assertFalse($clientDefinition->getArgument('$send')['user']);
     }
 
     public function testRegisterErrorListenerFalseRemovesListener(): void

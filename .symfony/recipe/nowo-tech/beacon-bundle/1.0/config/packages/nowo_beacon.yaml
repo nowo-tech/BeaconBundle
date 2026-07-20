@@ -16,3 +16,14 @@ nowo_beacon:
     #         verify_peer: false
     register_error_listener: true
     ignore_exceptions: []
+    # Per-category outbound context (user is opt-in; may include PII):
+    # send:
+    #     environment: true
+    #     release: true
+    #     server_name: true
+    #     stacktrace: true
+    #     request: true
+    #     user: false
+    #     runtime: true
+    #     framework: true
+    #     os: true

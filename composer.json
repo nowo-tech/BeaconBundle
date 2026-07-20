@@ -42,12 +42,15 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.0",
+        "monolog/monolog": "^3.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-symfony": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpunit/phpunit": "^10.0 || ^11.0",
         "rector/rector": "^2.0",
+        "symfony/console": "^7.0 || ^8.0",
+        "symfony/security-core": "^7.0 || ^8.0",
         "symfony/yaml": "^7.0 || ^8.0"
     },
     "autoload": {
@@ -118,6 +121,8 @@
         "qa": "Run all quality assurance checks"
     },
     "suggest": {
-        "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml"
+        "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
+        "monolog/monolog": "Enable nowo_beacon.monolog_handler to forward log records to Beacon",
+        "symfony/security-bundle": "Enable send.user authenticated context via the security token storage"
     }
 }

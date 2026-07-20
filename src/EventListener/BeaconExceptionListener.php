@@ -20,6 +20,7 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         private readonly bool $enabled = true,
         /** @var list<class-string> */
         private readonly array $ignoreExceptions = [],
+        private readonly bool $sendRequest = true,
     ) {
     }
 
@@ -41,10 +42,15 @@ final class BeaconExceptionListener implements EventSubscriberInterface
             return;
         }
 
-        $this->client->captureException($throwable, [
-            'request_uri'    => $event->getRequest()->getUri(),
-            'request_method' => $event->getRequest()->getMethod(),
-        ]);
+        $extra = [];
+        if ($this->sendRequest) {
+            $extra = [
+                'request_uri'    => $event->getRequest()->getUri(),
+                'request_method' => $event->getRequest()->getMethod(),
+            ];
+        }
+
+        $this->client->captureException($throwable, $extra);
     }
 
     private function shouldIgnore(Throwable $throwable): bool

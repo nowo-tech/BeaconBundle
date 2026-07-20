@@ -44,6 +44,44 @@ Prefer `%env(string:default::BEACON_DSN)%` so an empty env value resolves to `""
 - Bundle Composer constraints are unchanged: Symfony **`^7.0 || ^8.0`** remains supported for applications.
 - No public API changes.
 
-## Upgrading from 1.0.6 to the next release
+## Upgrading from 1.0.6 to 1.1.0
+
+### New optional configuration
+
+```yaml
+nowo_beacon:
+    register_console_listener: true   # ConsoleEvents::ERROR
+    monolog_handler:
+        enabled: false                # requires monolog/monolog
+        level: error
+    send:
+        environment: true
+        release: true
+        server_name: true
+        stacktrace: true
+        request: true
+        user: false                   # PII — opt-in
+        runtime: true
+        framework: true
+        os: true
+```
+
+### New client APIs
+
+- `BeaconClientInterface::addBreadcrumb(...)`
+- `BeaconClientInterface::captureTransaction(...)`
+
+### Behaviour
+
+- Events always include precise `timestamp` / `datetime`; contexts depend on `send.*`.
+- `send.user: true` may transmit personal data — align with your privacy policy.
+- Local Beacon from the FrankenPHP demo: prefer `BEACON_DSN=http://KEY@host.docker.internal:9081/1` (see Symfony Beacon `docs/dsn.md`).
+
+### Compatibility
+
+- No breaking changes to existing `captureException` / `captureMessage` call sites.
+- Apps without Monolog are unaffected when `monolog_handler.enabled` stays `false`.
+
+## Upgrading from 1.1.0 to the next release
 
 No upgrade notes yet.

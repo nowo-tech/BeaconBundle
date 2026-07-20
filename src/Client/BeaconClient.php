@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Client;
 
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
@@ -21,6 +22,7 @@ final class BeaconClient implements BeaconClientInterface
         private readonly EnvelopeTransport $transport,
         private readonly EnvelopeBuilder $envelopeBuilder,
         private readonly bool $enabled = true,
+        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
     ) {
     }
 
@@ -66,6 +68,40 @@ final class BeaconClient implements BeaconClientInterface
             null,
             $extra,
             $fingerprint,
+        );
+
+        $this->transport->send($body);
+
+        return $this->extractEventId($body);
+    }
+
+    public function addBreadcrumb(
+        string $message,
+        string $category = 'default',
+        string $level = 'info',
+        array $data = [],
+    ): void {
+        $this->breadcrumbBuffer?->add($message, $category, $level, $data);
+    }
+
+    public function captureTransaction(
+        string $transactionName,
+        float $startTimestamp,
+        float $endTimestamp,
+        array $spans = [],
+        array $extra = [],
+    ): ?string {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $body = $this->envelopeBuilder->buildTransactionEnvelope(
+            $this->transport->getDsn(),
+            $transactionName,
+            $startTimestamp,
+            $endTimestamp,
+            $spans,
+            $extra,
         );
 
         $this->transport->send($body);

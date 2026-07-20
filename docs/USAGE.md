@@ -47,6 +47,48 @@ final class CheckoutController
 
 Manual APIs return the locally generated event id or `null` when the client is disabled.
 
+## Breadcrumbs
+
+```php
+$beacon->addBreadcrumb('Opened checkout', 'navigation');
+$beacon->addBreadcrumb('Applied coupon', 'cart', 'info', ['code' => 'SAVE10']);
+$beacon->captureMessage('Checkout failed', 'error'); // breadcrumbs attached, then cleared
+```
+
+## Performance transactions
+
+```php
+$start = microtime(true);
+// ... work ...
+$end = microtime(true);
+$beacon->captureTransaction('checkout', $start, $end, [
+    [
+        'op' => 'db.query',
+        'description' => 'SELECT …',
+        'span_id' => bin2hex(random_bytes(8)),
+        'start_timestamp' => $start,
+        'timestamp' => $end,
+    ],
+]);
+```
+
+Transactions appear under **Performance** in Symfony Beacon.
+
+## Console errors
+
+With `register_console_listener: true` (default), uncaught console command errors are reported with `extra.console` / `extra.command`.
+
+## Monolog
+
+```yaml
+nowo_beacon:
+    monolog_handler:
+        enabled: true
+        level: error
+```
+
+Requires `monolog/monolog`. Records at/above the level are forwarded as Beacon messages (or `captureException` when `context.exception` is a `Throwable`).
+
 ## Disabled mode
 
 When `enabled: false` or the DSN is empty, the container injects `NullBeaconClient`. Calls become no-ops and return `null`.
@@ -99,6 +141,10 @@ when@dev:
 | Listener capture | `register_error_listener: true` and valid DSN | `GET /boom` | Request fails with `500`; the uncaught exception is reported by the listener. |
 | Ignored exception | `ignore_exceptions` contains `InvalidArgumentException` | `GET /boom-ignored` | Request fails with `500`; the exception is intentionally not reported by the listener. |
 | Fingerprint | Valid DSN | `GET /fingerprint` | Event is sent with a custom fingerprint to influence grouping. |
+| Breadcrumbs | Valid DSN | `GET /breadcrumbs` | Event includes `breadcrumbs.values`. |
+| User context | Valid DSN, logged in, `send.user: true` | `GET /user` | Event includes `user` when authenticated. |
+| Transaction | Valid DSN | `GET /transaction` | Performance transaction appears in Beacon. |
+| Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |
 | Wrong key / 403 | DSN host/project valid but public key invalid | `GET /report` | Demo may still render a local event id, but Beacon rejects the envelope and no event appears in the Beacon UI. |

@@ -19,6 +19,9 @@ services:
       - APP_ENV=dev
       - APP_DEBUG=1
       - APP_SECRET=${APP_SECRET:-demo-secret}
+    # Reach Symfony Beacon published on the host (HTTP :9081 / HTTPS :9444).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Mitigate Docker/WSL DNS failures resolving repo.packagist.org (composer curl error 6).
     dns:
       - 8.8.8.8

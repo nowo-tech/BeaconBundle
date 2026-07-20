@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Client;
 
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
+use Nowo\BeaconBundle\Envelope\SendOptions;
+use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -19,9 +22,24 @@ final class BeaconClientFactory
         private readonly BeaconDsnParser $parser,
         private readonly HttpClientInterface $httpClient,
         private readonly ?LoggerInterface $logger = null,
+        private readonly ?UserContextProviderInterface $userContextProvider = null,
+        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
     ) {
     }
 
+    /**
+     * @param array{
+     *     environment?: bool,
+     *     release?: bool,
+     *     server_name?: bool,
+     *     stacktrace?: bool,
+     *     request?: bool,
+     *     user?: bool,
+     *     runtime?: bool,
+     *     framework?: bool,
+     *     os?: bool
+     * } $send
+     */
     public function create(
         bool $enabled,
         ?string $dsn,
@@ -30,6 +48,7 @@ final class BeaconClientFactory
         string $serverName,
         bool $verifyPeer,
         float $timeout,
+        array $send = [],
     ): BeaconClientInterface {
         $dsn = trim((string) $dsn);
         if (!$enabled || $dsn === '') {
@@ -37,7 +56,15 @@ final class BeaconClientFactory
         }
 
         $parsed    = $this->parser->parse($dsn);
-        $builder   = new EnvelopeBuilder($environment, $release, $serverName);
+        $sendOptions = SendOptions::fromArray($send);
+        $builder   = new EnvelopeBuilder(
+            $environment,
+            $release,
+            $serverName,
+            $sendOptions,
+            $this->userContextProvider,
+            $this->breadcrumbBuffer,
+        );
         $transport = new EnvelopeTransport(
             $this->httpClient,
             $parsed,
@@ -46,6 +73,6 @@ final class BeaconClientFactory
             $this->logger,
         );
 
-        return new BeaconClient($transport, $builder, true);
+        return new BeaconClient($transport, $builder, true, $this->breadcrumbBuffer);
     }
 }

@@ -25,7 +25,19 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($config['verify_peer']);
         self::assertSame(5.0, $config['timeout']);
         self::assertTrue($config['register_error_listener']);
+        self::assertTrue($config['register_console_listener']);
+        self::assertFalse($config['monolog_handler']['enabled']);
+        self::assertSame('error', $config['monolog_handler']['level']);
         self::assertSame([], $config['ignore_exceptions']);
+        self::assertTrue($config['send']['environment']);
+        self::assertTrue($config['send']['release']);
+        self::assertTrue($config['send']['server_name']);
+        self::assertTrue($config['send']['stacktrace']);
+        self::assertTrue($config['send']['request']);
+        self::assertFalse($config['send']['user']);
+        self::assertTrue($config['send']['runtime']);
+        self::assertTrue($config['send']['framework']);
+        self::assertTrue($config['send']['os']);
     }
 
     public function testCustomConfiguration(): void
@@ -43,6 +55,11 @@ final class ConfigurationTest extends TestCase
                 RuntimeException::class,
                 InvalidArgumentException::class,
             ],
+            'send'                    => [
+                'user'       => true,
+                'stacktrace' => false,
+                'request'    => false,
+            ],
         ]]);
 
         self::assertFalse($config['enabled']);
@@ -57,6 +74,10 @@ final class ConfigurationTest extends TestCase
             RuntimeException::class,
             InvalidArgumentException::class,
         ], $config['ignore_exceptions']);
+        self::assertTrue($config['send']['user']);
+        self::assertFalse($config['send']['stacktrace']);
+        self::assertFalse($config['send']['request']);
+        self::assertTrue($config['send']['runtime']);
     }
 
     public function testTimeoutMustBeAtLeastMinimum(): void
