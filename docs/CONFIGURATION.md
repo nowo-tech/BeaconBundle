@@ -30,7 +30,7 @@ BEACON_DSN=http://PUBLIC:SECRET@beacon.internal:9081/2
 ```yaml
 nowo_beacon:
     enabled: true
-    dsn: '%env(default::BEACON_DSN)%'
+    dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
     release: null
     server_name: null

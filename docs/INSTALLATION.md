@@ -41,7 +41,7 @@ Then copy the recipe config from:
 ```yaml
 nowo_beacon:
     enabled: true
-    dsn: '%env(default::BEACON_DSN)%'
+    dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
     release: null
     server_name: null
@@ -51,9 +51,11 @@ nowo_beacon:
     ignore_exceptions: []
 ```
 
+Use `string:default::BEACON_DSN` so an unset/empty variable resolves to an empty string (reporting off) instead of `null`.
+
 ## Configure the DSN
 
-Point `BEACON_DSN` at your Symfony Beacon server:
+Point `BEACON_DSN` at your Symfony Beacon server. To create a project and API key on the server, follow [Getting started](GETTING_STARTED.md).
 
 ```env
 BEACON_DSN=https://PUBLIC_KEY@beacon.example.com:9444/1
@@ -71,4 +73,4 @@ when@dev:
         verify_peer: false
 ```
 
-See [CONFIGURATION.md](CONFIGURATION.md) for the full key reference and [USAGE.md](USAGE.md) for capture examples and E2E scenarios.
+See [CONFIGURATION.md](CONFIGURATION.md) for the full key reference, [GETTING_STARTED.md](GETTING_STARTED.md) for end-to-end setup with Symfony Beacon, and [USAGE.md](USAGE.md) for capture examples.

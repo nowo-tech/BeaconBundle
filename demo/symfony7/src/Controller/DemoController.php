@@ -18,7 +18,7 @@ final class DemoController extends AbstractController
         #[Autowire('%nowo.beacon.enabled%')]
         private readonly bool $beaconEnabled,
         #[Autowire('%nowo.beacon.dsn%')]
-        private readonly string $beaconDsn,
+        private readonly ?string $beaconDsn,
         #[Autowire('%nowo.beacon.environment%')]
         private readonly string $beaconEnvironment,
     ) {
@@ -122,11 +122,11 @@ final class DemoController extends AbstractController
     }
 
     #[Route(path: '/status', name: 'demo_status', methods: ['GET'])]
-    public function status(): JsonResponse
+    public function status(BeaconClientInterface $beacon): JsonResponse
     {
         return $this->json([
-            'enabled' => $this->beaconEnabled,
-            'has_dsn' => '' !== $this->beaconDsn,
+            'enabled' => $beacon->isEnabled(),
+            'has_dsn' => '' !== trim((string) $this->beaconDsn),
             'environment' => $this->beaconEnvironment,
         ]);
     }

@@ -1,5 +1,7 @@
 # Usage
 
+For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, verify issues in the UI), start with [Getting started](GETTING_STARTED.md).
+
 ## Automatic exception reporting
 
 With `register_error_listener: true` and a non-empty DSN, uncaught HTTP exceptions are reported automatically through the `kernel.exception` listener.
@@ -64,30 +66,20 @@ with:
 
 ## End-to-end against `symfony-beacon`
 
-Reference server checkout:
+See [Getting started](GETTING_STARTED.md) for the complete project + DSN + verification checklist.
 
-```text
-/home/hector/nowo/developer.local.server/repositories/other/symfony-beacon
-```
-
-Typical local flow:
+Short local reminder:
 
 ```bash
-cd /home/hector/nowo/developer.local.server/repositories/other/symfony-beacon
+cd /path/to/symfony-beacon
 make up
-make seed
+make seed   # prints DSN + demo login
 ```
 
 Default ports:
 
 - HTTPS: `https://localhost:9444`
 - HTTP: `http://localhost:9081`
-
-The seed command prints a DSN like:
-
-```text
-https://<public_key>@localhost:9444/<project_id>
-```
 
 For local self-signed HTTPS, configure the demo or your app with:
 

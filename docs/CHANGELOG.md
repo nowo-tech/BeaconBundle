@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-07-20
+
+### Added
+
+- [Getting started](GETTING_STARTED.md) manual: create a Symfony Beacon project, obtain a DSN, configure BeaconBundle, and verify event collection.
+- Runtime `BeaconClientFactory` so empty `%env(BEACON_DSN)%` disables reporting without failing container compilation.
+
+### Fixed
+
+- Regenerate `composer.lock` on Symfony **7.4** so `composer install` works on PHP 8.2 (CI code-style/coverage jobs). Symfony 8 remains supported via the CI matrix `composer update` path.
+- Prefer `%env(string:default::BEACON_DSN)%` so empty env values resolve to `""` instead of `null`.
+
 ## [1.0.3] - 2026-07-20
 
 ### Fixed

@@ -31,6 +31,8 @@ Symfony Flex registers the bundle, creates `config/packages/nowo_beacon.yaml`, a
 
 ## Quick start
 
+Full walkthrough (create a Beacon project, copy the DSN, verify events): [Getting started](docs/GETTING_STARTED.md).
+
 ```env
 BEACON_DSN=https://PUBLIC_KEY@localhost:9444/1
 ```
@@ -38,7 +40,7 @@ BEACON_DSN=https://PUBLIC_KEY@localhost:9444/1
 ```yaml
 nowo_beacon:
     enabled: true
-    dsn: '%env(default::BEACON_DSN)%'
+    dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
     release: null
     server_name: null
@@ -97,6 +99,7 @@ The bundled demo uses FrankenPHP. Its production-style Caddyfile enables worker 
 
 ## Documentation
 
+- [Getting started (Symfony Beacon + bundle)](docs/GETTING_STARTED.md)
 - [Installation](docs/INSTALLATION.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Usage](docs/USAGE.md)

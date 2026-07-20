@@ -6,7 +6,7 @@
 # Example (local Beacon): https://9cb5e28adc3ed7a40052e2a17e327220@localhost:9444/1
 nowo_beacon:
     enabled: true
-    dsn: '%env(default::BEACON_DSN)%'
+    dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
     # release: '%env(default::BEACON_RELEASE)%'
     verify_peer: true

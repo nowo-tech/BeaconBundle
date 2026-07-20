@@ -18,17 +18,7 @@ From `demo/symfony8/docker/frankenphp/Caddyfile`:
 
 That is the production-style worker setup. In local dev, the demo uses `Caddyfile.dev` instead, which keeps plain `php_server` and disables cache headers.
 
-## Running the demos
-
-Symfony 7.4 (`demo/symfony7`, default port `8010`):
-
-```bash
-cd demo/symfony7
-cp .env.example .env
-make up
-```
-
-Symfony 8.1 (`demo/symfony8`, default port `8011`):
+## Running the demo
 
 ```bash
 cd demo/symfony8
@@ -38,7 +28,7 @@ cp .env.example .env
 make up
 ```
 
-Each demo reads `PORT` from `.env` and prints:
+The demo reads `PORT` from `.env` (default `8011`) and prints:
 
 ```text
 Demo started at: http://localhost:<PORT>

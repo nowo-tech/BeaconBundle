@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Integration;
 
-use Nowo\BeaconBundle\Client\BeaconClient;
+use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\DependencyInjection\Configuration;
 use Nowo\BeaconBundle\DependencyInjection\NowoBeaconExtension;
-use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
-use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
-use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -49,7 +46,7 @@ final class ExtensionLoadTest extends TestCase
         self::assertFalse($container->hasDefinition(BeaconExceptionListener::class));
     }
 
-    public function testValidDsnWiresBeaconClientServices(): void
+    public function testValidDsnWiresBeaconClientFactory(): void
     {
         $container = $this->createContainer();
 
@@ -66,17 +63,17 @@ final class ExtensionLoadTest extends TestCase
 
         self::assertTrue($container->getParameter('nowo.beacon.enabled'));
         self::assertSame('https://pubkey@beacon.example.com:9444/5', $container->getParameter('nowo.beacon.dsn'));
-        self::assertSame(BeaconClient::class, (string) $container->getAlias(BeaconClientInterface::class));
-        self::assertTrue($container->hasDefinition(BeaconDsn::class));
-        self::assertTrue($container->hasDefinition(EnvelopeBuilder::class));
-        self::assertTrue($container->hasDefinition(EnvelopeTransport::class));
-        self::assertTrue($container->hasDefinition(BeaconClient::class));
+        self::assertTrue($container->hasDefinition(BeaconClientFactory::class));
+        self::assertTrue($container->hasDefinition('nowo.beacon.client'));
+        self::assertSame('nowo.beacon.client', (string) $container->getAlias(BeaconClientInterface::class));
         self::assertTrue($container->hasDefinition(BeaconExceptionListener::class));
 
-        $transportDefinition = $container->getDefinition(EnvelopeTransport::class);
-        self::assertSame(1.5, $transportDefinition->getArgument('$timeout'));
-        self::assertFalse($transportDefinition->getArgument('$verifyPeer'));
-        self::assertEquals(new Reference(BeaconDsn::class), $transportDefinition->getArgument('$dsn'));
+        $clientDefinition = $container->getDefinition('nowo.beacon.client');
+        self::assertEquals([new Reference(BeaconClientFactory::class), 'create'], $clientDefinition->getFactory());
+        self::assertTrue($clientDefinition->getArgument('$enabled'));
+        self::assertSame('https://pubkey@beacon.example.com:9444/5', $clientDefinition->getArgument('$dsn'));
+        self::assertSame(1.5, $clientDefinition->getArgument('$timeout'));
+        self::assertFalse($clientDefinition->getArgument('$verifyPeer'));
 
         $listenerDefinition = $container->getDefinition(BeaconExceptionListener::class);
         self::assertEquals(new Reference(BeaconClientInterface::class), $listenerDefinition->getArgument('$client'));
@@ -95,10 +92,10 @@ final class ExtensionLoadTest extends TestCase
         ]], $container);
 
         self::assertFalse($container->hasDefinition(BeaconExceptionListener::class));
-        self::assertSame(BeaconClient::class, (string) $container->getAlias(BeaconClientInterface::class));
+        self::assertSame('nowo.beacon.client', (string) $container->getAlias(BeaconClientInterface::class));
     }
 
-    public function testInvalidDsnThrows(): void
+    public function testInvalidLiteralDsnThrowsAtCompileTime(): void
     {
         $this->expectException(InvalidBeaconDsnException::class);
 

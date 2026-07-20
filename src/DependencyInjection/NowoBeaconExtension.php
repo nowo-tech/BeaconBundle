@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\DependencyInjection;
 
-use Nowo\BeaconBundle\Client\BeaconClient;
+use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
-use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
-use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
-use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -23,6 +20,9 @@ use function is_string;
 
 /**
  * Loads `nowo_beacon` configuration and wires the HTTP Envelope client.
+ *
+ * DSN values coming from `%env(...)%` are resolved at runtime via {@see BeaconClientFactory}
+ * so an empty `BEACON_DSN` disables reporting without failing container compilation.
  */
 final class NowoBeaconExtension extends Extension
 {
@@ -31,14 +31,17 @@ final class NowoBeaconExtension extends Extension
         $configuration = new Configuration();
         $config        = $this->processConfiguration($configuration, $configs);
 
-        $dsn        = is_string($config['dsn'] ?? null) ? trim($config['dsn']) : '';
-        $enabled    = (bool) $config['enabled'] && $dsn !== '';
-        $serverName = is_string($config['server_name'] ?? null) && $config['server_name'] !== ''
+        $dsn         = is_string($config['dsn'] ?? null) ? trim($config['dsn']) : '';
+        $enabledFlag = (bool) $config['enabled'];
+        $serverName  = is_string($config['server_name'] ?? null) && $config['server_name'] !== ''
             ? $config['server_name']
             : (gethostname() ?: 'unknown');
 
-        $container->setParameter('nowo.beacon.enabled', $enabled);
-        $container->setParameter('nowo.beacon.dsn', $dsn);
+        // Literal DSNs contain "://"; env placeholders / %env(...)% do not.
+        $isLiteralDsn = str_contains($dsn, '://');
+
+        $container->setParameter('nowo.beacon.enabled', $enabledFlag && ($dsn !== ''));
+        $container->setParameter('nowo.beacon.dsn', $config['dsn'] ?? '');
         $container->setParameter('nowo.beacon.environment', $config['environment']);
         $container->setParameter('nowo.beacon.release', $config['release']);
         $container->setParameter('nowo.beacon.server_name', $serverName);
@@ -49,54 +52,42 @@ final class NowoBeaconExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yaml');
 
-        if (!$enabled) {
-            $null = new Definition(NullBeaconClient::class);
-            $null->setPublic(false);
-            $container->setDefinition(NullBeaconClient::class, $null);
-            $container->setAlias(BeaconClientInterface::class, NullBeaconClient::class);
-            $container->removeDefinition(BeaconExceptionListener::class);
+        if (!$enabledFlag || $dsn === '') {
+            $this->registerNullClient($container);
 
             return;
         }
 
-        // Validate DSN early at compile time.
-        (new BeaconDsnParser())->parse($dsn);
+        // Fail fast for literal DSNs; env / placeholder values are validated at runtime.
+        if ($isLiteralDsn) {
+            (new BeaconDsnParser())->parse($dsn);
+            $container->setParameter('nowo.beacon.enabled', true);
+        }
 
-        $dsnDefinition = new Definition(BeaconDsn::class);
-        $dsnDefinition->setFactory([new Reference(BeaconDsnParser::class), 'parse']);
-        $dsnDefinition->setArguments([$dsn]);
-        $dsnDefinition->setPublic(false);
-        $container->setDefinition(BeaconDsn::class, $dsnDefinition);
+        $factory = new Definition(BeaconClientFactory::class, [
+            '$parser'     => new Reference(BeaconDsnParser::class),
+            '$httpClient' => new Reference('http_client'),
+            '$logger'     => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $factory->setAutowired(false);
+        $factory->setPublic(false);
+        $container->setDefinition(BeaconClientFactory::class, $factory);
 
-        $builder = new Definition(EnvelopeBuilder::class, [
+        $client = new Definition(BeaconClientInterface::class);
+        $client->setFactory([new Reference(BeaconClientFactory::class), 'create']);
+        $client->setArguments([
+            '$enabled'     => $enabledFlag,
+            '$dsn'         => $config['dsn'] ?? '',
             '$environment' => $config['environment'],
             '$release'     => $config['release'],
             '$serverName'  => $serverName,
-        ]);
-        $builder->setAutowired(false);
-        $builder->setPublic(false);
-        $container->setDefinition(EnvelopeBuilder::class, $builder);
-
-        $transport = new Definition(EnvelopeTransport::class, [
-            '$httpClient' => new Reference('http_client'),
-            '$dsn'        => new Reference(BeaconDsn::class),
-            '$verifyPeer' => (bool) $config['verify_peer'],
-            '$timeout'    => (float) $config['timeout'],
-            '$logger'     => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
-        ]);
-        $transport->setAutowired(false);
-        $transport->setPublic(false);
-        $container->setDefinition(EnvelopeTransport::class, $transport);
-
-        $client = new Definition(BeaconClient::class, [
-            '$transport'       => new Reference(EnvelopeTransport::class),
-            '$envelopeBuilder' => new Reference(EnvelopeBuilder::class),
-            '$enabled'         => true,
+            '$verifyPeer'  => (bool) $config['verify_peer'],
+            '$timeout'     => (float) $config['timeout'],
         ]);
         $client->setAutowired(false);
         $client->setPublic(false);
-        $container->setDefinition(BeaconClient::class, $client);
-        $container->setAlias(BeaconClientInterface::class, BeaconClient::class);
+        $container->setDefinition('nowo.beacon.client', $client);
+        $container->setAlias(BeaconClientInterface::class, 'nowo.beacon.client');
 
         if (!(bool) $config['register_error_listener']) {
             $container->removeDefinition(BeaconExceptionListener::class);
@@ -113,5 +104,15 @@ final class NowoBeaconExtension extends Extension
     public function getAlias(): string
     {
         return Configuration::ALIAS;
+    }
+
+    private function registerNullClient(ContainerBuilder $container): void
+    {
+        $null = new Definition(NullBeaconClient::class);
+        $null->setPublic(false);
+        $container->setDefinition(NullBeaconClient::class, $null);
+        $container->setAlias(BeaconClientInterface::class, NullBeaconClient::class);
+        $container->setParameter('nowo.beacon.enabled', false);
+        $container->removeDefinition(BeaconExceptionListener::class);
     }
 }
