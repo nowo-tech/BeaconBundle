@@ -153,6 +153,13 @@ Bugfix only. **No consumer API or config changes.**
 
 - Message events with `send.stacktrace: true` again include `stacktrace` / `culprit` when the package is checked out under a path that contains `BeaconBundle` (typical GitHub Actions layout).
 
-## Upgrading from 1.4.2 to the next release
+## Upgrading from 1.4.2 to 1.4.3
 
-- No consumer API changes expected from the `composer.lock` / CI PHP 8.2 install fix (dev tooling only).
+Dev / CI tooling only. **No consumer API or config changes.**
+
+- `composer.lock` targets Symfony 7.4 again so installs on PHP 8.2 succeed; Symfony 8 apps are unchanged (constraints remain `^7.0 || ^8.0`).
+- Contributors: run `make setup-hooks` so Cursor co-author trailers are stripped from commit messages.
+
+## Upgrading from 1.4.3 to the next release
+
+No upgrade notes yet.

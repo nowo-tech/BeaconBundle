@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-07-20
+
 ### Fixed
 
 - CI / `composer.lock`: keep the lock on Symfony **7.4** so `composer install` works on PHP 8.2 (code-style jobs). `make composer-sync` pins `platform.php` to 8.2 while refreshing the lock; Symfony 8 remains covered by the matrix `composer update` path.
+
+### Changed
+
+- Git hygiene: broader Cursor co-author trailer stripping (`prepare-commit-msg` + `commit-msg`), always-on Cursor rule, and `make setup-hooks` guidance.
 
 ## [1.4.2] - 2026-07-20
 
@@ -155,7 +161,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.1...v1.4.0
