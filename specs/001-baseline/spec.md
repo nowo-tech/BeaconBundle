@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
 **Last audited:** 2026-07-20  
-**Aligned with:** public API / config through **v1.3.x**
+**Aligned with:** public API / config through **v1.4.x**
 
 ## Summary
 
@@ -75,10 +75,12 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, register_error_listener, register_console_listener, ignore_exceptions, monolog_handler.*, send.* |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, monolog_handler.*, send.* |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
 | FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`) |
+| FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`) |
+| FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
 
 ## Sample application

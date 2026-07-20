@@ -16,6 +16,8 @@ nowo_beacon:
     #         verify_peer: false
     register_error_listener: true
     register_console_listener: true
+    # register_messenger_listener: true   # needs symfony/messenger
+    # auto_http_transaction: false        # opt-in per-request performance transactions
     ignore_exceptions: []
     # Per-category outbound context (user is opt-in; may include PII):
     send:

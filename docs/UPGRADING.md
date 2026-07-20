@@ -118,6 +118,27 @@ nowo_beacon:
 
 - Documentation / PHPDoc / spec inventory sync only. **No consumer API or config changes.**
 
-## Upgrading from 1.3.1 to the next release
+## Upgrading from 1.3.1 to 1.4.0
 
-No further release yet. When upgrading past `v1.3.1`, read the new [`CHANGELOG.md`](CHANGELOG.md) section and follow any migration notes published there.
+### New optional configuration
+
+```yaml
+nowo_beacon:
+    register_messenger_listener: true   # WorkerMessageFailedEvent (needs symfony/messenger)
+    auto_http_transaction: false        # opt-in HTTP performance transactions
+```
+
+### Behaviour
+
+- With default `register_messenger_listener: true`, final Messenger failures (no retry) are reported when `symfony/messenger` is installed. Disable if you do not want worker failures in Beacon.
+- `auto_http_transaction` stays **off** by default. Enable only if you want one transaction per main request (routes under `/_profiler`, `/_wdt`, `/health/`, `/build` are skipped).
+- `ignore_exceptions` also applies to the Messenger failure listener.
+
+### Compatibility
+
+- No breaking changes to existing capture APIs.
+- Apps without Messenger are unaffected (listener is not registered when the Messenger event class is missing).
+
+## Upgrading from 1.4.0 to the next release
+
+No upgrade notes yet.

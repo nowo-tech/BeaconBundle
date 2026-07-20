@@ -1139,6 +1139,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     register_error_listener?: bool|Param, // When true, register a kernel.exception listener that reports uncaught exceptions. // Default: true
  *     ignore_exceptions?: list<scalar|Param|null>,
  *     register_console_listener?: bool|Param, // When true, report uncaught console command errors (ConsoleEvents::ERROR). // Default: true
+ *     register_messenger_listener?: bool|Param, // When true and symfony/messenger is installed, report WorkerMessageFailedEvent failures that will not retry. // Default: true
+ *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips profiler/health/build). // Default: false
  *     monolog_handler?: array{ // Optional Monolog handler (requires monolog/monolog). Disabled by default.
  *         enabled?: bool|Param, // Default: false
  *         level?: scalar|Param|null, // Minimum Monolog level to forward (e.g. error, warning). // Default: "error"

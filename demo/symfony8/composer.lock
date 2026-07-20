@@ -115,7 +115,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "6b1c8abb17ccee0f784296303e21b0a9af8eb5ac"
+                "reference": "9090a720c05418a60b771f03213ffe773a7197a1"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -136,12 +136,14 @@
                 "phpunit/phpunit": "^10.0 || ^11.0",
                 "rector/rector": "^2.0",
                 "symfony/console": "^7.0 || ^8.0",
+                "symfony/messenger": "^7.0 || ^8.0",
                 "symfony/security-core": "^7.0 || ^8.0",
                 "symfony/yaml": "^7.0 || ^8.0"
             },
             "suggest": {
                 "monolog/monolog": "Enable nowo_beacon.monolog_handler to forward log records to Beacon",
                 "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
+                "symfony/messenger": "Required for register_messenger_listener (WorkerMessageFailedEvent).",
                 "symfony/security-bundle": "Enable send.user authenticated context via the security token storage"
             },
             "type": "symfony-bundle",

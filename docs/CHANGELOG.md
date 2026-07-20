@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-20
+
+### Added
+
+- `register_messenger_listener` (default `true`): report `WorkerMessageFailedEvent` when the message will not be retried (requires `symfony/messenger`).
+- `auto_http_transaction` (default `false`): send a performance transaction for each main HTTP request (skips profiler / WDT / health / build).
+
 ## [1.3.1] - 2026-07-20
 
 ### Changed
@@ -127,7 +134,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.1.1...v1.2.0

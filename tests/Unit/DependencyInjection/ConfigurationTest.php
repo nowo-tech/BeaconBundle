@@ -26,6 +26,8 @@ final class ConfigurationTest extends TestCase
         self::assertSame(5.0, $config['timeout']);
         self::assertTrue($config['register_error_listener']);
         self::assertTrue($config['register_console_listener']);
+        self::assertTrue($config['register_messenger_listener']);
+        self::assertFalse($config['auto_http_transaction']);
         self::assertFalse($config['monolog_handler']['enabled']);
         self::assertSame('error', $config['monolog_handler']['level']);
         self::assertSame([], $config['ignore_exceptions']);

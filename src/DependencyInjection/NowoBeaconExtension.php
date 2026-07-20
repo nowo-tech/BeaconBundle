@@ -13,6 +13,8 @@ use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -170,6 +172,32 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $container->removeDefinition(BeaconConsoleErrorListener::class);
         }
 
+        if ((bool) ($config['register_messenger_listener'] ?? true)
+            && class_exists(\Symfony\Component\Messenger\Event\WorkerMessageFailedEvent::class)
+        ) {
+            $messenger = new Definition(BeaconMessengerFailedListener::class, [
+                '$client'           => new Reference(BeaconClientInterface::class),
+                '$enabled'          => true,
+                '$ignoreExceptions' => $config['ignore_exceptions'],
+            ]);
+            $messenger->addTag('kernel.event_listener', [
+                'event' => \Symfony\Component\Messenger\Event\WorkerMessageFailedEvent::class,
+            ]);
+            $messenger->setPublic(false);
+            $container->setDefinition(BeaconMessengerFailedListener::class, $messenger);
+        }
+
+        if ((bool) ($config['auto_http_transaction'] ?? false)) {
+            $tx = new Definition(BeaconRequestTransactionListener::class, [
+                '$client'  => new Reference(BeaconClientInterface::class),
+                '$enabled' => true,
+            ]);
+            $tx->addTag('kernel.event_subscriber');
+            $tx->addTag('kernel.reset', ['method' => 'reset']);
+            $tx->setPublic(false);
+            $container->setDefinition(BeaconRequestTransactionListener::class, $tx);
+        }
+
         $monolog = $config['monolog_handler'] ?? [];
         // Check Monolog before referencing BeaconMonologHandler — class_exists(BeaconMonologHandler)
         // would autoload a file that extends AbstractProcessingHandler and fatals without monolog.
@@ -203,5 +231,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $container->setParameter('nowo.beacon.enabled', false);
         $container->removeDefinition(BeaconExceptionListener::class);
         $container->removeDefinition(BeaconConsoleErrorListener::class);
+        if ($container->hasDefinition(BeaconMessengerFailedListener::class)) {
+            $container->removeDefinition(BeaconMessengerFailedListener::class);
+        }
+        if ($container->hasDefinition(BeaconRequestTransactionListener::class)) {
+            $container->removeDefinition(BeaconRequestTransactionListener::class);
+        }
     }
 }

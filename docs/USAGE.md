@@ -80,6 +80,21 @@ Transactions appear under **Performance** in Symfony Beacon.
 
 With `register_console_listener: true` (default), uncaught console command errors are reported with `extra.console` / `extra.command`.
 
+## Messenger failures
+
+With `register_messenger_listener: true` (default) and `symfony/messenger` installed, final worker failures (`WorkerMessageFailedEvent` when `willRetry()` is false) are reported with `extra.messenger.message_class` / `receiver_name`.
+
+## Automatic HTTP transactions
+
+Opt in to one performance transaction per main HTTP request:
+
+```yaml
+nowo_beacon:
+    auto_http_transaction: true
+```
+
+Profiler, WDT, `/health/*`, and `/build*` paths are skipped. Prefer this for coarse request timing; use `captureTransaction()` for finer spans.
+
 ## Monolog
 
 ```yaml
@@ -146,6 +161,8 @@ when@dev:
 | Breadcrumbs | Valid DSN | `GET /breadcrumbs` | Event includes `breadcrumbs.values`. |
 | User context | Valid DSN, logged in, `send.user: true` | `GET /user` | Event includes `user` when authenticated. |
 | Transaction | Valid DSN | `GET /transaction` | Performance transaction appears in Beacon. |
+| Auto HTTP transaction | `auto_http_transaction: true` | Any non-skipped page | Transaction named after the route (or `METHOD path`). |
+| Messenger failure | `register_messenger_listener: true` + Messenger | Final failed worker message | Exception event with `extra.messenger`. |
 | Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |

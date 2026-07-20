@@ -39,6 +39,8 @@ nowo_beacon:
     timeout: 5.0
     register_error_listener: true
     register_console_listener: true
+    register_messenger_listener: true
+    auto_http_transaction: false
     ignore_exceptions: []
     monolog_handler:
         enabled: false
@@ -66,7 +68,9 @@ nowo_beacon:
 | `timeout` | `5.0` | HTTP timeout in seconds. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
-| `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console automatic listeners. |
+| `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
+| `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `/_profiler`, `/health`, `/build`). |
+| `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
 

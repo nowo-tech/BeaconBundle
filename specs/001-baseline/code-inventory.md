@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
 **Last audited:** 2026-07-20  
-**Aligned with:** **v1.3.x**
+**Aligned with:** **v1.4.x**
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
@@ -26,6 +26,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/EnvelopeTransport.php` | HTTP POST ingest | FR-TR-001, FR-ENV-002 |
 | `src/EventListener/BeaconExceptionListener.php` | `kernel.exception` | FR-LI-001 |
 | `src/EventListener/BeaconConsoleErrorListener.php` | `ConsoleEvents::ERROR` | FR-LI-002 |
+| `src/EventListener/BeaconMessengerFailedListener.php` | Messenger final failures | FR-LI-003 |
+| `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 19 PHP production files (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 21 PHP production files (+ `services.yaml`). Inventory complete — no placeholders.
