@@ -191,4 +191,4 @@ Outbound requests now include:
 
 ## Upgrading from 1.5.0 to the next release
 
-No upgrade notes yet.
+- If you consume `dev-main` / `1.5.x-dev` from a path repo: Symfony constraints are again `^7.0 || ^8.0` (not `^7.4` only). Symfony 8 apps and `make update-deps` on `demo/symfony8` should resolve normally.

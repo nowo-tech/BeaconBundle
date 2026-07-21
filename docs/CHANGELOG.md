@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored Composer Symfony constraints to `^7.0 || ^8.0` (a CS Fixer CI job had accidentally committed `^7.4`-only requires, breaking the Symfony 8 demo / `make update-deps`).
+- Code-style CI commits only `*.php` changes and uses `composer install` from the Symfony 7.4 lock again (avoids rewriting `composer.json`).
+
 ## [1.5.0] - 2026-07-21
 
 ### Changed

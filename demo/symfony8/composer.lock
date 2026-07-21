@@ -115,7 +115,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "fda37fdad0b965de96d69b18a8fbee18acc1d23e"
+                "reference": "ef4133585a130948e5cf0bf06b67a3755011a571"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -149,7 +149,7 @@
             "type": "symfony-bundle",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.0.x-dev"
+                    "dev-main": "1.5.x-dev"
                 }
             },
             "autoload": {
