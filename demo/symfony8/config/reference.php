@@ -1130,7 +1130,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * }
  * @psalm-type NowoBeaconConfig = array{
  *     enabled?: bool|Param, // Master switch. When false, no events are sent even if DSN is set. // Default: true
- *     dsn?: scalar|Param|null, // Beacon DSN: https://PUBLIC_KEY@host:port/PROJECT_ID (empty disables sending). Prefer %env(default::BEACON_DSN)%. // Default: ""
+ *     dsn?: scalar|Param|null, // Beacon DSN: https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID (empty disables sending). Prefer %env(default::BEACON_DSN)%. // Default: ""
  *     environment?: scalar|Param|null, // Environment tag sent with events (e.g. prod, staging). // Default: "%kernel.environment%"
  *     release?: scalar|Param|null, // Optional release / version string attached to events. // Default: null
  *     server_name?: scalar|Param|null, // Hostname tag for events. Defaults to gethostname() when null. // Default: null

@@ -75,7 +75,7 @@ nowo_beacon:
 
 - Events always include precise `timestamp` / `datetime`; contexts depend on `send.*`.
 - `send.user: true` may transmit personal data — align with your privacy policy.
-- Local Beacon from the FrankenPHP demo: prefer `BEACON_DSN=http://KEY@host.docker.internal:9081/1` (see Symfony Beacon `docs/dsn.md`).
+- Local Beacon from the FrankenPHP demo: prefer `BEACON_DSN=http://KEY:SECRET@host.docker.internal:9081/1` (see Symfony Beacon `docs/DSN.md`).
 
 ### Compatibility
 
@@ -160,6 +160,35 @@ Dev / CI tooling only. **No consumer API or config changes.**
 - `composer.lock` targets Symfony 7.4 again so installs on PHP 8.2 succeed; Symfony 8 apps are unchanged (constraints remain `^7.0 || ^8.0`).
 - Contributors: run `make setup-hooks` so Cursor co-author trailers are stripped from commit messages.
 
-## Upgrading from 1.4.3 to the next release
+## Upgrading from 1.4.3 to 1.5.0
+
+### Breaking: DSN secret required
+
+Symfony Beacon stores a secret on every generated API key and rejects public-key-only ingest with **HTTP 403**. BeaconBundle now requires the secret in `BEACON_DSN`:
+
+```env
+# Before (1.4.x — no longer accepted)
+BEACON_DSN=https://PUBLIC@localhost:9444/1
+
+# After (1.5.0+)
+BEACON_DSN=https://PUBLIC:SECRET@localhost:9444/1
+```
+
+Copy the full DSN from Beacon project settings (or `.demo-client.env` after `make seed` / `make sync-beacon`).
+
+### Auth wire format
+
+Outbound requests now include:
+
+- `X-Beacon-Auth: Beacon beacon_key=PUBLIC, beacon_secret=SECRET`
+- Envelope header `"dsn": "https://PUBLIC:SECRET@host/projectId"` (unchanged shape, secret always present)
+
+### Behaviour
+
+- HTTP **429** is logged with `retry_after` when present. The transport still does **not** auto-retry (avoid stacking load on a rate-limited project).
+- `BeaconDsn::getSecretKey()` returns `string` (no longer nullable).
+- Empty `BEACON_DSN` still disables reporting via `NullBeaconClient`.
+
+## Upgrading from 1.5.0 to the next release
 
 No upgrade notes yet.

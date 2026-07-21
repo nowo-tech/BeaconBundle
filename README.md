@@ -13,9 +13,9 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 
 ## Features
 
-- DSN-driven ingest with host, optional port, public key, optional secret, and project id
+- DSN-driven ingest with host, optional port, public key, **required secret**, and project id
 - Empty DSN disables reporting without changing application code
-- Envelope transport to `POST /api/{project_id}/envelope/`
+- Envelope transport to `POST /api/{project_id}/envelope/` with `X-Beacon-Auth` + envelope DSN auth
 - Manual APIs through `BeaconClientInterface`
 - Optional `kernel.exception` listener for uncaught HTTP exceptions
 - `ignore_exceptions` support for listener-side filtering
@@ -41,7 +41,7 @@ Symfony Flex registers the bundle, creates `config/packages/nowo_beacon.yaml`, a
 Full walkthrough (create a Beacon project, copy the DSN, verify events): [Getting started](docs/GETTING_STARTED.md).
 
 ```env
-BEACON_DSN=https://PUBLIC_KEY@localhost:9444/1
+BEACON_DSN=https://PUBLIC_KEY:SECRET_KEY@localhost:9444/1
 ```
 
 ```yaml
@@ -101,16 +101,16 @@ final class PaymentService
 ## DSN format
 
 ```text
-{scheme}://{public_key}[:{secret}]@{host}[:{port}]/{project_id}
+{scheme}://{public_key}:{secret}@{host}[:{port}]/{project_id}
 ```
 
 | Example | Meaning |
 |---------|---------|
-| `https://KEY@localhost:9444/1` | Local HTTPS Beacon on port `9444`, project `1` |
-| `https://KEY@errors.example.com/3` | Hosted Beacon over default HTTPS port |
-| `http://KEY:SECRET@beacon.internal:9081/2` | Internal HTTP Beacon with optional secret |
+| `https://KEY:SECRET@localhost:9444/1` | Local HTTPS Beacon on port `9444`, project `1` |
+| `https://KEY:SECRET@errors.example.com/3` | Hosted Beacon over default HTTPS port |
+| `http://KEY:SECRET@beacon.internal:9081/2` | Internal HTTP Beacon (Docker ingest) |
 
-Generate keys in Beacon project settings, or run `make seed` in the `symfony-beacon` repository to create demo data and print a DSN.
+Generate keys in Beacon project settings, or run `make seed` in the `symfony-beacon` repository to create demo data and print a DSN (includes secret).
 
 ## FrankenPHP worker
 

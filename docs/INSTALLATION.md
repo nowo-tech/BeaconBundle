@@ -58,7 +58,7 @@ Use `string:default::BEACON_DSN` so an unset/empty variable resolves to an empty
 Point `BEACON_DSN` at your Symfony Beacon server. To create a project and API key on the server, follow [Getting started](GETTING_STARTED.md).
 
 ```env
-BEACON_DSN=https://PUBLIC_KEY@beacon.example.com:9444/1
+BEACON_DSN=https://PUBLIC_KEY:SECRET_KEY@beacon.example.com:9444/1
 ```
 
 Leave it empty when you want Beacon reporting off.

@@ -30,6 +30,6 @@
         <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code>send.user</code></li>
     </ul>
 
-    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC@localhost:9444/…</code> from the host). Empty DSN disables reporting. Local TLS: <code>verify_peer: false</code> in <code>when@dev</code>.</p>
+    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC:SECRET@localhost:9444/…</code> from the host). Empty DSN disables reporting. Local TLS: <code>verify_peer: false</code> in <code>when@dev</code>.</p>
 </div>
 {% endblock %}

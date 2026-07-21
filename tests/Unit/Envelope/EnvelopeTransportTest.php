@@ -18,7 +18,7 @@ final class EnvelopeTransportTest extends TestCase
 {
     public function testSendReturnsTrueForSuccessfulResponses(): void
     {
-        $dsn        = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $dsn        = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
         $requests   = [];
         $httpClient = new MockHttpClient(static function (string $method, string $url, array $options) use (&$requests): MockResponse {
             $requests[] = ['method' => $method, 'url' => $url, 'options' => $options];
@@ -32,25 +32,59 @@ final class EnvelopeTransportTest extends TestCase
         self::assertSame($dsn, $transport->getDsn());
         self::assertSame('POST', $requests[0]['method']);
         self::assertSame('https://beacon.example.com:9444/api/5/envelope/', $requests[0]['url']);
+        self::assertContains(
+            'X-Beacon-Auth: Beacon beacon_key=pubkey, beacon_secret=secret',
+            $requests[0]['options']['headers'],
+        );
     }
 
-    public function testSendReturnsFalseAndLogsWarningForRejectedResponses(): void
+    public function testSendReturnsFalseAndLogsRateLimitFor429(): void
     {
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/5');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
         $logger = $this->createMock(LoggerInterface::class);
         $logger
             ->expects(self::once())
             ->method('warning')
             ->with(
-                'Beacon ingest rejected envelope.',
+                'Beacon ingest rate limited (HTTP 429). Respect Retry-After before retrying.',
                 self::callback(static function (array $context) use ($dsn): bool {
                     return $context['status'] === 429
+                        && $dsn->getEnvelopeUrl() === $context['url']
+                        && ($context['retry_after'] ?? null) === '60';
+                }),
+            );
+
+        $transport = new EnvelopeTransport(
+            new MockHttpClient(new MockResponse('', [
+                'http_code'        => 429,
+                'response_headers' => ['Retry-After' => '60'],
+            ])),
+            $dsn,
+            true,
+            5.0,
+            $logger,
+        );
+
+        self::assertFalse($transport->send("header\nitem\npayload\n"));
+    }
+
+    public function testSendReturnsFalseAndLogsAuthWarningFor403(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger
+            ->expects(self::once())
+            ->method('warning')
+            ->with(
+                'Beacon ingest authentication rejected. Confirm BEACON_DSN includes public:secret and matches the project.',
+                self::callback(static function (array $context) use ($dsn): bool {
+                    return $context['status'] === 403
                         && $dsn->getEnvelopeUrl() === $context['url'];
                 }),
             );
 
         $transport = new EnvelopeTransport(
-            new MockHttpClient(new MockResponse('', ['http_code' => 429])),
+            new MockHttpClient(new MockResponse('', ['http_code' => 403])),
             $dsn,
             true,
             5.0,
@@ -62,7 +96,7 @@ final class EnvelopeTransportTest extends TestCase
 
     public function testSendReturnsFalseAndLogsErrorOnTransportException(): void
     {
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/5');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
         $logger = $this->createMock(LoggerInterface::class);
         $logger
             ->expects(self::once())
@@ -89,7 +123,7 @@ final class EnvelopeTransportTest extends TestCase
 
     public function testSendPassesVerifyPeerAndTimeoutOptions(): void
     {
-        $dsn             = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $dsn             = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
         $capturedOptions = [];
         $httpClient      = $this->createMock(HttpClientInterface::class);
         $httpClient
@@ -110,7 +144,11 @@ final class EnvelopeTransportTest extends TestCase
 
         self::assertTrue($transport->send("header\nitem\npayload\n"));
         self::assertSame('application/x-beacon-envelope', $capturedOptions['headers']['Content-Type']);
-        self::assertSame('beacon-bundle/1.0', $capturedOptions['headers']['User-Agent']);
+        self::assertSame('beacon-bundle/1.5', $capturedOptions['headers']['User-Agent']);
+        self::assertSame(
+            'Beacon beacon_key=pubkey, beacon_secret=secret',
+            $capturedOptions['headers']['X-Beacon-Auth'],
+        );
         self::assertSame("header\nitem\npayload\n", $capturedOptions['body']);
         self::assertSame(2.5, $capturedOptions['timeout']);
         self::assertSame(2.5, $capturedOptions['max_duration']);
@@ -120,7 +158,7 @@ final class EnvelopeTransportTest extends TestCase
 
     public function testSendWorksWithoutLogger(): void
     {
-        $dsn       = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/5');
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
         $transport = new EnvelopeTransport(
             new MockHttpClient(new MockResponse('', ['http_code' => 400])),
             $dsn,

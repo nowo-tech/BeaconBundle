@@ -114,17 +114,17 @@ Prefer `string:default::BEACON_DSN` so an empty env value becomes `""` (disabled
 
 ```env
 # .env.local (do not commit real keys)
-BEACON_DSN=https://PUBLIC_KEY@localhost:9444/1
+BEACON_DSN=https://PUBLIC_KEY:SECRET_KEY@localhost:9444/1
 ```
 
 Examples:
 
 | Context | Example DSN |
 |---------|-------------|
-| App on host, Beacon HTTPS on host | `https://KEY@localhost:9444/1` |
-| App in Docker, Beacon on host HTTPS | `https://KEY@host.docker.internal:9444/1` |
-| App in Docker, Beacon HTTP on host | `http://KEY@host.docker.internal:9081/1` |
-| Production | `https://KEY@errors.example.com/3` |
+| App on host, Beacon HTTPS on host | `https://KEY:SECRET@localhost:9444/1` |
+| App in Docker, Beacon on host HTTPS | `https://KEY:SECRET@host.docker.internal:9444/1` |
+| App in Docker, Beacon HTTP on host | `http://KEY:SECRET@host.docker.internal:9081/1` |
+| Production | `https://KEY:SECRET@errors.example.com/3` |
 
 Leave `BEACON_DSN` empty to disable outbound reporting without removing the bundle.
 

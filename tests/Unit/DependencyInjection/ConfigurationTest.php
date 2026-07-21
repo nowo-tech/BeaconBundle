@@ -46,7 +46,7 @@ final class ConfigurationTest extends TestCase
     {
         $config = (new Processor())->processConfiguration(new Configuration(), [[
             'enabled'                 => false,
-            'dsn'                     => 'https://k@host:9444/1',
+            'dsn'                     => 'https://k:s@host:9444/1',
             'environment'             => 'staging',
             'release'                 => '2026.07.20',
             'server_name'             => 'app-01',
@@ -65,7 +65,7 @@ final class ConfigurationTest extends TestCase
         ]]);
 
         self::assertFalse($config['enabled']);
-        self::assertSame('https://k@host:9444/1', $config['dsn']);
+        self::assertSame('https://k:s@host:9444/1', $config['dsn']);
         self::assertSame('staging', $config['environment']);
         self::assertSame('2026.07.20', $config['release']);
         self::assertSame('app-01', $config['server_name']);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Dsn;
 
 use function in_array;
+use function is_string;
 use function sprintf;
 
 /**
@@ -26,7 +27,7 @@ final class BeaconDsnParser
 
         $parts = parse_url($dsn);
         if ($parts === false || !isset($parts['scheme'], $parts['host'], $parts['user'], $parts['path'])) {
-            throw new InvalidBeaconDsnException('Invalid DSN. Expected format: https://PUBLIC_KEY@host:port/PROJECT_ID');
+            throw new InvalidBeaconDsnException('Invalid DSN. Expected format: https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID');
         }
 
         $scheme = strtolower($parts['scheme']);
@@ -36,12 +37,16 @@ final class BeaconDsnParser
 
         $publicKey = rawurldecode($parts['user']);
         if ($publicKey === '') {
-            throw new InvalidBeaconDsnException('DSN public key (userinfo) must not be empty.');
+            throw new InvalidBeaconDsnException('DSN public key (userinfo username) must not be empty.');
         }
 
-        $secretKey = isset($parts['pass']) ? rawurldecode($parts['pass']) : null;
-        if ($secretKey !== null && $secretKey === '') {
-            $secretKey = null;
+        if (!isset($parts['pass']) || !is_string($parts['pass']) || $parts['pass'] === '') {
+            throw new InvalidBeaconDsnException('DSN secret key is required. Use https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID (Symfony Beacon rejects public-key-only auth when the API key has a secret).');
+        }
+
+        $secretKey = rawurldecode($parts['pass']);
+        if ($secretKey === '') {
+            throw new InvalidBeaconDsnException('DSN secret key must not be empty.');
         }
 
         $host = strtolower($parts['host']);
@@ -52,7 +57,7 @@ final class BeaconDsnParser
 
         $path = trim($parts['path'], '/');
         if ($path === '' || !ctype_digit($path)) {
-            throw new InvalidBeaconDsnException('DSN path must be a numeric project id (e.g. https://KEY@host:9444/1).');
+            throw new InvalidBeaconDsnException('DSN path must be a numeric project id (e.g. https://KEY:SECRET@host:9444/1).');
         }
 
         $projectId = (int) $path;

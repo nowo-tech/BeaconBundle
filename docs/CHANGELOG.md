@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-21
+
+### Changed
+
+- **Breaking:** DSN secret is **required**. Format is now `https://PUBLIC:SECRET@host[:port]/projectId`. Public-key-only DSNs are rejected at parse time (Symfony Beacon returns HTTP 403 when the API key has a secret, which all generated keys do).
+- Envelope transport sends `X-Beacon-Auth: Beacon beacon_key=…, beacon_secret=…` in addition to embedding the full DSN in the envelope header.
+- HTTP 429 responses log `retry_after` when Beacon sends `Retry-After` (default server value: 60 seconds). Auth failures (401/403) get a dedicated warning.
+- User-Agent updated to `beacon-bundle/1.5`.
+- Composer `branch-alias` / `root-version` aligned to **1.5.x**.
+
+### Security
+
+- Aligns client auth with Symfony Beacon ingest: secret required, dual auth (HTTP header + envelope DSN), clearer handling of rate limits and rejected credentials.
+
 ## [1.4.3] - 2026-07-20
 
 ### Fixed
@@ -161,7 +175,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.3...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.0...v1.4.1

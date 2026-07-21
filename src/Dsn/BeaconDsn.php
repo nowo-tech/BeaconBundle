@@ -7,11 +7,10 @@ namespace Nowo\BeaconBundle\Dsn;
 /**
  * Parsed Beacon DSN (authority + project id).
  *
- * Format: `{scheme}://{public_key}[:{secret}]@{host}[:{port}]/{project_id}`
+ * Format: `{scheme}://{public_key}:{secret}@{host}[:{port}]/{project_id}`
  *
  * Examples:
- * - `https://9cb5e28adc3ed7a40052e2a17e327220@localhost:9444/1`
- * - `https://PUBLIC@beacon.example.com/3`
+ * - `https://9cb5e28adc3ed7a40052e2a17e327220:abcdef0123456789@localhost:9444/1`
  * - `http://PUBLIC:SECRET@beacon.internal:9081/2`
  */
 final class BeaconDsn
@@ -19,7 +18,7 @@ final class BeaconDsn
     public function __construct(
         private readonly string $scheme,
         private readonly string $publicKey,
-        private readonly ?string $secretKey,
+        private readonly string $secretKey,
         private readonly string $host,
         private readonly ?int $port,
         private readonly int $projectId,
@@ -43,9 +42,9 @@ final class BeaconDsn
     }
 
     /**
-     * Optional secret key (DSN userinfo password).
+     * Secret key (DSN userinfo password). Required by Symfony Beacon ingest.
      */
-    public function getSecretKey(): ?string
+    public function getSecretKey(): string
     {
         return $this->secretKey;
     }
@@ -96,16 +95,19 @@ final class BeaconDsn
     }
 
     /**
-     * Rebuild a canonical DSN string (secret included when present).
+     * Wire value for the `X-Beacon-Auth` HTTP header (public + secret).
+     */
+    public function getBeaconAuthHeader(): string
+    {
+        return 'Beacon beacon_key=' . $this->publicKey . ', beacon_secret=' . $this->secretKey;
+    }
+
+    /**
+     * Rebuild a canonical DSN string (always includes the secret).
      */
     public function toString(): string
     {
-        $userInfo = $this->publicKey;
-        if ($this->secretKey !== null && $this->secretKey !== '') {
-            $userInfo .= ':' . $this->secretKey;
-        }
-
-        return $this->scheme . '://' . $userInfo . '@' . $this->host
+        return $this->scheme . '://' . $this->publicKey . ':' . $this->secretKey . '@' . $this->host
             . ($this->port !== null ? ':' . $this->port : '')
             . '/' . $this->projectId;
     }

@@ -42,7 +42,7 @@ final class BeaconClientTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
 
-        $dsn       = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
         $transport = new EnvelopeTransport($http, $dsn, true, 2.0);
         $client    = new BeaconClient($transport, new EnvelopeBuilder('test'), true);
 
@@ -69,7 +69,7 @@ final class BeaconClientTest extends TestCase
         self::assertSame('application/x-beacon-envelope', $contentType);
 
         $body = (string) ($requests[0]['options']['body'] ?? '');
-        self::assertStringContainsString('"dsn":"https://pubkey@beacon.example.com:9444/5"', $body);
+        self::assertStringContainsString('"dsn":"https://pubkey:secret@beacon.example.com:9444/5"', $body);
     }
 
     public function testBreadcrumbsAndTransaction(): void
@@ -81,7 +81,7 @@ final class BeaconClientTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
 
-        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com:9444/5');
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
         $buffer  = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
         $builder = new EnvelopeBuilder('test', null, 'ci', new \Nowo\BeaconBundle\Envelope\SendOptions(), null, $buffer);
         $client  = new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $buffer);
@@ -102,7 +102,7 @@ final class BeaconClientTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
 
-        $dsn       = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/9');
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
         $transport = new EnvelopeTransport($http, $dsn, true, 2.0);
         $client    = new BeaconClient($transport, new EnvelopeBuilder('test', '1.2.3', 'ci-host'), true);
 
@@ -132,7 +132,7 @@ final class BeaconClientTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
 
-        $dsn       = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/9');
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
         $transport = new EnvelopeTransport($http, $dsn);
         $client    = new BeaconClient($transport, new EnvelopeBuilder('test'), false);
 
@@ -144,7 +144,7 @@ final class BeaconClientTest extends TestCase
 
     public function testGetDsnReturnsTransportDsn(): void
     {
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/9');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
         $client = new BeaconClient(
             new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
             new EnvelopeBuilder('test'),
@@ -155,7 +155,7 @@ final class BeaconClientTest extends TestCase
 
     public function testExtractEventIdReturnsNullForFailurePaths(): void
     {
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@beacon.example.com/9');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
         $client = new BeaconClient(
             new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
             new EnvelopeBuilder('test'),

@@ -121,7 +121,8 @@ The client POSTs Envelope bodies to:
 with:
 
 - `Content-Type: application/x-beacon-envelope`
-- the full DSN included in the envelope header for authentication
+- the full DSN (public + secret) included in the envelope header for authentication
+- `X-Beacon-Auth` with `beacon_key` + `beacon_secret` (preferred by Symfony Beacon)
 
 ## End-to-end against `symfony-beacon`
 

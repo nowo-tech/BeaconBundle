@@ -38,7 +38,7 @@ final class ExtensionLoadTest extends TestCase
 
         (new NowoBeaconExtension())->load([[
             'enabled' => false,
-            'dsn'     => 'https://pubkey@beacon.example.com/5',
+            'dsn'     => 'https://pubkey:secret@beacon.example.com/5',
         ]], $container);
 
         self::assertFalse($container->getParameter('nowo.beacon.enabled'));
@@ -52,7 +52,7 @@ final class ExtensionLoadTest extends TestCase
 
         (new NowoBeaconExtension())->load([[
             'enabled'           => true,
-            'dsn'               => 'https://pubkey@beacon.example.com:9444/5',
+            'dsn'               => 'https://pubkey:secret@beacon.example.com:9444/5',
             'environment'       => 'test',
             'release'           => '1.0.0',
             'server_name'       => 'ci-host',
@@ -62,7 +62,7 @@ final class ExtensionLoadTest extends TestCase
         ]], $container);
 
         self::assertTrue($container->getParameter('nowo.beacon.enabled'));
-        self::assertSame('https://pubkey@beacon.example.com:9444/5', $container->getParameter('nowo.beacon.dsn'));
+        self::assertSame('https://pubkey:secret@beacon.example.com:9444/5', $container->getParameter('nowo.beacon.dsn'));
         self::assertTrue($container->hasDefinition(BeaconClientFactory::class));
         self::assertTrue($container->hasDefinition('nowo.beacon.client'));
         self::assertSame('nowo.beacon.client', (string) $container->getAlias(BeaconClientInterface::class));
@@ -71,7 +71,7 @@ final class ExtensionLoadTest extends TestCase
         $clientDefinition = $container->getDefinition('nowo.beacon.client');
         self::assertEquals([new Reference(BeaconClientFactory::class), 'create'], $clientDefinition->getFactory());
         self::assertTrue($clientDefinition->getArgument('$enabled'));
-        self::assertSame('https://pubkey@beacon.example.com:9444/5', $clientDefinition->getArgument('$dsn'));
+        self::assertSame('https://pubkey:secret@beacon.example.com:9444/5', $clientDefinition->getArgument('$dsn'));
         self::assertSame(1.5, $clientDefinition->getArgument('$timeout'));
         self::assertFalse($clientDefinition->getArgument('$verifyPeer'));
 
@@ -90,7 +90,7 @@ final class ExtensionLoadTest extends TestCase
 
         (new NowoBeaconExtension())->load([[
             'enabled'                 => true,
-            'dsn'                     => 'https://pubkey@beacon.example.com/5',
+            'dsn'                     => 'https://pubkey:secret@beacon.example.com/5',
             'register_error_listener' => false,
         ]], $container);
 
@@ -105,7 +105,7 @@ final class ExtensionLoadTest extends TestCase
         $container = $this->createContainer();
         (new NowoBeaconExtension())->load([[
             'enabled' => true,
-            'dsn'     => 'https://pubkey@beacon.example.com/not-a-number',
+            'dsn'     => 'https://pubkey:secret@beacon.example.com/not-a-number',
         ]], $container);
     }
 

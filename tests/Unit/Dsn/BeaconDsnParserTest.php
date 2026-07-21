@@ -21,25 +21,29 @@ final class BeaconDsnParserTest extends TestCase
 
     public function testParsesHostPortAndProject(): void
     {
-        $dsn = $this->parser->parse('https://9cb5e28adc3ed7a40052e2a17e327220@localhost:9444/1');
+        $dsn = $this->parser->parse('https://9cb5e28adc3ed7a40052e2a17e327220:abcdef0123456789@localhost:9444/1');
 
         self::assertSame('https', $dsn->getScheme());
         self::assertSame('9cb5e28adc3ed7a40052e2a17e327220', $dsn->getPublicKey());
-        self::assertNull($dsn->getSecretKey());
+        self::assertSame('abcdef0123456789', $dsn->getSecretKey());
         self::assertSame('localhost', $dsn->getHost());
         self::assertSame(9444, $dsn->getPort());
         self::assertSame(1, $dsn->getProjectId());
         self::assertSame('https://localhost:9444', $dsn->getOrigin());
         self::assertSame('https://localhost:9444/api/1/envelope/', $dsn->getEnvelopeUrl());
+        self::assertSame(
+            'Beacon beacon_key=9cb5e28adc3ed7a40052e2a17e327220, beacon_secret=abcdef0123456789',
+            $dsn->getBeaconAuthHeader(),
+        );
     }
 
     public function testParsesHttpScheme(): void
     {
-        $dsn = $this->parser->parse('http://public@beacon.internal:9081/2');
+        $dsn = $this->parser->parse('http://public:secret@beacon.internal:9081/2');
 
         self::assertSame('http', $dsn->getScheme());
         self::assertSame('public', $dsn->getPublicKey());
-        self::assertNull($dsn->getSecretKey());
+        self::assertSame('secret', $dsn->getSecretKey());
         self::assertSame('beacon.internal', $dsn->getHost());
         self::assertSame(9081, $dsn->getPort());
         self::assertSame(2, $dsn->getProjectId());
@@ -48,7 +52,7 @@ final class BeaconDsnParserTest extends TestCase
 
     public function testParsesSubdomainWithoutPort(): void
     {
-        $dsn = $this->parser->parse('https://abc@errors.example.com/3');
+        $dsn = $this->parser->parse('https://abc:secret@errors.example.com/3');
 
         self::assertSame('errors.example.com', $dsn->getHost());
         self::assertNull($dsn->getPort());
@@ -57,7 +61,7 @@ final class BeaconDsnParserTest extends TestCase
         self::assertSame('https://errors.example.com/api/3/envelope/', $dsn->getEnvelopeUrl());
     }
 
-    public function testParsesOptionalSecret(): void
+    public function testParsesRequiredSecret(): void
     {
         $dsn = $this->parser->parse('http://public:secret@beacon.internal:9081/2');
 
@@ -67,13 +71,18 @@ final class BeaconDsnParserTest extends TestCase
         self::assertSame('http://public:secret@beacon.internal:9081/2', $dsn->toString());
     }
 
-    public function testTreatsEmptySecretAsNull(): void
+    public function testRejectsEmptySecret(): void
     {
-        $dsn = $this->parser->parse('https://public:@host/9');
+        $this->expectException(InvalidBeaconDsnException::class);
+        $this->expectExceptionMessage('DSN secret key is required');
+        $this->parser->parse('https://public:@host/9');
+    }
 
-        self::assertSame('public', $dsn->getPublicKey());
-        self::assertNull($dsn->getSecretKey());
-        self::assertSame('https://public@host/9', $dsn->toString());
+    public function testRejectsMissingSecret(): void
+    {
+        $this->expectException(InvalidBeaconDsnException::class);
+        $this->expectExceptionMessage('DSN secret key is required');
+        $this->parser->parse('https://public@host/9');
     }
 
     public function testRejectsInvalidDsns(): void
@@ -91,13 +100,13 @@ final class BeaconDsnParserTest extends TestCase
     public function testRejectsInvalidPorts(): void
     {
         $this->expectException(InvalidBeaconDsnException::class);
-        $this->parser->parse('https://key@host:0/1');
+        $this->parser->parse('https://key:secret@host:0/1');
     }
 
     public function testRejectsPortAboveRange(): void
     {
         $this->expectException(InvalidBeaconDsnException::class);
-        $this->parser->parse('https://key@host:70000/1');
+        $this->parser->parse('https://key:secret@host:70000/1');
     }
 
     public function testToStringRoundTripWithSecret(): void
@@ -115,11 +124,12 @@ final class BeaconDsnParserTest extends TestCase
     {
         return [
             ['   ', 'DSN must not be empty.'],
-            ['ftp://key@host/1', 'Unsupported DSN scheme'],
+            ['ftp://key:secret@host/1', 'Unsupported DSN scheme'],
             ['https://:secret@host/1', 'public key'],
             ['https://host/1', 'Invalid DSN'],
-            ['https://key@host/not-a-number', 'numeric project id'],
-            ['https://key@host/0', 'positive integer'],
+            ['https://only-public@host/1', 'DSN secret key is required'],
+            ['https://key:secret@host/not-a-number', 'numeric project id'],
+            ['https://key:secret@host/0', 'positive integer'],
         ];
     }
 }

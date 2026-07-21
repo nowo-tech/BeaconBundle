@@ -5,7 +5,7 @@
 
 ## Summary
 
-Symfony client bundle that sends Envelope events to a self-hosted **Symfony Beacon** instance ([nowo-tech/symfony-beacon](https://github.com/nowo-tech/symfony-beacon)). Configuration uses a **DSN** embedding scheme, public key, optional secret, host, optional port, and project id (`BEACON_DSN`), so deployments can point at any domain/subdomain/port without hard-coded URLs.
+Symfony client bundle that sends Envelope events to a self-hosted **Symfony Beacon** instance ([nowo-tech/symfony-beacon](https://github.com/nowo-tech/symfony-beacon)). Configuration uses a **DSN** embedding scheme, public key, **required secret**, host, optional port, and project id (`BEACON_DSN`), so deployments can point at any domain/subdomain/port without hard-coded URLs.
 
 Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs/CONFIGURATION.md`](../../docs/CONFIGURATION.md), [`docs/USAGE.md`](../../docs/USAGE.md), [`docs/UPGRADING.md`](../../docs/UPGRADING.md), [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md).
 

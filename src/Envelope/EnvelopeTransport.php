@@ -9,11 +9,14 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * HTTP transport that POSTs Envelope bodies to Beacon ingest.
  *
- * Authentication uses the DSN embedded in the envelope header (public key + project).
+ * Authentication uses both:
+ * - `X-Beacon-Auth` with `beacon_key` + `beacon_secret` (preferred by Symfony Beacon)
+ * - the full DSN (including secret) embedded in the envelope header
  */
 final class EnvelopeTransport
 {
@@ -23,7 +26,7 @@ final class EnvelopeTransport
         private readonly bool $verifyPeer = true,
         private readonly float $timeout = 5.0,
         private readonly ?LoggerInterface $logger = null,
-        private readonly string $clientName = 'beacon-bundle/1.0',
+        private readonly string $clientName = 'beacon-bundle/1.5',
     ) {
     }
 
@@ -42,8 +45,9 @@ final class EnvelopeTransport
     {
         $options = [
             'headers' => [
-                'Content-Type' => 'application/x-beacon-envelope',
-                'User-Agent'   => $this->clientName,
+                'Content-Type'  => 'application/x-beacon-envelope',
+                'User-Agent'    => $this->clientName,
+                'X-Beacon-Auth' => $this->dsn->getBeaconAuthHeader(),
             ],
             'body'         => $envelopeBody,
             'timeout'      => $this->timeout,
@@ -62,10 +66,7 @@ final class EnvelopeTransport
                 return true;
             }
 
-            $this->logger()->warning('Beacon ingest rejected envelope.', [
-                'status' => $status,
-                'url'    => $this->dsn->getEnvelopeUrl(),
-            ]);
+            $this->logRejectedResponse($status, $response);
 
             return false;
         } catch (TransportExceptionInterface $exception) {
@@ -76,6 +77,39 @@ final class EnvelopeTransport
 
             return false;
         }
+    }
+
+    /**
+     * @param int $status HTTP status from Beacon ingest
+     */
+    private function logRejectedResponse(int $status, ResponseInterface $response): void
+    {
+        $context = [
+            'status' => $status,
+            'url'    => $this->dsn->getEnvelopeUrl(),
+        ];
+
+        if ($status === 429) {
+            $retryAfter = $response->getHeaders(false)['retry-after'][0] ?? null;
+            if ($retryAfter !== null && $retryAfter !== '') {
+                $context['retry_after'] = $retryAfter;
+            }
+
+            $this->logger()->warning('Beacon ingest rate limited (HTTP 429). Respect Retry-After before retrying.', $context);
+
+            return;
+        }
+
+        if ($status === 401 || $status === 403) {
+            $this->logger()->warning(
+                'Beacon ingest authentication rejected. Confirm BEACON_DSN includes public:secret and matches the project.',
+                $context,
+            );
+
+            return;
+        }
+
+        $this->logger()->warning('Beacon ingest rejected envelope.', $context);
     }
 
     /**

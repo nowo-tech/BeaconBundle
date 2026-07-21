@@ -2,8 +2,8 @@
 # Point BEACON_DSN at any Symfony Beacon instance (domain / subdomain / port).
 # Empty DSN disables reporting.
 #
-# Format: https://PUBLIC_KEY@host:port/PROJECT_ID
-# Example (local Beacon): https://9cb5e28adc3ed7a40052e2a17e327220@localhost:9444/1
+# Format: https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID
+# Example (local Beacon): https://9cb5e28adc3ed7a40052e2a17e327220:abcdef0123456789@localhost:9444/1
 nowo_beacon:
     enabled: true
     dsn: '%env(string:default::BEACON_DSN)%'

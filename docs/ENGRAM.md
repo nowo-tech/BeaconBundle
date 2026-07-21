@@ -10,7 +10,7 @@ BeaconBundle is the Symfony client for [`symfony-beacon`](https://github.com/now
 /api/{project_id}/envelope/
 ```
 
-The DSN is the source of truth for host, port, project id, public key, and optional secret.
+The DSN is the source of truth for host, port, project id, public key, and required secret.
 
 ## Stable configuration keys
 

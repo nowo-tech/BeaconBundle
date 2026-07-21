@@ -21,7 +21,7 @@ final class EnvelopeBuilderTest extends TestCase
 {
     public function testBuildsNdjsonEnvelopeWithExceptionExtraAndFingerprint(): void
     {
-        $dsn       = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder   = new EnvelopeBuilder('test', '1.0.0', 'ci-host');
         $throwable = new RuntimeException('outer boom', 0, new InvalidArgumentException('inner boom'));
 
@@ -39,7 +39,7 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('event', $item['type']);
         self::assertSame('application/json', $item['content_type']);
         self::assertSame($header['event_id'], $payload['event_id']);
-        self::assertSame('https://pubkey@localhost:9444/1', $header['dsn']);
+        self::assertSame('https://pubkey:secret@localhost:9444/1', $header['dsn']);
         self::assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $header['event_id']);
         self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/', $header['sent_at']);
         self::assertSame($header['sent_at'], $payload['datetime']);
@@ -67,7 +67,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testRespectsSendOptionsOmissionsAndUserOptIn(): void
     {
-        $dsn          = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn          = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $userProvider = new class implements UserContextProviderInterface {
             public function getUserContext(): array
             {
@@ -106,7 +106,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testUsesThrowableMessageWhenMessageIsEmpty(): void
     {
-        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder = new EnvelopeBuilder('test', '1.0.0', 'ci-host');
         $body    = $builder->buildEventEnvelope($dsn, '', 'warning', new RuntimeException('fallback message'));
 
@@ -118,7 +118,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testOmitsEmptyReleaseExtraAndFingerprint(): void
     {
-        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder = new EnvelopeBuilder('prod', '', 'app-host', new SendOptions(stacktrace: false, request: false));
         $body    = $builder->buildEventEnvelope($dsn, '', 'info', null, [], []);
 
@@ -137,7 +137,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testMessageEventsIncludeCurrentStacktraceWhenEnabled(): void
     {
-        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder = new EnvelopeBuilder('test', null, 'ci-host');
         $body    = $builder->buildEventEnvelope($dsn, 'Beacon demo fingerprinted message', 'error');
 
@@ -157,7 +157,7 @@ final class EnvelopeBuilderTest extends TestCase
         file_put_contents($tmp, "line-one\nline-two THROW_HERE\nline-three\nline-four\n");
 
         try {
-            $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+            $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
             $builder = new EnvelopeBuilder('test', null, 'ci-host');
             $method  = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
             $method->setAccessible(true);
@@ -198,7 +198,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testAttachesHttpRequestContextWhenAvailable(): void
     {
-        $dsn   = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn   = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $stack = new \Symfony\Component\HttpFoundation\RequestStack();
         $stack->push(\Symfony\Component\HttpFoundation\Request::create('https://demo.test/fingerprint?x=1', 'GET'));
         $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, $stack);
@@ -216,7 +216,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testPreservesProvidedLevelValues(): void
     {
-        $dsn     = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder = new EnvelopeBuilder('test', null, 'ci-host');
 
         foreach (['debug', 'info', 'warning', 'error', 'fatal'] as $level) {
@@ -269,7 +269,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testAttachesBreadcrumbsAndClearsBuffer(): void
     {
-        $dsn    = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $buffer = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
         $buffer->add('step-1', 'demo');
         $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(), null, $buffer);
@@ -283,7 +283,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testBuildTransactionEnvelope(): void
     {
-        $dsn                = (new BeaconDsnParser())->parse('https://pubkey@localhost:9444/1');
+        $dsn                = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder            = new EnvelopeBuilder('test', null, 'ci');
         $start              = 1000.0;
         $end                = 1000.25;

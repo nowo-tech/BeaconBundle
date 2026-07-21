@@ -32,7 +32,7 @@ final class Configuration implements ConfigurationInterface
                     ->defaultTrue()
                 ->end()
                 ->scalarNode('dsn')
-                    ->info('Beacon DSN: https://PUBLIC_KEY@host:port/PROJECT_ID (empty disables sending). Prefer %env(default::BEACON_DSN)%.')
+                    ->info('Beacon DSN: https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID (empty disables sending). Prefer %env(default::BEACON_DSN)%.')
                     ->defaultValue('')
                 ->end()
                 ->scalarNode('environment')
