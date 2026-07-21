@@ -222,6 +222,13 @@ Demo `nowo_beacon.yaml` enables `auto_http_transaction` and installs `symfony/me
 
 No breaking changes to existing defaults.
 
-## Upgrading from 1.6.0 to the next release
+## Upgrading from 1.6.0 to 1.6.1
+
+No consumer API or config changes. Additive only:
+
+- Optional golden Envelope contract fixtures / `make check-envelope-goldens` for maintainers aligning with Symfony Beacon ingest.
+- PHPUnit discovers `tests/Contract` via a dedicated testsuite.
+
+## Upgrading from 1.6.1 to the next release
 
 No further consumer changes documented yet.

@@ -5,7 +5,7 @@ COMPOSE_FILE := docker-compose.yml
 COMPOSE     := docker-compose -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: help up down build shell install ensure-up test test-coverage coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan update validate assets setup-hooks check-no-cursor-coauthor strip-cursor-coauthor-from-history
+.PHONY: help up down build shell install ensure-up test test-coverage coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan update validate assets setup-hooks check-no-cursor-coauthor strip-cursor-coauthor-from-history check-envelope-goldens
 
 help:
 	@echo "Beacon Bundle - Development Commands"
@@ -31,6 +31,7 @@ help:
 	@echo "  composer-sync Validate composer.json and align composer.lock (no install)"
 	@echo "  setup-hooks   Install git hooks (.githooks, REQ-GIT-001)"
 	@echo "  check-no-cursor-coauthor  Fail if Cursor co-author trailers in history"
+	@echo "  check-envelope-goldens    Diff Envelope fixtures vs sibling symfony-beacon"
 	@echo "  clean         Remove vendor and cache"
 	@echo "  update        Update composer.lock (composer update)"
 	@echo "  validate      Run composer validate --strict"
@@ -100,6 +101,10 @@ validate: ensure-up
 check-no-cursor-coauthor:
 	@chmod +x .scripts/check-no-cursor-coauthor.sh
 	@./.scripts/check-no-cursor-coauthor.sh HEAD
+
+check-envelope-goldens:
+	@chmod +x .scripts/check-envelope-goldens.sh
+	@./.scripts/check-envelope-goldens.sh
 
 strip-cursor-coauthor-from-history:
 	@chmod +x .scripts/strip-cursor-coauthor-from-history.sh
