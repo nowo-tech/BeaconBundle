@@ -48,7 +48,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     public function send(string $envelopeBody): bool
     {
         $response = $this->startRequest($envelopeBody);
-        if (!$response instanceof \Symfony\Contracts\HttpClient\ResponseInterface) {
+        if (!$response instanceof ResponseInterface) {
             return false;
         }
 
