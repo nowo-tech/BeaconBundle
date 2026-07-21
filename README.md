@@ -16,6 +16,8 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 - DSN-driven ingest with host, optional port, public key, **required secret**, and project id
 - Empty DSN disables reporting without changing application code
 - Envelope transport to `POST /api/{project_id}/envelope/` with `X-Beacon-Auth` + envelope DSN auth
+- Delivery modes: `transport.mode` `sync` (default), `async` (finalize on terminate), or `messenger` (queue)
+- Versioned `User-Agent` (`beacon-bundle/{composer-version}`)
 - Manual APIs through `BeaconClientInterface`
 - Optional `kernel.exception` listener for uncaught HTTP exceptions
 - `ignore_exceptions` support for listener-side filtering
@@ -23,6 +25,8 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 - Message events can include current stacktrace; frames may include source context when files are readable
 - HTTP events attach request URL/method (and safe headers) when available
 - Breadcrumbs (`addBreadcrumb`) and performance transactions (`captureTransaction`)
+- Public **tags** API (`setTag` / `setTags`) and optional **`before_send`** scrubbing hook
+- Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
 - Optional console / Messenger failure listeners and optional Monolog handler
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)

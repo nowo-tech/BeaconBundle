@@ -10,6 +10,16 @@ services:
         tags:
             - { name: kernel.reset, method: reset }
 
+    Nowo\BeaconBundle\Scope\Scope:
+        tags:
+            - { name: kernel.reset, method: reset }
+
+    Nowo\BeaconBundle\Instrumentation\SpanBuffer:
+        tags:
+            - { name: kernel.reset, method: reset }
+
+    Nowo\BeaconBundle\Envelope\PendingTransportRegistry: ~
+
     Nowo\BeaconBundle\EventListener\BeaconExceptionListener:
         tags:
             - { name: kernel.event_subscriber }

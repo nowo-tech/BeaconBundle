@@ -39,10 +39,16 @@ nowo_beacon:
     server_name: null
     verify_peer: true
     timeout: 5.0
+    transport:
+        mode: sync   # sync | async | messenger
     register_error_listener: true
     register_console_listener: true
     register_messenger_listener: true
     auto_http_transaction: false
+    before_send: null
+    instrumentation:
+        doctrine: false
+        http_client: false
     ignore_exceptions: []
     monolog_handler:
         enabled: false
@@ -68,10 +74,14 @@ nowo_beacon:
 | `server_name` | `null` | Optional server/host tag. When null, the bundle falls back to the host name. |
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
 | `timeout` | `5.0` | HTTP timeout in seconds. |
+| `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `/_profiler`, `/health`, `/build`). |
+| `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
+| `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |
+| `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest URLs are skipped. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |

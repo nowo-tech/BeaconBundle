@@ -74,4 +74,28 @@ interface BeaconClientInterface
         array $spans = [],
         array $extra = [],
     ): ?string;
+
+    /**
+     * Set a single public tag on the current scope (merged; overwrites same key).
+     */
+    public function setTag(string $key, mixed $value): void;
+
+    /**
+     * Merge public tags into the current scope.
+     *
+     * @param array<string, mixed> $tags
+     */
+    public function setTags(array $tags): void;
+
+    /**
+     * Current scope tags.
+     *
+     * @return array<string, string>
+     */
+    public function getTags(): array;
+
+    /**
+     * Clear all scope tags.
+     */
+    public function clearTags(): void;
 }

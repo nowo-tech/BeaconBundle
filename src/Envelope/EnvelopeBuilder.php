@@ -9,6 +9,7 @@ use DateTimeZone;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\Scope\Scope;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
@@ -45,6 +46,7 @@ final class EnvelopeBuilder
         private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
         private readonly ?RequestStack $requestStack = null,
         private readonly int $stackContextLines = 5,
+        private readonly ?Scope $scope = null,
     ) {
     }
 
@@ -115,6 +117,7 @@ final class EnvelopeBuilder
             $payload['fingerprint'] = $fingerprint;
         }
 
+        $this->attachTags($payload);
         $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
@@ -188,6 +191,7 @@ final class EnvelopeBuilder
             $payload['extra'] = $extra;
         }
 
+        $this->attachTags($payload);
         $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
@@ -302,6 +306,23 @@ final class EnvelopeBuilder
         $srcRoot = dirname(__DIR__) . DIRECTORY_SEPARATOR;
 
         return str_starts_with($file, $srcRoot);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachTags(array &$payload): void
+    {
+        if (!$this->scope instanceof Scope) {
+            return;
+        }
+
+        $tags = $this->scope->getTags();
+        if ($tags === []) {
+            return;
+        }
+
+        $payload['tags'] = $tags;
     }
 
     /**

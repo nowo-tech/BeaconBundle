@@ -57,6 +57,70 @@ $beacon->addBreadcrumb('Applied coupon', 'cart', 'info', ['code' => 'SAVE10']);
 $beacon->captureMessage('Checkout failed', 'error'); // breadcrumbs attached, then cleared
 ```
 
+## Tags
+
+Tags live on a request-scoped scope and are merged into every subsequent event/transaction as `tags`:
+
+```php
+$beacon->setTag('tenant', 'acme');
+$beacon->setTags(['tier' => 'pro', 'region' => 'eu']);
+$beacon->captureMessage('Checkout failed', 'error');
+// payload.tags = { tenant: acme, tier: pro, region: eu }
+```
+
+Limits (invalid entries are ignored; the host app is never crashed):
+
+| Limit | Value |
+|-------|-------|
+| Max tags | 32 |
+| Max key length | 32 |
+| Max value length | 200 |
+| Allowed values | string / int / float / bool (arrays/objects rejected) |
+
+## before_send scrubbing
+
+Register an invokable service and point `nowo_beacon.before_send` at its id:
+
+```yaml
+nowo_beacon:
+    before_send: App\Beacon\ScrubPii
+```
+
+```php
+namespace App\Beacon;
+
+final class ScrubPii
+{
+    /**
+     * @param array<string, mixed> $event
+     *
+     * @return array<string, mixed>|null
+     */
+    public function __invoke(array $event): ?array
+    {
+        unset($event['extra']['password'], $event['request']['headers']['authorization']);
+
+        return $event; // return null to drop the send entirely
+    }
+}
+```
+
+If the hook throws, the event is **dropped** (fail soft).
+
+## Automatic Doctrine / HttpClient spans
+
+```yaml
+nowo_beacon:
+    auto_http_transaction: true   # recommended so spans attach to a parent transaction
+    instrumentation:
+        doctrine: true            # requires doctrine/dbal
+        http_client: true
+```
+
+- Doctrine: `db.sql.query` spans + `db.query` breadcrumbs (SQL literals scrubbed).
+- HttpClient: `http.client` spans + `http` breadcrumbs (Beacon `/envelope/` calls skipped).
+- Buffered spans drain into the next `captureTransaction()` (including auto HTTP transactions).
+
 ## Performance transactions
 
 ```php

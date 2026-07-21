@@ -41,6 +41,7 @@
         "symfony/http-kernel": "^7.0 || ^8.0"
     },
     "require-dev": {
+        "doctrine/dbal": "^3.8 || ^4.0",
         "friendsofphp/php-cs-fixer": "^3.0",
         "monolog/monolog": "^3.0",
         "phpstan/extension-installer": "^1.4",
@@ -79,16 +80,18 @@
     },
     "config": {
         "sort-packages": true,
-        "root-version": "1.5.1-dev",
+        "root-version": "1.6.0-dev",
         "allow-plugins": {
             "phpstan/extension-installer": true
+        },
+        "platform": {
         }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "extra": {
         "branch-alias": {
-            "dev-main": "1.5.x-dev"
+            "dev-main": "1.6.x-dev"
         }
     },
     "scripts": {
@@ -123,6 +126,7 @@
         "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
         "monolog/monolog": "Enable nowo_beacon.monolog_handler to forward log records to Beacon",
         "symfony/security-bundle": "Enable send.user authenticated context via the security token storage",
-        "symfony/messenger": "Required for register_messenger_listener (WorkerMessageFailedEvent)."
+        "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
+        "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware)."
     }
 }

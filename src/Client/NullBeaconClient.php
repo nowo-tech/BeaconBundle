@@ -62,4 +62,33 @@ final class NullBeaconClient implements BeaconClientInterface
     ): ?string {
         return null;
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setTag(string $key, mixed $value): void
+    {
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setTags(array $tags): void
+    {
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getTags(): array
+    {
+        return [];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function clearTags(): void
+    {
+    }
 }

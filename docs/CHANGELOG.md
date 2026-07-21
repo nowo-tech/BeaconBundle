@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-21
+
+### Added
+
+- Public tags API on `BeaconClientInterface` (`setTag` / `setTags` / `getTags` / `clearTags`) via request-scoped `Scope` (merged into event/transaction `tags`)
+- `before_send` config: service id of an invokable that mutates or drops (`null`) the payload before transport; exceptions fail soft (event dropped)
+- Opt-in `instrumentation.doctrine` (Doctrine DBAL middleware) and `instrumentation.http_client` (HttpClient decorator) for SQL / HTTP spans + breadcrumbs
+- `SpanBuffer` drains into `captureTransaction()` (works with `auto_http_transaction`)
+- `transport.mode`: `sync` (default), `async` (HTTP starts immediately; status finalized on `kernel.terminate` / console terminate), or `messenger` (queue via Symfony Messenger + `SendBeaconEnvelopeMessage`)
+- Versioned `User-Agent` from Composer (`beacon-bundle/{pretty-version}` via `ClientUserAgent`)
+
+### Changed
+
+- `BeaconClient` depends on `EnvelopeTransportInterface` (sync / async / messenger implementations)
+- Composer `branch-alias` / `root-version` aligned to **1.6.x**
+
 ## [1.5.1] - 2026-07-21
 
 ### Added
@@ -194,7 +210,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...v1.4.3

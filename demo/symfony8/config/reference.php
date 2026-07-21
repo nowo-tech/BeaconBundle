@@ -1136,11 +1136,19 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     server_name?: scalar|Param|null, // Hostname tag for events. Defaults to gethostname() when null. // Default: null
  *     verify_peer?: bool|Param, // TLS certificate verification. Set false for local self-signed Beacon HTTPS (dev only). // Default: true
  *     timeout?: float|Param, // HTTP timeout in seconds for ingest requests. // Default: 5.0
+ *     transport?: array{ // Outbound Envelope delivery mode.
+ *         mode?: "sync"|"async"|"messenger"|Param, // sync = block on HTTP; async = start HTTP and finalize on kernel/console terminate; messenger = queue via Symfony Messenger (requires symfony/messenger). // Default: "sync"
+ *     },
  *     register_error_listener?: bool|Param, // When true, register a kernel.exception listener that reports uncaught exceptions. // Default: true
  *     ignore_exceptions?: list<scalar|Param|null>,
  *     register_console_listener?: bool|Param, // When true, report uncaught console command errors (ConsoleEvents::ERROR). // Default: true
  *     register_messenger_listener?: bool|Param, // When true and symfony/messenger is installed, report WorkerMessageFailedEvent failures that will not retry. // Default: true
  *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips profiler/health/build). // Default: false
+ *     before_send?: scalar|Param|null, // Optional service id of an invokable that receives the event/transaction payload array and returns the mutated array, or null to drop the send. // Default: null
+ *     instrumentation?: array{ // Opt-in automatic spans / breadcrumbs for Doctrine SQL and HttpClient requests.
+ *         doctrine?: bool|Param, // When true and doctrine/dbal is installed, record SQL query spans and breadcrumbs. // Default: false
+ *         http_client?: bool|Param, // When true, decorate http_client to record outbound HTTP spans and breadcrumbs (Beacon Envelope calls are skipped). // Default: false
+ *     },
  *     monolog_handler?: array{ // Optional Monolog handler (requires monolog/monolog). Disabled by default.
  *         enabled?: bool|Param, // Default: false
  *         level?: scalar|Param|null, // Minimum Monolog level to forward (e.g. error, warning). // Default: "error"

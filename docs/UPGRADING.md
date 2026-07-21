@@ -211,6 +211,17 @@ New routes / command: `/full-context`, `/messenger-fail`, `/auto-http`, `php bin
 
 Demo `nowo_beacon.yaml` enables `auto_http_transaction` and installs `symfony/messenger` for the Messenger failure sample. Production apps can keep previous defaults.
 
-## Upgrading from 1.5.1 to the next release
+## Upgrading from 1.5.1 to 1.6.0
 
-No upgrade notes yet.
+### Added (opt-in / additive)
+
+- **Tags**: `BeaconClientInterface::setTag()` / `setTags()` / `getTags()` / `clearTags()` — request-scoped; appear as Envelope `tags`.
+- **`before_send`**: optional service id; invokable `(array $event): ?array`. Return `null` to drop; exceptions drop the event (fail soft).
+- **`instrumentation.doctrine`** / **`instrumentation.http_client`**: default `false`. Enable to record SQL / HTTP spans (and breadcrumbs). Prefer with `auto_http_transaction: true`. Requires `doctrine/dbal` for Doctrine spans.
+- **`transport.mode`**: default `sync` (unchanged behaviour). Set `async` to finalize HTTP on terminate, or `messenger` to queue `SendBeaconEnvelopeMessage` (requires `symfony/messenger` + a worker). User-Agent is now versioned from Composer (`beacon-bundle/{version}`).
+
+No breaking changes to existing defaults.
+
+## Upgrading from 1.6.0 to the next release
+
+No further consumer changes documented yet.

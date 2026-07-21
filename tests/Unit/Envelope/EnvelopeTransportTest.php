@@ -140,11 +140,11 @@ final class EnvelopeTransportTest extends TestCase
             )
             ->willReturn(new MockResponse('', ['http_code' => 204]));
 
-        $transport = new EnvelopeTransport($httpClient, $dsn, false, 2.5);
+        $transport = new EnvelopeTransport($httpClient, $dsn, false, 2.5, null, 'beacon-bundle/test');
 
         self::assertTrue($transport->send("header\nitem\npayload\n"));
         self::assertSame('application/x-beacon-envelope', $capturedOptions['headers']['Content-Type']);
-        self::assertSame('beacon-bundle/1.5', $capturedOptions['headers']['User-Agent']);
+        self::assertSame('beacon-bundle/test', $capturedOptions['headers']['User-Agent']);
         self::assertSame(
             'Beacon beacon_key=pubkey, beacon_secret=secret',
             $capturedOptions['headers']['X-Beacon-Auth'],

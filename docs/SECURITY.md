@@ -27,7 +27,7 @@
 | DSN secret | Secret embedded in DSN copied into public docs or shell history | Prefer secret storage, avoid pasting secrets in shared terminals or examples |
 | TLS to Beacon ingest | MITM or certificate spoofing if `verify_peer` is disabled in production | Leave `verify_peer: true` outside local self-signed dev setups |
 | `kernel.exception` listener | Uncaught exceptions may include sensitive messages or request context if your app throws them | Review exception messages, use `ignore_exceptions` for known noisy/sensitive classes, disable listener if your app wants manual reporting only |
-| Outbound HTTP call | Slow or unavailable Beacon server can delay the request path | Keep `timeout` low and monitor logs; the transport has no retry loop |
+| Outbound HTTP call | Slow or unavailable Beacon server can delay the request path | Keep `timeout` low; use `transport.mode: async` or `messenger`; the transport has no retry loop |
 | Ingest rate limit | Sustained spikes may receive HTTP 429 | Back off using `Retry-After`; fix noisy reporters; raise `BEACON_INGEST_RATE_LIMIT` only on the server if appropriate |
 | Dependency supply chain | Vulnerable Composer dependency included in the release | Run `composer audit` before release and triage findings |
 

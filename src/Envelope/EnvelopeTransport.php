@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Envelope;
 
+use Nowo\BeaconBundle\Client\ClientUserAgent;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -12,22 +13,25 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * HTTP transport that POSTs Envelope bodies to Beacon ingest.
+ * Synchronous HTTP transport that POSTs Envelope bodies to Beacon ingest.
  *
  * Authentication uses both:
  * - `X-Beacon-Auth` with `beacon_key` + `beacon_secret` (preferred by Symfony Beacon)
  * - the full DSN (including secret) embedded in the envelope header
  */
-final class EnvelopeTransport
+final class EnvelopeTransport implements EnvelopeTransportInterface
 {
+    private readonly string $clientName;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly BeaconDsn $dsn,
         private readonly bool $verifyPeer = true,
         private readonly float $timeout = 5.0,
         private readonly ?LoggerInterface $logger = null,
-        private readonly string $clientName = 'beacon-bundle/1.5',
+        ?string $clientName = null,
     ) {
+        $this->clientName = $clientName ?? ClientUserAgent::resolve();
     }
 
     /**
@@ -39,9 +43,24 @@ final class EnvelopeTransport
     }
 
     /**
-     * POST an Envelope body to Beacon. Returns true on HTTP 2xx.
+     * {@inheritdoc}
      */
     public function send(string $envelopeBody): bool
+    {
+        $response = $this->startRequest($envelopeBody);
+        if (!$response instanceof \Symfony\Contracts\HttpClient\ResponseInterface) {
+            return false;
+        }
+
+        return $this->finalizeResponse($response);
+    }
+
+    /**
+     * Start the HTTP POST without reading the status (used by async transport).
+     *
+     * @internal
+     */
+    public function startRequest(string $envelopeBody): ?ResponseInterface
     {
         $options = [
             'headers' => [
@@ -60,15 +79,26 @@ final class EnvelopeTransport
         }
 
         try {
-            $response = $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
-            $status   = $response->getStatusCode();
-            if ($status >= 200 && $status < 300) {
-                return true;
-            }
+            return $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
+        } catch (TransportExceptionInterface $exception) {
+            $this->logger()->error('Beacon ingest transport failed.', [
+                'exception' => $exception->getMessage(),
+                'url'       => $this->dsn->getEnvelopeUrl(),
+            ]);
 
-            $this->logRejectedResponse($status, $response);
+            return null;
+        }
+    }
 
-            return false;
+    /**
+     * Read status / log rejection for a previously started response.
+     *
+     * @internal
+     */
+    public function finalizeResponse(ResponseInterface $response): bool
+    {
+        try {
+            $status = $response->getStatusCode();
         } catch (TransportExceptionInterface $exception) {
             $this->logger()->error('Beacon ingest transport failed.', [
                 'exception' => $exception->getMessage(),
@@ -77,6 +107,14 @@ final class EnvelopeTransport
 
             return false;
         }
+
+        if ($status >= 200 && $status < 300) {
+            return true;
+        }
+
+        $this->logRejectedResponse($status, $response);
+
+        return false;
     }
 
     /**
@@ -113,7 +151,7 @@ final class EnvelopeTransport
     }
 
     /**
-     * DSN used to build the ingest URL and envelope header.
+     * {@inheritdoc}
      */
     public function getDsn(): BeaconDsn
     {

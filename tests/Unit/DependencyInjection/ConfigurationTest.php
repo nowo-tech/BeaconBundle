@@ -24,10 +24,14 @@ final class ConfigurationTest extends TestCase
         self::assertNull($config['server_name']);
         self::assertTrue($config['verify_peer']);
         self::assertSame(5.0, $config['timeout']);
+        self::assertSame('sync', $config['transport']['mode']);
         self::assertTrue($config['register_error_listener']);
         self::assertTrue($config['register_console_listener']);
         self::assertTrue($config['register_messenger_listener']);
         self::assertFalse($config['auto_http_transaction']);
+        self::assertNull($config['before_send']);
+        self::assertFalse($config['instrumentation']['doctrine']);
+        self::assertFalse($config['instrumentation']['http_client']);
         self::assertFalse($config['monolog_handler']['enabled']);
         self::assertSame('error', $config['monolog_handler']['level']);
         self::assertSame([], $config['ignore_exceptions']);
@@ -53,7 +57,13 @@ final class ConfigurationTest extends TestCase
             'verify_peer'             => false,
             'timeout'                 => 0.5,
             'register_error_listener' => false,
-            'ignore_exceptions'       => [
+            'auto_http_transaction'   => true,
+            'before_send'             => 'App\\Beacon\\ScrubPii',
+            'instrumentation'         => [
+                'doctrine'    => true,
+                'http_client' => true,
+            ],
+            'ignore_exceptions' => [
                 RuntimeException::class,
                 InvalidArgumentException::class,
             ],
@@ -72,6 +82,10 @@ final class ConfigurationTest extends TestCase
         self::assertFalse($config['verify_peer']);
         self::assertSame(0.5, $config['timeout']);
         self::assertFalse($config['register_error_listener']);
+        self::assertTrue($config['auto_http_transaction']);
+        self::assertSame('App\\Beacon\\ScrubPii', $config['before_send']);
+        self::assertTrue($config['instrumentation']['doctrine']);
+        self::assertTrue($config['instrumentation']['http_client']);
         self::assertSame([
             RuntimeException::class,
             InvalidArgumentException::class,

@@ -10,6 +10,8 @@ nowo_beacon:
     environment: '%kernel.environment%'
     release: '%env(string:default::BEACON_RELEASE)%'
     verify_peer: true
+    # transport:
+    #     mode: sync   # sync | async | messenger
     # Set false only for local self-signed HTTPS:
     # when@dev:
     #     nowo_beacon:
@@ -18,6 +20,10 @@ nowo_beacon:
     register_console_listener: true
     # register_messenger_listener: true   # needs symfony/messenger
     # auto_http_transaction: false        # opt-in per-request performance transactions
+    # before_send: App\Beacon\ScrubPii    # invokable service: (array): ?array
+    # instrumentation:
+    #     doctrine: false                 # requires doctrine/dbal
+    #     http_client: false
     ignore_exceptions: []
     # Per-category outbound context (user is opt-in; may include PII):
     send:

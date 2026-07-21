@@ -115,7 +115,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "85a0b051f2d09709eddfa93eb9c29ddb1fdbcdf0"
+                "reference": "c453f7f37fbed949ecb595147431717cb51a33c5"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -127,6 +127,7 @@
                 "symfony/http-kernel": "^7.0 || ^8.0"
             },
             "require-dev": {
+                "doctrine/dbal": "^3.8 || ^4.0",
                 "friendsofphp/php-cs-fixer": "^3.0",
                 "monolog/monolog": "^3.0",
                 "phpstan/extension-installer": "^1.4",
@@ -141,15 +142,16 @@
                 "symfony/yaml": "^7.0 || ^8.0"
             },
             "suggest": {
+                "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware).",
                 "monolog/monolog": "Enable nowo_beacon.monolog_handler to forward log records to Beacon",
                 "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
-                "symfony/messenger": "Required for register_messenger_listener (WorkerMessageFailedEvent).",
+                "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
                 "symfony/security-bundle": "Enable send.user authenticated context via the security token storage"
             },
             "type": "symfony-bundle",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.5.x-dev"
+                    "dev-main": "1.6.x-dev"
                 }
             },
             "autoload": {
