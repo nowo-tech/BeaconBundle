@@ -37,6 +37,25 @@ final class DemoControllerTest extends WebTestCase
         self::assertIsArray($payload);
         self::assertArrayHasKey('enabled', $payload);
         self::assertArrayHasKey('has_dsn', $payload);
+        self::assertArrayHasKey('has_secret_in_dsn', $payload);
         self::assertArrayHasKey('environment', $payload);
+        self::assertArrayHasKey('release', $payload);
+        self::assertArrayHasKey('auth', $payload);
+    }
+
+    public function testFullContextPageIsOk(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/full-context');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Full context demo');
+    }
+
+    public function testMessengerFailPageIsOk(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/messenger-fail');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Messenger failure demo');
     }
 }

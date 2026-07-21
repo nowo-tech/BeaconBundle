@@ -2,17 +2,24 @@
 # Point BEACON_DSN at any Symfony Beacon instance (domain / subdomain / port).
 # Empty DSN disables reporting.
 #
-# Format: https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID
-# Example (local Beacon): https://PUBLIC:SECRET@localhost:9444/1
+# Format (secret REQUIRED): https://PUBLIC_KEY:SECRET_KEY@host:port/PROJECT_ID
+# Example (local Beacon UI host): https://PUBLIC:SECRET@localhost:9444/1
 # Docker → Beacon HTTP ingest: http://PUBLIC:SECRET@host.docker.internal:9081/1
+#
+# Transport (v1.5+): X-Beacon-Auth with beacon_key + beacon_secret, full DSN in envelope
+# header, Content-Type application/x-beacon-envelope. Pair with symfony-beacon ≥ 0.9.0.
 nowo_beacon:
     enabled: true
     dsn: '%env(string:default::BEACON_DSN)%'
     environment: '%kernel.environment%'
     release: '%env(string:default::BEACON_RELEASE)%'
+    server_name: 'beacon-demo-symfony8'
     verify_peer: true
     register_error_listener: true
     register_console_listener: true
+    register_messenger_listener: true
+    # One performance transaction per main HTTP request (skips profiler / WDT / health / build).
+    auto_http_transaction: true
     ignore_exceptions:
         - InvalidArgumentException
     # Full outbound context for the sample app (production apps should keep send.user false unless needed).
@@ -36,3 +43,11 @@ when@dev:
         verify_peer: false
         send:
             user: true
+
+when@test:
+    nowo_beacon:
+        # Keep unit/functional demo tests free of outbound side effects.
+        auto_http_transaction: false
+        register_messenger_listener: true
+        send:
+            user: false

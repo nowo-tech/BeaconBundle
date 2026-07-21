@@ -6,10 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-21
+
+### Added
+
+- Demo Symfony 8: `/full-context` (dense breadcrumbs + nested exception + fingerprint + checkout extra), `/messenger-fail`, `/auto-http`, and `app:demo-console-boom`
+- Demo depends on `symfony/messenger`; sample `messenger.yaml` + `DemoFailMessage`
+- Demo `nowo_beacon.yaml`: `auto_http_transaction`, explicit messenger/console listeners, `server_name`, comments for required DSN secret / `X-Beacon-Auth`
+
+### Changed
+
+- Demo routes send richer `extra` (client auth metadata, HTTP path, PHP runtime, nested checkout samples)
+- Demo home / README / USAGE scenario matrix / DEMO-FRANKENPHP aligned with Symfony Beacon ≥ 0.9 and bundle ≥ 1.5 (secret required; `/boom` not `/listener-exception`)
+- `/status` reports `has_secret_in_dsn`, `release`, and auth hint
+
 ### Fixed
 
-- Restored Composer Symfony constraints to `^7.0 || ^8.0` (a CS Fixer CI job had accidentally committed `^7.4`-only requires, breaking the Symfony 8 demo / `make update-deps`).
-- Code-style CI commits only `*.php` changes and uses `composer install` from the Symfony 7.4 lock again (avoids rewriting `composer.json`).
+- Restored Composer Symfony constraints to `^7.0 || ^8.0` (a CS Fixer CI job had accidentally committed `^7.4`-only requires, breaking the Symfony 8 demo / `make update-deps`)
+- Code-style CI commits only `*.php` changes and uses `composer install` from the Symfony 7.4 lock again (avoids rewriting `composer.json`)
 
 ## [1.5.0] - 2026-07-21
 
@@ -180,7 +194,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.4.1...v1.4.2

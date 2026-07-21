@@ -1,0 +1,6 @@
+framework:
+    messenger:
+        # Demo keeps Messenger installed so register_messenger_listener can wire.
+        # Worker failures are demonstrated via /messenger-fail (same extra shape as the listener).
+        transports:
+            sync: 'sync://'

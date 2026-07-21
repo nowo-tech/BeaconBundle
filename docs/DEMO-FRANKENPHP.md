@@ -45,9 +45,9 @@ Manual sync (after re-seeding Beacon):
 make sync-beacon
 ```
 
-Then open `http://localhost:8011` and use `/exception` (or `/listener-exception`) to send errors into the seeded Demo project.
+Then open `http://localhost:8011` and use `/full-context` or `/exception` (or `/boom` for the HTTP listener) to send errors into the seeded Demo project.
 
-Docker clients must use **HTTP `:9081`** via `host.docker.internal` (not HTTPS `:9444`).
+Docker clients must use **HTTP `:9081`** via `host.docker.internal` (not HTTPS `:9444`), with a DSN that includes the **secret** (`PUBLIC:SECRET@…`).
 
 ## Running the demo
 

@@ -189,6 +189,28 @@ Outbound requests now include:
 - `BeaconDsn::getSecretKey()` returns `string` (no longer nullable).
 - Empty `BEACON_DSN` still disables reporting via `NullBeaconClient`.
 
-## Upgrading from 1.5.0 to the next release
+## Upgrading from 1.5.0 to 1.5.1
 
-- If you consume `dev-main` / `1.5.x-dev` from a path repo: Symfony constraints are again `^7.0 || ^8.0` (not `^7.4` only). Symfony 8 apps and `make update-deps` on `demo/symfony8` should resolve normally.
+No consumer API or Envelope auth changes (still **1.5.0** wire format: required DSN secret + `X-Beacon-Auth`).
+
+### Symfony constraints / path installs
+
+If you consume `dev-main` / `1.5.x-dev` from a path repo or Packagist: Symfony constraints are again `^7.0 || ^8.0` (not `^7.4` only). Symfony 8 apps and `make update-deps` on `demo/symfony8` should resolve normally.
+
+### Demo sample app (optional)
+
+The FrankenPHP demo now exercises more scenarios. After pull:
+
+```bash
+cd demo/symfony8
+make sync-beacon   # ensure BEACON_DSN includes PUBLIC:SECRET
+make up
+```
+
+New routes / command: `/full-context`, `/messenger-fail`, `/auto-http`, `php bin/console app:demo-console-boom`. See [USAGE.md](USAGE.md) scenario matrix and [DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md).
+
+Demo `nowo_beacon.yaml` enables `auto_http_transaction` and installs `symfony/messenger` for the Messenger failure sample. Production apps can keep previous defaults.
+
+## Upgrading from 1.5.1 to the next release
+
+No upgrade notes yet.

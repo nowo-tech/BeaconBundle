@@ -153,20 +153,24 @@ when@dev:
 
 | Scenario | Setup | Route / action | Expected result |
 |----------|-------|----------------|-----------------|
-| Success | Valid DSN to `https://localhost:9444/...` or `http://localhost:9081/...` | `GET /report` | Demo renders an event id and the event appears in Beacon. |
+| Success | Valid DSN (`PUBLIC:SECRET@…`) to `https://localhost:9444/...` or `http://localhost:9081/...` | `GET /report` | Demo renders an event id and the event appears in Beacon. |
 | Error-level message | Valid DSN | `GET /report-error` | Event is sent with level `error`. |
-| Manual exception | Valid DSN | `GET /exception` | Demo renders the captured exception event id; Beacon receives the event. |
+| Manual exception | Valid DSN | `GET /exception` | Nested exception + rich extra; Beacon receives the event. |
+| Full context | Valid DSN | `GET /full-context` | Breadcrumbs, fingerprint, nested exception, dense checkout extra + send.* contexts. |
 | Listener capture | `register_error_listener: true` and valid DSN | `GET /boom` | Request fails with `500`; the uncaught exception is reported by the listener. |
 | Ignored exception | `ignore_exceptions` contains `InvalidArgumentException` | `GET /boom-ignored` | Request fails with `500`; the exception is intentionally not reported by the listener. |
 | Fingerprint | Valid DSN | `GET /fingerprint` | Event is sent with a custom fingerprint, breadcrumbs, current stacktrace, and request context. |
 | Breadcrumbs | Valid DSN | `GET /breadcrumbs` | Event includes `breadcrumbs.values`. |
 | User context | Valid DSN, logged in, `send.user: true` | `GET /user` | Event includes `user` when authenticated. |
 | Transaction | Valid DSN | `GET /transaction` | Performance transaction appears in Beacon. |
-| Auto HTTP transaction | `auto_http_transaction: true` | Any non-skipped page | Transaction named after the route (or `METHOD path`). |
-| Messenger failure | `register_messenger_listener: true` + Messenger | Final failed worker message | Exception event with `extra.messenger`. |
+| N+1 transaction | Valid DSN | `GET /transaction-nplus1` | Transaction with ≥5 similar DB spans; Beacon marks an N+1 group. |
+| Auto HTTP transaction | `auto_http_transaction: true` | `GET /auto-http` (or any non-skipped page) | Message + terminate transaction named after the route. |
+| Messenger failure | `register_messenger_listener: true` + Messenger | `GET /messenger-fail` | Exception event with `extra.messenger` (same shape as the worker listener). |
+| Console failure | `register_console_listener: true` | `php bin/console app:demo-console-boom` | Exception event with console extra. |
 | Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |
+| Missing secret / 403 | Public-key-only DSN or wrong secret | `GET /report` | Client parse failure or Beacon rejects the envelope; no event in the UI. |
 | Wrong key / 403 | DSN host/project valid but public key invalid | `GET /report` | Demo may still render a local event id, but Beacon rejects the envelope and no event appears in the Beacon UI. |
 
 The key operational detail is that event ids are generated before transport. Delivery success should be verified in Beacon itself or in server/client logs, especially for TLS and 403 scenarios.

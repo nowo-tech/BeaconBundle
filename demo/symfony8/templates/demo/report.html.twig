@@ -1,14 +1,19 @@
 {% extends 'base.html.twig' %}
 {% block title %}{{ heading }}{% endblock %}
 {% block body %}
-<h1>{{ heading }}</h1>
-<p>{{ description }}</p>
-<p>Client enabled: <strong>{{ enabled ? 'yes' : 'no' }}</strong></p>
-<p>Level: <code>{{ level }}</code></p>
-<p>Event id: <code>{{ eventId ?? 'null (DSN empty or disabled)' }}</code></p>
-{% if fingerprint is not empty %}
-    <p>Fingerprint: <code>{{ fingerprint|join(', ') }}</code></p>
-{% endif %}
-<p class="text-muted small">Event ids are generated locally. For TLS failures or rejected keys, verify the result in Beacon or in the application logs.</p>
-<p><a href="{{ path('homepage') }}">Home</a> · <a href="{{ path('demo_status') }}">Status JSON</a></p>
+<div class="container py-4">
+    <h1>{{ heading }}</h1>
+    <p>{{ description }}</p>
+    {% if note is defined and note %}
+        <p class="text-muted">{{ note }}</p>
+    {% endif %}
+    <p>Client enabled: <strong>{{ enabled ? 'yes' : 'no' }}</strong></p>
+    <p>Level: <code>{{ level }}</code></p>
+    <p>Event id: <code>{{ eventId ?? 'null (DSN empty, disabled, or assigned inside a listener)' }}</code></p>
+    {% if fingerprint is not empty %}
+        <p>Fingerprint: <code>{{ fingerprint|join(', ') }}</code></p>
+    {% endif %}
+    <p class="text-muted small mb-3">Event ids are generated locally before transport. For TLS failures, missing DSN secret, or rejected keys (401/403), verify delivery in Beacon Issues / Performance or in application logs. Auth uses <code>X-Beacon-Auth</code> (<code>beacon_key</code> + <code>beacon_secret</code>).</p>
+    <p><a href="{{ path('homepage') }}">Home</a> · <a href="{{ path('demo_status') }}">Status JSON</a></p>
+</div>
 {% endblock %}

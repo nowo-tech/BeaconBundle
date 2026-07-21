@@ -26,7 +26,7 @@ Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon)
 - Optional console / Messenger failure listeners and optional Monolog handler
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)
-- Local FrankenPHP demo for success, failure, and listener scenarios
+- Local FrankenPHP demo covering messages, exceptions, full context, fingerprints, breadcrumbs, user, transactions / N+1, auto HTTP tx, Monolog, Messenger failures, and console errors
 
 ## Installation
 

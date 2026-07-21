@@ -3,14 +3,15 @@
 {% block body %}
 <div class="container py-5">
     <h1 class="mb-3">Beacon Bundle demo</h1>
-    <p class="lead">Report events to any Symfony Beacon instance via <code>BEACON_DSN</code>. The matrix below maps each route to the scenario it exercises.</p>
+    <p class="lead">Report events to any Symfony Beacon instance via <code>BEACON_DSN</code> (public <strong>and</strong> secret required). The matrix below maps each route to the scenario it exercises.</p>
 
     <h2 class="h5 mt-4">Messages &amp; exceptions</h2>
     <ul>
-        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info) + current stacktrace / request</li>
-        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error) + current stacktrace / request</li>
-        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code> (exception frames)</li>
-        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — listener capture (shows Symfony 500; event is sent with request)</li>
+        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info) + send.* contexts</li>
+        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error)</li>
+        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code> with previous + rich extra</li>
+        <li><a href="{{ path('demo_full_context') }}">GET /full-context</a> — densest sample (breadcrumbs, nested exception, fingerprint, checkout extra)</li>
+        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — HTTP listener capture (Symfony 500; event sent with request)</li>
         <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> — ignored by listener (500, <strong>not</strong> sent)</li>
         <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint + breadcrumbs + stacktrace</li>
     </ul>
@@ -21,15 +22,22 @@
         <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code>send.user</code>; log in first)</li>
         <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans (no N+1)</li>
         <li><a href="{{ path('demo_transaction_nplus1') }}">GET /transaction-nplus1</a> — 6 similar DB spans → Beacon N+1 group</li>
-        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error forwarded via <code>monolog_handler.enabled</code></li>
+        <li><a href="{{ path('demo_auto_http') }}">GET /auto-http</a> — message + <code>auto_http_transaction</code> on terminate</li>
+    </ul>
+
+    <h2 class="h5 mt-4">Integrations</h2>
+    <ul>
+        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error → <code>monolog_handler</code></li>
+        <li><a href="{{ path('demo_messenger_fail') }}">GET /messenger-fail</a> — simulated final Messenger worker failure</li>
+        <li><code>php bin/console app:demo-console-boom</code> — console listener (<code>register_console_listener</code>)</li>
     </ul>
 
     <h2 class="h5 mt-4">Status</h2>
     <ul>
-        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code>enabled</code> / <code>has_dsn</code> / <code>environment</code></li>
-        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code>send.user</code></li>
+        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code>enabled</code> / DSN secret / environment / release</li>
+        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code>send.user</code> (<code>debugger</code> / <code>debug</code>)</li>
     </ul>
 
-    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC:SECRET@localhost:9444/…</code> from the host). Empty DSN disables reporting. Local TLS: <code>verify_peer: false</code> in <code>when@dev</code>.</p>
+    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC:SECRET@localhost:9444/…</code> from the host). After Beacon <code>make bootstrap</code>, run <code>make sync-beacon</code> here. Empty DSN disables reporting. Auth: <code>X-Beacon-Auth</code> with <code>beacon_key</code> + <code>beacon_secret</code>.</p>
 </div>
 {% endblock %}
