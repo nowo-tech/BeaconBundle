@@ -1,6 +1,6 @@
 # Demo / FrankenPHP
 
-BeaconBundle demos use **FrankenPHP + Caddy**. The production Caddyfile enables worker mode, while the default development setup uses `Caddyfile.dev` without workers so file changes are visible on refresh.
+BeaconBundle demos use **FrankenPHP + Caddy**. Runtime mode is selected with **`FRANKENPHP_MODE`** (`worker` by default; set `classic` for hot-reload-friendly `Caddyfile.dev`). See [Switching classic vs worker](#switching-classic-vs-worker-frankenphp_mode).
 
 ## Worker-mode snippet
 
@@ -16,7 +16,7 @@ From `demo/symfony8/docker/frankenphp/Caddyfile`:
 }
 ```
 
-That is the production-style worker setup. In local dev, the demo uses `Caddyfile.dev` instead, which keeps plain `php_server` and disables cache headers.
+That is the default **`worker`** Caddyfile baked into the image. With `FRANKENPHP_MODE=classic`, the entrypoint switches to `Caddyfile.dev` (plain `php_server`, friendlier for file refresh).
 
 ## Running the demo with Symfony Beacon (direct error ingest)
 
@@ -77,3 +77,14 @@ Its default ports are:
 - HTTP ingest (Docker clients / this demo): `http://localhost:9081`
 
 See [`USAGE.md`](USAGE.md) for the end-to-end scenario matrix.
+
+## Switching classic vs worker (`FRANKENPHP_MODE`)
+
+Demos select the FrankenPHP runtime via **`FRANKENPHP_MODE`** in `.env` / `.env.example` (not a Dockerfile `ENV`):
+
+| Value | Behaviour |
+| --- | --- |
+| **`worker`** (default) | Keep the worker Caddyfile (`php_server { worker ... }`) |
+| **`classic`** | Entrypoint copies `Caddyfile.dev` (plain `php_server`, hot-reload friendly) |
+
+Compose passes `FRANKENPHP_MODE=${FRANKENPHP_MODE:-worker}` into the PHP service. After changing `.env`, run `docker compose up -d` (or `make up`) so the container is **recreated** — a plain `restart` does not reload env. No image rebuild is required.

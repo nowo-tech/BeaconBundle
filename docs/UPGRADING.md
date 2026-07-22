@@ -229,6 +229,13 @@ No consumer API or config changes. Additive only:
 - Optional golden Envelope contract fixtures / `make check-envelope-goldens` for maintainers aligning with Symfony Beacon ingest.
 - PHPUnit discovers `tests/Contract` via a dedicated testsuite.
 
-## Upgrading from 1.6.1 to the next release
+## Upgrading from 1.6.1 to 1.6.2
+
+Demo / docs only. **No consumer API or config changes.**
+
+- FrankenPHP demo: set `FRANKENPHP_MODE=worker` (default) or `classic` in `demo/symfony8/.env`. After changing it, recreate containers (`docker compose up -d` / `make up`), not a plain restart.
+- See [DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md).
+
+## Upgrading from 1.6.2 to the next release
 
 No further consumer changes documented yet.

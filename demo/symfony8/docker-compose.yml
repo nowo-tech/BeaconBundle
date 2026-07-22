@@ -19,6 +19,7 @@ services:
       - APP_ENV=dev
       - APP_DEBUG=1
       - APP_SECRET=${APP_SECRET:-demo-secret}
+      - FRANKENPHP_MODE=${FRANKENPHP_MODE:-worker}
     # Reach Symfony Beacon published on the host (HTTP :9081 / HTTPS :9444).
     extra_hosts:
       - "host.docker.internal:host-gateway"

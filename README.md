@@ -118,7 +118,7 @@ Generate keys in Beacon project settings, or run `make seed` in the `symfony-bea
 
 ## FrankenPHP worker
 
-The bundled demo uses FrankenPHP. Its production-style Caddyfile enables worker mode, while local dev defaults to `Caddyfile.dev` without workers so code changes show up immediately. See [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md).
+The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `classic` for `Caddyfile.dev` (hot-reload friendly). See [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md).
 
 ## Documentation
 

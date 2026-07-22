@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-07-22
+
+### Added
+
+- Demo Symfony 8: `FRANKENPHP_MODE` (`worker` default / `classic`) via Compose + `docker/entrypoint.sh` (selects worker Caddyfile vs `Caddyfile.dev` without rebuilding the image)
+
+### Changed
+
+- Docs (`DEMO-FRANKENPHP.md`, demo/README, root README): document classic vs worker switching; recreate containers after changing `.env`
+
 ## [1.6.1] - 2026-07-21
 
 ### Added
@@ -218,7 +228,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.0...v1.5.1
