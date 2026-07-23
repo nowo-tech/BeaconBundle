@@ -52,4 +52,22 @@ final class BeaconMonologHandlerTest extends TestCase
             extra: [],
         ));
     }
+
+    public function testSkipsWhenClientDisabled(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(false);
+        $client->expects(self::never())->method('captureMessage');
+        $client->expects(self::never())->method('captureException');
+
+        $handler = new BeaconMonologHandler($client, Level::Error);
+        $handler->handle(new LogRecord(
+            datetime: new DateTimeImmutable(),
+            channel: 'app',
+            level: Level::Error,
+            message: 'ignored',
+            context: [],
+            extra: [],
+        ));
+    }
 }

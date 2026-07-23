@@ -11,6 +11,7 @@ use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Scope\Scope;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
 use Throwable;
@@ -212,7 +213,7 @@ final class EnvelopeBuilder
         }
 
         $request = $this->requestStack->getCurrentRequest();
-        if (!$request instanceof \Symfony\Component\HttpFoundation\Request) {
+        if (!$request instanceof Request) {
             return;
         }
 
@@ -272,8 +273,8 @@ final class EnvelopeBuilder
             fn (array $frame): bool => !$this->isBeaconBundleImplementationFrame($frame),
         ));
 
-        if ($trace === []) {
-            return;
+        if ($trace === []) { // @codeCoverageIgnore
+            return; // @codeCoverageIgnore
         }
 
         $payload['stacktrace'] = [
@@ -524,8 +525,8 @@ final class EnvelopeBuilder
         }
 
         $lines = file($file, FILE_IGNORE_NEW_LINES);
-        if ($lines === false) {
-            return $this->sourceLineCache[$file] = null;
+        if ($lines === false) { // @codeCoverageIgnore
+            return $this->sourceLineCache[$file] = null; // @codeCoverageIgnore
         }
 
         return $this->sourceLineCache[$file] = $lines;

@@ -22,6 +22,8 @@
 
 /public/build/
 /node_modules/
+# pnpm local store (REQ-GITIGNORE-003)
+/.pnpm-store
 /pnpm-lock.yaml
 
 # ------------------------------------------------------------------------------

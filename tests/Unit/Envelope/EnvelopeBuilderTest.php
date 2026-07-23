@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\Envelope;
 
 use InvalidArgumentException;
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
+use Nowo\BeaconBundle\Scope\Scope;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
 
 use const JSON_THROW_ON_ERROR;
@@ -199,8 +203,8 @@ final class EnvelopeBuilderTest extends TestCase
     public function testAttachesHttpRequestContextWhenAvailable(): void
     {
         $dsn   = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
-        $stack = new \Symfony\Component\HttpFoundation\RequestStack();
-        $stack->push(\Symfony\Component\HttpFoundation\Request::create('https://demo.test/fingerprint?x=1', 'GET'));
+        $stack = new RequestStack();
+        $stack->push(Request::create('https://demo.test/fingerprint?x=1', 'GET'));
         $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, $stack);
 
         [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'with request'));
@@ -270,7 +274,7 @@ final class EnvelopeBuilderTest extends TestCase
     public function testAttachesBreadcrumbsAndClearsBuffer(): void
     {
         $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
-        $buffer = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
+        $buffer = new BreadcrumbBuffer();
         $buffer->add('step-1', 'demo');
         $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(), null, $buffer);
 
@@ -309,6 +313,88 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertEqualsWithDelta($start, $payload['start_timestamp'], 0.0001);
         self::assertCount(1, $payload['spans']);
         self::assertTrue($payload['extra']['demo']);
+    }
+
+    public function testTransactionIncludesReleaseAndEmptyRequestStackIsIgnored(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $stack   = new RequestStack();
+        $builder = new EnvelopeBuilder('test', '2.0.0', 'ci', new SendOptions(request: true), null, null, $stack);
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildTransactionEnvelope($dsn, 'tx', 1.0, 2.0));
+
+        self::assertSame('2.0.0', $payload['release']);
+        self::assertArrayNotHasKey('request', $payload);
+    }
+
+    public function testTransactionAttachesRequestWithoutPriorContexts(): void
+    {
+        $dsn   = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $stack = new RequestStack();
+        $stack->push(Request::create('https://demo.test/checkout', 'POST'));
+        $builder = new EnvelopeBuilder(
+            'test',
+            null,
+            'ci',
+            new SendOptions(request: true, runtime: false, framework: false, os: false),
+            null,
+            null,
+            $stack,
+        );
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildTransactionEnvelope($dsn, 'checkout', 1.0, 2.0));
+
+        self::assertSame('POST', $payload['request']['method']);
+        self::assertSame('POST', $payload['contexts']['request']['method']);
+    }
+
+    public function testEmptyScopeTagsAreNotAttached(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $scope   = new Scope();
+        $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(), null, null, null, 5, $scope);
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'no tags', 'info'));
+
+        self::assertArrayNotHasKey('tags', $payload);
+    }
+
+    public function testSourceContextEdgeCasesViaReflection(): void
+    {
+        $builder = new EnvelopeBuilder('test', null, 'ci');
+        $read    = new ReflectionMethod(EnvelopeBuilder::class, 'readSourceContext');
+        $read->setAccessible(true);
+        $isInApp = new ReflectionMethod(EnvelopeBuilder::class, 'isInApp');
+        $isInApp->setAccessible(true);
+        $isImpl = new ReflectionMethod(EnvelopeBuilder::class, 'isBeaconBundleImplementationFrame');
+        $isImpl->setAccessible(true);
+
+        self::assertFalse($isInApp->invoke($builder, null));
+        self::assertFalse($isInApp->invoke($builder, ''));
+        self::assertFalse($isImpl->invoke($builder, ['file' => '']));
+        self::assertSame([], $read->invoke($builder, '/tmp/definitely-missing-beacon-file.php', 1));
+
+        $tmp = tempnam(sys_get_temp_dir(), 'beacon-src-');
+        self::assertNotFalse($tmp);
+        file_put_contents($tmp, "only-one-line\n");
+        try {
+            self::assertSame([], $read->invoke($builder, $tmp, 0));
+            self::assertSame([], $read->invoke($builder, $tmp, 99));
+        } finally {
+            @unlink($tmp);
+        }
+
+        $large = tempnam(sys_get_temp_dir(), 'beacon-big-');
+        self::assertNotFalse($large);
+        $fh = fopen($large, 'w');
+        self::assertNotFalse($fh);
+        ftruncate($fh, 1_048_577);
+        fclose($fh);
+        try {
+            self::assertSame([], $read->invoke($builder, $large, 1));
+        } finally {
+            @unlink($large);
+        }
     }
 
     /**

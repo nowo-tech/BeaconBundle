@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-07-20  
-**Aligned with:** public API / config through **v1.4.x**
+**Last audited:** 2026-07-23  
+**Aligned with:** public API / config through **v1.6.x**
 
 ## Summary
 
@@ -63,19 +63,24 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-CL-004 | `NullBeaconClient` no-ops when disabled / empty DSN |
 | FR-CL-005 | `addBreadcrumb(...)` buffers crumbs for the next event/transaction, then clears |
 | FR-CL-006 | `captureTransaction(name, start, end, spans?, extra?)` sends Envelope item `type: transaction` |
+| FR-CL-007 | `setTag` / `setTags` merge into Scope and attach on subsequent captures |
+| FR-CL-008 | Optional `before_send` callable may scrub or drop events before transport |
+| FR-SCOPE-001 | `Scope` holds tags, extras, and user overrides for the request lifetime |
 | FR-ENV-001 | Envelope is 3-line NDJSON: header (`event_id`, `dsn`, `sent_at`), item header, JSON payload |
 | FR-ENV-002 | Content-Type `application/x-beacon-envelope` |
 | FR-ENV-003 | Events include fractional `timestamp` and ISO-8601 `datetime` (microseconds, UTC) |
 | FR-ENV-004 | With `send.stacktrace`, exceptions include frames + `culprit`; message events may include a current PHP stacktrace (BeaconBundle frames filtered). Readable files may add `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines) |
 | FR-ENV-005 | With `send.request` and an active HTTP request: `request` + `contexts.request` (url, method, query, safe header allow-list) and `extra.request_*` |
 | FR-ENV-006 | `send.*` may attach environment, release, server_name, user, and `contexts` (runtime / framework / os) |
-| FR-TR-001 | Non-2xx and transport errors are logged; `send()` returns false; no exception to caller |
+| FR-TR-001 | Non-2xx and transport errors are logged; `send()` returns false; no exception to caller. HTTP uses configured `timeout` / `max_duration` |
+| FR-TR-002 | `transport.mode` `sync` \| `async` \| `messenger`; async/messenger finalize via flush listener or Messenger handler |
+| FR-INS-001 | Opt-in `instrumentation.*` records Doctrine SQL and HttpClient spans/breadcrumbs |
 
 ### DI / Listeners / Monolog
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, monolog_handler.*, send.* |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, monolog_handler.*, send.*, instrumentation.*, before_send |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
 | FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`) |

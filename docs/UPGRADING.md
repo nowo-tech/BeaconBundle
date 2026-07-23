@@ -236,6 +236,14 @@ Demo / docs only. **No consumer API or config changes.**
 - FrankenPHP demo: set `FRANKENPHP_MODE=worker` (default) or `classic` in `demo/symfony8/.env`. After changing it, recreate containers (`docker compose up -d` / `make up`), not a plain restart.
 - See [DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md).
 
-## Upgrading from 1.6.2 to the next release
+## Upgrading from 1.6.2 to 1.6.3
+
+Docs / QA / Spec Kit / coverage only. **No consumer API or config changes.**
+
+- README badges, Documentation section order, FrankenPHP Friendly banner, and coverage claim updated for Nowo bundle standards.
+- Maintainers: `make test-coverage-100` (alias `coverage-check`) enforces 100% PHP line coverage; `make down-dev` aliases `down`.
+- Optional: ensure `nowo-tech/phpstan-frankenphp` is available in your fork’s `require-dev` if you run the same PHPStan FrankenPHP rulesets locally (already wired in this repo).
+
+## Upgrading from 1.6.3 to the next release
 
 No further consumer changes documented yet.

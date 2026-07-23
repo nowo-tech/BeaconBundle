@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\DependencyInjection;
 
+use Doctrine\DBAL\Driver\Middleware;
+use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
@@ -11,6 +13,7 @@ use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Context\SecurityUserContextProvider;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
+use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
@@ -30,6 +33,8 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 use function class_exists;
 use function interface_exists;
@@ -60,8 +65,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             return;
         }
 
-        if (!class_exists(\Monolog\Handler\AbstractProcessingHandler::class)) {
-            return;
+        if (!class_exists(AbstractProcessingHandler::class)) {
+            return; // @codeCoverageIgnore
         }
 
         // MonologBundle only wires handlers declared in monolog.handlers (the monolog.handler tag is not enough).
@@ -184,8 +189,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $container->setDefinition(FlushPendingTransportsListener::class, $flush);
         }
 
-        if ($transportMode === 'messenger' && interface_exists(\Symfony\Component\Messenger\MessageBusInterface::class)) {
-            $syncTransport = new Definition(\Nowo\BeaconBundle\Envelope\EnvelopeTransport::class);
+        if ($transportMode === 'messenger' && interface_exists(MessageBusInterface::class)) {
+            $syncTransport = new Definition(EnvelopeTransport::class);
             $syncTransport->setFactory([new Reference(BeaconClientFactory::class), 'createSyncTransport']);
             $syncTransport->setArguments([
                 '$enabled'    => $enabledFlag,
@@ -224,7 +229,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         }
 
         if ((bool) ($config['register_messenger_listener'] ?? true)
-            && class_exists(\Symfony\Component\Messenger\Event\WorkerMessageFailedEvent::class)
+            && class_exists(WorkerMessageFailedEvent::class)
         ) {
             $messenger = new Definition(BeaconMessengerFailedListener::class, [
                 '$client'           => new Reference(BeaconClientInterface::class),
@@ -232,7 +237,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$ignoreExceptions' => $config['ignore_exceptions'],
             ]);
             $messenger->addTag('kernel.event_listener', [
-                'event' => \Symfony\Component\Messenger\Event\WorkerMessageFailedEvent::class,
+                'event' => WorkerMessageFailedEvent::class,
             ]);
             $messenger->setPublic(false);
             $container->setDefinition(BeaconMessengerFailedListener::class, $messenger);
@@ -254,7 +259,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $monolog = $config['monolog_handler'] ?? [];
         // Check Monolog before referencing BeaconMonologHandler — class_exists(BeaconMonologHandler)
         // would autoload a file that extends AbstractProcessingHandler and fatals without monolog.
-        if ((bool) ($monolog['enabled'] ?? false) && class_exists(\Monolog\Handler\AbstractProcessingHandler::class)) {
+        if ((bool) ($monolog['enabled'] ?? false) && class_exists(AbstractProcessingHandler::class)) {
             $handler = new Definition(BeaconMonologHandler::class, [
                 '$client' => new Reference(BeaconClientInterface::class),
                 '$level'  => (string) ($monolog['level'] ?? 'error'),
@@ -274,7 +279,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $instrumentation = $config['instrumentation'] ?? [];
 
         if ((bool) ($instrumentation['doctrine'] ?? false)
-            && interface_exists(\Doctrine\DBAL\Driver\Middleware::class)
+            && interface_exists(Middleware::class)
         ) {
             $middleware = new Definition(DoctrineSqlMiddleware::class, [
                 '$spanBuffer'       => new Reference(SpanBuffer::class),

@@ -22,6 +22,31 @@ final class SpanBufferAndSqlNormalizerTest extends TestCase
         self::assertSame([], $buffer->all());
     }
 
+    public function testSpanBufferTrimsWhenOverMaxAndSupportsHelpers(): void
+    {
+        $buffer = new SpanBuffer();
+        for ($i = 0; $i < 105; ++$i) {
+            $buffer->add('op', 'desc-' . $i, 1.0, 1.1);
+        }
+
+        self::assertCount(100, $buffer->all());
+        self::assertSame('desc-5', $buffer->all()[0]['description']);
+
+        $buffer->clear();
+        self::assertSame([], $buffer->all());
+
+        $buffer->addTimed('http.client', 'GET x', 0.25, ['k' => 1], 10.0);
+        self::assertCount(1, $buffer->all());
+        self::assertEqualsWithDelta(9.75, $buffer->all()[0]['start_timestamp'], 0.0001);
+        self::assertEqualsWithDelta(10.0, $buffer->all()[0]['timestamp'], 0.0001);
+
+        $buffer->reset();
+        self::assertSame([], $buffer->all());
+
+        $buffer->addTimed('http.client', 'GET y', 0.1);
+        self::assertCount(1, $buffer->all());
+    }
+
     public function testSqlNormalizerScrubsAndTruncates(): void
     {
         $sql = "SELECT * FROM users WHERE email = 'secret@example.com' AND id = 1";

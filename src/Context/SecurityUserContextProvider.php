@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Context;
 
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 use function is_string;
@@ -30,7 +31,7 @@ final class SecurityUserContextProvider implements UserContextProviderInterface
         }
 
         $token = $this->tokenStorage->getToken();
-        if (!$token instanceof \Symfony\Component\Security\Core\Authentication\Token\TokenInterface) {
+        if (!$token instanceof TokenInterface) {
             return null;
         }
 

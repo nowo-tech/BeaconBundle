@@ -29,7 +29,7 @@ composer audit
 - `cs-check`
 - `rector-dry`
 - `phpstan`
-- `test-coverage`
+- `test-coverage` (and preferably `test-coverage-100` / `coverage-check` for the 100% gate)
 - demo release verification
 
 4. **Create the release commit**

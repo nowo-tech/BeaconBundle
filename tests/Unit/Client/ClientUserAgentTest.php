@@ -16,4 +16,9 @@ final class ClientUserAgentTest extends TestCase
         self::assertStringStartsWith('beacon-bundle/', $ua);
         self::assertNotSame('beacon-bundle/', $ua);
     }
+
+    public function testResolveFallsBackWhenPackageIsNotInstalled(): void
+    {
+        self::assertSame('beacon-bundle/1.6', ClientUserAgent::resolve('nowo-tech/definitely-not-installed-package'));
+    }
 }

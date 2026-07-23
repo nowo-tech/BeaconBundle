@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Contract;
 
+use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
+use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -57,8 +59,8 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
         self::assertMatchesRegularExpression('/^[a-f0-9]{32}$/', (string) $header['event_id']);
         self::assertIsString($header['dsn']);
-        self::assertStringContainsString('://', (string) $header['dsn']);
-        self::assertStringContainsString(':', (string) $header['dsn']); // secret required in DSN
+        self::assertStringContainsString('://', $header['dsn']);
+        self::assertStringContainsString(':', $header['dsn']); // secret required in DSN
         self::assertMatchesRegularExpression(
             '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/',
             (string) $header['sent_at'],
@@ -101,7 +103,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testAuthHeaderContractMatchesBeaconParserExpectation(): void
     {
-        $dsn = (new \Nowo\BeaconBundle\Dsn\BeaconDsnParser())->parse(
+        $dsn = (new BeaconDsnParser())->parse(
             'https://pubkey:secret@beacon.example.com:9444/1',
         );
 
@@ -113,10 +115,10 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testLiveBuilderEventShapeAlignsWithGoldenRequiredKeys(): void
     {
-        $dsn = (new \Nowo\BeaconBundle\Dsn\BeaconDsnParser())->parse(
+        $dsn = (new BeaconDsnParser())->parse(
             'https://pubkey:secret@beacon.example.com:9444/1',
         );
-        $builder = new \Nowo\BeaconBundle\Envelope\EnvelopeBuilder('test', '1.2.3', 'ci-host');
+        $builder = new EnvelopeBuilder('test', '1.2.3', 'ci-host');
         $body    = $builder->buildEventEnvelope($dsn, 'Something broke', 'error');
 
         $lines = explode("\n", rtrim($body, "\n"));

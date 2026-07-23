@@ -13,6 +13,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class EnvelopeTransportTest extends TestCase
 {
@@ -119,6 +120,32 @@ final class EnvelopeTransportTest extends TestCase
         $transport = new EnvelopeTransport($httpClient, $dsn, true, 5.0, $logger);
 
         self::assertFalse($transport->send("header\nitem\npayload\n"));
+    }
+
+    public function testFinalizeResponseLogsWhenStatusCodeThrows(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger
+            ->expects(self::once())
+            ->method('error')
+            ->with(
+                'Beacon ingest transport failed.',
+                self::callback(static function (array $context) use ($dsn): bool {
+                    return $context['exception'] === 'status failed'
+                        && $dsn->getEnvelopeUrl() === $context['url'];
+                }),
+            );
+
+        $response = $this->createMock(ResponseInterface::class);
+        $response
+            ->method('getStatusCode')
+            ->willThrowException(new class('status failed') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $transport = new EnvelopeTransport(new MockHttpClient(), $dsn, true, 5.0, $logger);
+
+        self::assertFalse($transport->finalizeResponse($response));
     }
 
     public function testSendPassesVerifyPeerAndTimeoutOptions(): void

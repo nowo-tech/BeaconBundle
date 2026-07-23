@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Client;
 
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClient;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
+use Nowo\BeaconBundle\Envelope\SendOptions;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
@@ -31,6 +33,10 @@ final class BeaconClientTest extends TestCase
         self::assertNull($client->captureException(new RuntimeException('x')));
         self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
         $client->addBreadcrumb('noop');
+        $client->setTag('k', 'v');
+        $client->setTags(['a' => 'b']);
+        self::assertSame([], $client->getTags());
+        $client->clearTags();
     }
 
     public function testCaptureMessagePostsEnvelope(): void
@@ -82,8 +88,8 @@ final class BeaconClientTest extends TestCase
         });
 
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
-        $buffer  = new \Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer();
-        $builder = new EnvelopeBuilder('test', null, 'ci', new \Nowo\BeaconBundle\Envelope\SendOptions(), null, $buffer);
+        $buffer  = new BreadcrumbBuffer();
+        $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(), null, $buffer);
         $client  = new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $buffer);
 
         $client->addBreadcrumb('pre');
@@ -139,7 +145,66 @@ final class BeaconClientTest extends TestCase
         self::assertFalse($client->isEnabled());
         self::assertNull($client->captureMessage('hello'));
         self::assertNull($client->captureException(new RuntimeException('boom')));
+        self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
         self::assertCount(0, $requests);
+    }
+
+    public function testTagHelpersAreNoopWithoutScope(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
+        $client = new BeaconClient(
+            new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
+            new EnvelopeBuilder('test'),
+        );
+
+        $client->setTag('k', 'v');
+        $client->setTags(['a' => 1]);
+        self::assertSame([], $client->getTags());
+        $client->clearTags();
+    }
+
+    public function testBeforeSendEdgeCasesViaReflection(): void
+    {
+        $dsn = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
+        // Invalid return type exercises the fail-soft path in applyBeforeSend.
+        $beforeSend = static fn (array $event): mixed => 'not-an-array';
+        $client     = new BeaconClient(
+            new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
+            new EnvelopeBuilder('test'),
+            true,
+            null,
+            null,
+            null,
+            // @phpstan-ignore argument.type
+            $beforeSend,
+        );
+
+        $apply = new ReflectionMethod($client, 'applyBeforeSend');
+        $apply->setAccessible(true);
+
+        self::assertSame("only-one-line\n", $apply->invoke($client, "only-one-line\n"));
+        self::assertSame(
+            "h\ni\nnot-json\n",
+            $apply->invoke($client, "h\ni\nnot-json\n"),
+        );
+        self::assertNull($apply->invoke($client, "h\ni\n{\"message\":\"x\"}\n"));
+    }
+
+    public function testBeforeSendDropsCaptureException(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
+        $client = new BeaconClient(
+            new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
+            new EnvelopeBuilder('test'),
+            true,
+            null,
+            null,
+            null,
+            static fn (array $event): ?array => null,
+        );
+
+        self::assertNull($client->captureException(new RuntimeException('dropped')));
+        self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
     }
 
     public function testGetDsnReturnsTransportDsn(): void

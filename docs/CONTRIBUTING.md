@@ -51,11 +51,12 @@ Coverage:
 
 ```bash
 make test-coverage
+make test-coverage-100   # fail unless Lines are 100%
 # or
 composer test-coverage
 ```
 
-Coverage HTML is written to `coverage/`.
+Coverage HTML is written to `coverage/`. The release checklist expects ~100% PHP line coverage.
 
 ## Demo checks
 

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Envelope;
 
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Non-blocking transport: starts the HTTP POST immediately but defers status handling until {@see flush()}.
  *
- * Pair with {@see \Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener} on kernel/console terminate.
+ * Pair with {@see FlushPendingTransportsListener} on kernel/console terminate.
  */
 final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterface
 {

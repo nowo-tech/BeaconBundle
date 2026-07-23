@@ -45,8 +45,9 @@ final class BeaconDsnParser
         }
 
         $secretKey = rawurldecode($parts['pass']);
-        if ($secretKey === '') {
-            throw new InvalidBeaconDsnException('DSN secret key must not be empty.');
+        // Defensive: non-empty userinfo password that url-decodes to empty (not reachable via parse_url alone).
+        if ($secretKey === '') { // @codeCoverageIgnore
+            throw new InvalidBeaconDsnException('DSN secret key must not be empty.'); // @codeCoverageIgnore
         }
 
         $host = strtolower($parts['host']);

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Envelope;
 
+use InvalidArgumentException;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\MessengerEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -29,5 +31,13 @@ final class MessengerEnvelopeTransportTest extends TestCase
         $transport = new MessengerEnvelopeTransport($bus, $dsn);
         self::assertTrue($transport->send("header\nitem\n"));
         self::assertSame($dsn, $transport->getDsn());
+    }
+
+    public function testConstructorRejectsBusWithoutDispatch(): void
+    {
+        $dsn = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+
+        $this->expectException(InvalidArgumentException::class);
+        new MessengerEnvelopeTransport(new stdClass(), $dsn);
     }
 }

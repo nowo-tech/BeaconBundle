@@ -43,7 +43,19 @@ final class ScopeTest extends TestCase
         $scope->setTags(['a' => '1', 'b' => '2']);
         $scope->removeTag('a');
         self::assertSame(['b' => '2'], $scope->getTags());
+        $scope->removeTag('');
         $scope->clearTags();
         self::assertSame([], $scope->getTags());
+        $scope->reset();
+        self::assertSame([], $scope->getTags());
+    }
+
+    public function testNormalizesBooleanValues(): void
+    {
+        $scope = new Scope();
+        $scope->setTag('on', true);
+        $scope->setTag('off', false);
+
+        self::assertSame(['on' => 'true', 'off' => 'false'], $scope->getTags());
     }
 }

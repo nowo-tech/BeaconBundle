@@ -44,6 +44,7 @@
         "doctrine/dbal": "^3.8 || ^4.0",
         "friendsofphp/php-cs-fixer": "^3.0",
         "monolog/monolog": "^3.0",
+        "nowo-tech/phpstan-frankenphp": "^1.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
@@ -80,7 +81,7 @@
     },
     "config": {
         "sort-packages": true,
-        "root-version": "1.6.2-dev",
+        "root-version": "1.6.3-dev",
         "allow-plugins": {
             "phpstan/extension-installer": true
         },

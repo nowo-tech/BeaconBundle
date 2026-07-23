@@ -41,6 +41,18 @@ final class BeaconConsoleErrorListenerTest extends TestCase
         $listener->onConsoleError($event);
     }
 
+    public function testSkipsInvalidIgnoreEntriesThenReports(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException');
+
+        /** @var list<mixed> $ignore */
+        $ignore   = ['', 123];
+        $listener = new BeaconConsoleErrorListener($client, true, $ignore);
+        $listener->onConsoleError(new ConsoleErrorEvent(new ArrayInput([]), new NullOutput(), new RuntimeException('report')));
+    }
+
     public function testSkipsWhenDisabled(): void
     {
         $client = $this->createMock(BeaconClientInterface::class);

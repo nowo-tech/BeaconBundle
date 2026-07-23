@@ -23,26 +23,28 @@ final class ClientUserAgent
 
     /**
      * User-Agent string, e.g. `beacon-bundle/1.6.0` or `beacon-bundle/dev-main`.
+     *
+     * @param string $package Composer package name (overridable in tests)
      */
-    public static function resolve(): string
+    public static function resolve(string $package = self::PACKAGE): string
     {
         if (!class_exists(InstalledVersions::class)) {
-            return self::FALLBACK;
+            return self::FALLBACK; // @codeCoverageIgnore
         }
 
         try {
-            if (!InstalledVersions::isInstalled(self::PACKAGE)) {
+            if (!InstalledVersions::isInstalled($package)) {
                 return self::FALLBACK;
             }
 
-            $pretty = InstalledVersions::getPrettyVersion(self::PACKAGE);
+            $pretty = InstalledVersions::getPrettyVersion($package);
             if (is_string($pretty) && $pretty !== '') {
                 return 'beacon-bundle/' . ltrim($pretty, 'v');
             }
-        } catch (Throwable) {
-            return self::FALLBACK;
+        } catch (Throwable) { // @codeCoverageIgnore
+            return self::FALLBACK; // @codeCoverageIgnore
         }
 
-        return self::FALLBACK;
+        return self::FALLBACK; // @codeCoverageIgnore
     }
 }

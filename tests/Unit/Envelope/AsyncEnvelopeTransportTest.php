@@ -8,8 +8,11 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\AsyncEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class AsyncEnvelopeTransportTest extends TestCase
 {
@@ -47,5 +50,19 @@ final class AsyncEnvelopeTransportTest extends TestCase
         $async->flush();
 
         self::assertSame($dsn, $async->getDsn());
+    }
+
+    public function testSendReturnsFalseWhenStartRequestFails(): void
+    {
+        $dsn        = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient
+            ->method('request')
+            ->willThrowException(new class('fail') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $async = new AsyncEnvelopeTransport(new EnvelopeTransport($httpClient, $dsn, true, 5.0, null, 'beacon-bundle/test'));
+
+        self::assertFalse($async->send('body'));
     }
 }

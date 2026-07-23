@@ -1,15 +1,14 @@
 # Beacon Bundle
 
-[![CI](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml/badge.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml)
-[![Packagist Version](https://img.shields.io/packagist/v/nowo-tech/beacon-bundle.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
-[![Packagist Downloads](https://img.shields.io/packagist/dt/nowo-tech/beacon-bundle.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
-[![License](https://img.shields.io/packagist/l/nowo-tech/beacon-bundle.svg)](LICENSE)
-[![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle)
-[![Symfony 7 | 8.0 | 8.1+](https://img.shields.io/badge/Symfony-7%20%7C%208.0%20%7C%208.1%2B-000000.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml)
-[![GitHub stars](https://img.shields.io/github/stars/nowo-tech/BeaconBundle.svg?style=social)](https://github.com/nowo-tech/BeaconBundle/stargazers)
-[![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen.svg)](#tests-and-coverage)
+[![CI](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml/badge.svg)](https://github.com/nowo-tech/BeaconBundle/actions/workflows/ci.yml) [![Packagist Version](https://img.shields.io/packagist/v/nowo-tech/beacon-bundle.svg?style=flat)](https://packagist.org/packages/nowo-tech/beacon-bundle) [![Packagist Downloads](https://img.shields.io/packagist/dt/nowo-tech/beacon-bundle.svg)](https://packagist.org/packages/nowo-tech/beacon-bundle) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php)](https://php.net) [![Symfony](https://img.shields.io/badge/Symfony-7.4%20%7C%208.0%20%7C%208.1%2B-000000?logo=symfony)](https://symfony.com) [![GitHub stars](https://img.shields.io/github/stars/nowo-tech/beacon-bundle.svg?style=social&label=Star)](https://github.com/nowo-tech/BeaconBundle) [![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)](#tests-and-coverage)
+
+> ⭐ **Found this useful?** Install from [Packagist](https://packagist.org/packages/nowo-tech/beacon-bundle) and give the repo a star on GitHub.
 
 Symfony client for [Symfony Beacon](https://github.com/nowo-tech/symfony-beacon), the self-hosted error-tracking server from Nowo. BeaconBundle sends Envelope requests to any Beacon host described by a DSN and provides both manual APIs and an optional automatic exception listener.
+
+![FrankenPHP Friendly Worker Mode](docs/images/frankenphp-friendly.png)
+
+This bundle is **FrankenPHP worker mode friendly**.
 
 ## Features
 
@@ -122,21 +121,25 @@ The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `cla
 
 ## Documentation
 
-- [Getting started (Symfony Beacon + bundle)](docs/GETTING_STARTED.md)
 - [Installation](docs/INSTALLATION.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Usage](docs/USAGE.md)
 - [Contributing](docs/CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Upgrading](docs/UPGRADING.md)
-- [Security](docs/SECURITY.md)
 - [Release](docs/RELEASE.md)
-- [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md)
+- [Security](docs/SECURITY.md)
 - [Engram](docs/ENGRAM.md)
 - [Spec-driven development](docs/SPEC-DRIVEN-DEVELOPMENT.md)
-- [Spec Kit](docs/SPEC-KIT.md)
+- [GitHub Spec Kit](docs/SPEC-KIT.md)
+
+### Additional documentation
+
+- [Getting started (Symfony Beacon + bundle)](docs/GETTING_STARTED.md)
+- [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md)
 - [GitHub CI](docs/GITHUB_CI.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Performance](docs/PERFORMANCE.md)
 
 ## Tests and coverage
 
@@ -152,13 +155,14 @@ or, in the Docker-based maintainer workflow:
 ```bash
 make test
 make test-coverage
+make test-coverage-100
 ```
 
-Coverage (Lines): **96.94%** (measured with `make test-coverage` / PCOV).
+Coverage (Lines): **100.00%** (measured with `make test-coverage` / PCOV).
 
 | Suite | Status |
 |-------|--------|
-| PHP unit + integration | 96.94% Lines |
+| PHP unit + integration | 100.00% Lines |
 | TypeScript / Python | N/A (no frontend or Python in this bundle) |
 
 ## Found this useful?

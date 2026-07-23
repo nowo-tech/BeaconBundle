@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-07-23
+
+### Added
+
+- FrankenPHP Friendly Worker Mode banner + claim in root README (`docs/images/frankenphp-friendly.png`) after PHPStan FrankenPHP rules (`nowo-tech/phpstan-frankenphp`)
+- Maintainer targets: `make down-dev`, `make test-coverage-100` / `make coverage-check` (fail unless PHP coverage is 100%)
+- Unit/integration tests covering async/Messenger transports, flush listener, Doctrine SQL middleware, and remaining client/extension branches
+
+### Changed
+
+- PHP line coverage raised to **100%** (README badge + Tests and coverage section)
+- Root README: standard badge line (Symfony **7.4 | 8.0 | 8.1+**), canonical `## Documentation` order + `### Additional documentation`, highlighted *Found this useful?* CTA
+- Spec Kit baseline (`specs/001-baseline/`): inventory and FRs aligned with **v1.6.x** (`src/` complete)
+
+### Fixed
+
+- Minor internal hardening / import cleanups for coverage and static analysis (no public API or config changes)
+
 ## [1.6.2] - 2026-07-22
 
 ### Added
@@ -228,7 +246,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.5.1...v1.6.0
