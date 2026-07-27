@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.5] - 2026-07-27](#165-2026-07-27)
+  - [Fixed](#fixed)
 - [[1.6.4] - 2026-07-27](#164-2026-07-27)
   - [Added](#added)
   - [Changed](#changed)
@@ -72,6 +74,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.5] - 2026-07-27
+
+### Fixed
+
+- `composer.lock` content-hash refreshed so `composer validate --strict` succeeds after `make composer-sync`
+- `make composer-sync` unsets `platform.php` before `composer update --lock` (Composer embeds platform in the lock hash while it is set)
 
 ## [1.6.4] - 2026-07-27
 
@@ -328,7 +337,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...HEAD
+[1.6.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.1...v1.6.2

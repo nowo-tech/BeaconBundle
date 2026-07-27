@@ -40,7 +40,8 @@
 - [Upgrading from 1.6.1 to 1.6.2](#upgrading-from-161-to-162)
 - [Upgrading from 1.6.2 to 1.6.3](#upgrading-from-162-to-163)
 - [Upgrading from 1.6.3 to 1.6.4](#upgrading-from-163-to-164)
-- [Upgrading from 1.6.4 to the next release](#upgrading-from-164-to-the-next-release)
+- [Upgrading from 1.6.4 to 1.6.5](#upgrading-from-164-to-165)
+- [Upgrading from 1.6.5 to the next release](#upgrading-from-165-to-the-next-release)
 
 ## First install -> 1.0.x
 
@@ -295,7 +296,13 @@ Docs / maintainer tooling / demo image only. **No consumer API or config changes
 - CI / PHPUnit fail on **direct** Symfony deprecations (`SYMFONY_DEPRECATIONS_HELPER=max[direct]=0`).
 - Long docs include a Table of contents; DEMO/PERFORMANCE document ingest timeout hierarchy under FrankenPHP.
 
-## Upgrading from 1.6.4 to the next release
+## Upgrading from 1.6.4 to 1.6.5
+
+Maintainer / CI only. **No consumer API or config changes.**
+
+- `composer validate --strict` and `make composer-sync` work again after the `platform.php` lock-hash fix (no application code changes).
+
+## Upgrading from 1.6.5 to the next release
 
 No further consumer changes documented yet.
 
