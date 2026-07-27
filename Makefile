@@ -138,11 +138,13 @@ release-check-demos:
 	@if [ -f demo/Makefile ]; then $(MAKE) -C demo release-check; else echo "No demo/Makefile — skip release-check-demos"; fi
 
 composer-sync: ensure-up
-	$(COMPOSE) exec -T $(SERVICE_PHP) composer validate --strict
 	@echo "Aligning composer.lock for PHP 8.2 / Symfony 7.x (CI code-style + local install)…"
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer config platform.php 8.2.32
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer update --no-install --no-interaction
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer config --unset platform.php
+	# Refresh content-hash without platform.php (Composer includes platform in the hash while set).
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer update --lock --no-install --no-interaction
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer validate --strict
 
 clean: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) sh -c "rm -rf vendor .phpunit.cache coverage coverage.xml .php-cs-fixer.cache"
