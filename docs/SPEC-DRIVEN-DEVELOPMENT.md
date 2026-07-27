@@ -2,6 +2,15 @@
 
 BeaconBundle uses a lightweight spec-driven workflow so product behavior, implementation, and contributor tooling stay aligned.
 
+## Table of contents
+
+- [Layers](#layers)
+- [User stories](#user-stories)
+- [Language](#language)
+- [Engram](#engram)
+- [Spec Kit](#spec-kit)
+- [Working rule](#working-rule)
+
 ## Layers
 
 This repository has three layers that should move together:

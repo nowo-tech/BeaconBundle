@@ -2,6 +2,14 @@
 
 This repository uses **GitHub Spec Kit** as the maintainer workflow for writing and evolving product specs. It complements [`SPEC-DRIVEN-DEVELOPMENT.md`](SPEC-DRIVEN-DEVELOPMENT.md), which describes BeaconBundle behavior and traceability.
 
+## Table of contents
+
+- [Minimum sections](#minimum-sections)
+- [Baseline](#baseline)
+- [Feature workflow](#feature-workflow)
+- [Maintainer checklist](#maintainer-checklist)
+- [Related documents](#related-documents)
+
 ## Minimum sections
 
 Every maintained Spec Kit repository should keep these pieces in sync:

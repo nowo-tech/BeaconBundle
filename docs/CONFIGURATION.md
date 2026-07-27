@@ -1,5 +1,14 @@
 # Configuration
 
+## Table of contents
+
+- [Environment variable](#environment-variable)
+- [DSN format](#dsn-format)
+- [YAML reference](#yaml-reference)
+  - [`send.*` context switches](#send-context-switches)
+- [Important behavior](#important-behavior)
+- [Development with self-signed certificates](#development-with-self-signed-certificates)
+
 ## Environment variable
 
 | Variable | Description |

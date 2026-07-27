@@ -24,6 +24,7 @@ composer audit
 `make release-check` already includes:
 
 - `check-no-cursor-coauthor`
+- `check-open-prs` (REQ-REL-003 — no unresolved open GitHub PRs)
 - `composer-sync`
 - `cs-fix`
 - `cs-check`

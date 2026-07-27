@@ -1,5 +1,14 @@
 # Installation
 
+## Table of contents
+
+- [Requirements](#requirements)
+- [Composer](#composer)
+- [Manual registration](#manual-registration)
+- [Minimal configuration](#minimal-configuration)
+- [Configure the DSN](#configure-the-dsn)
+- [Development with self-signed HTTPS](#development-with-self-signed-https)
+
 ## Requirements
 
 - PHP `>=8.2 <8.6`

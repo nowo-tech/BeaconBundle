@@ -1,4 +1,5 @@
-FROM dunglas/frankenphp:1-php8.4-alpine
+# Prefer newest PHP in official FrankenPHP images when Symfony 8 allows it (REQ-DEMO-010).
+FROM dunglas/frankenphp:1-php8.5-alpine
 
 RUN apk add --no-cache git unzip bash curl ca-certificates nodejs npm \
     && npm install -g pnpm@9.14.2

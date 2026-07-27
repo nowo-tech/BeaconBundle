@@ -2,6 +2,14 @@
 
 Short repository memory for BeaconBundle.
 
+## Table of contents
+
+- [What this repository is](#what-this-repository-is)
+- [Stable configuration keys](#stable-configuration-keys)
+- [Operational reminders](#operational-reminders)
+- [Documentation anchors](#documentation-anchors)
+- [Demo context](#demo-context)
+
 ## What this repository is
 
 BeaconBundle is the Symfony client for [`symfony-beacon`](https://github.com/nowo-tech/symfony-beacon). It sends Envelope HTTP requests to:

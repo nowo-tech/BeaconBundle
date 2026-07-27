@@ -4,7 +4,89 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Table of contents
+
+- [[Unreleased]](#unreleased)
+- [[1.6.4] - 2026-07-27](#164-2026-07-27)
+  - [Added](#added)
+  - [Changed](#changed)
+- [[1.6.3] - 2026-07-23](#163-2026-07-23)
+  - [Added](#added)
+  - [Changed](#changed)
+  - [Fixed](#fixed)
+- [[1.6.2] - 2026-07-22](#162-2026-07-22)
+  - [Added](#added)
+  - [Changed](#changed)
+- [[1.6.1] - 2026-07-21](#161-2026-07-21)
+  - [Added](#added)
+- [[1.6.0] - 2026-07-21](#160-2026-07-21)
+  - [Added](#added)
+  - [Changed](#changed)
+- [[1.5.1] - 2026-07-21](#151-2026-07-21)
+  - [Added](#added)
+  - [Changed](#changed)
+  - [Fixed](#fixed)
+- [[1.5.0] - 2026-07-21](#150-2026-07-21)
+  - [Changed](#changed)
+  - [Security](#security)
+- [[1.4.3] - 2026-07-20](#143-2026-07-20)
+  - [Fixed](#fixed)
+  - [Changed](#changed)
+- [[1.4.2] - 2026-07-20](#142-2026-07-20)
+  - [Fixed](#fixed)
+- [[1.4.1] - 2026-07-20](#141-2026-07-20)
+  - [Added](#added)
+  - [Changed](#changed)
+- [[1.4.0] - 2026-07-20](#140-2026-07-20)
+  - [Added](#added)
+- [[1.3.1] - 2026-07-20](#131-2026-07-20)
+  - [Changed](#changed)
+- [[1.3.0] - 2026-07-20](#130-2026-07-20)
+  - [Added](#added)
+  - [Fixed](#fixed)
+- [[1.2.0] - 2026-07-20](#120-2026-07-20)
+  - [Added](#added)
+  - [Changed](#changed)
+- [[1.1.1] - 2026-07-20](#111-2026-07-20)
+  - [Fixed](#fixed)
+  - [Changed](#changed)
+- [[1.1.0] - 2026-07-20](#110-2026-07-20)
+  - [Added](#added)
+  - [Changed](#changed)
+  - [Fixed](#fixed)
+- [[1.0.6] - 2026-07-20](#106-2026-07-20)
+  - [Removed](#removed)
+  - [Changed](#changed)
+- [[1.0.5] - 2026-07-20](#105-2026-07-20)
+  - [Fixed](#fixed)
+- [[1.0.4] - 2026-07-20](#104-2026-07-20)
+  - [Added](#added)
+  - [Fixed](#fixed)
+- [[1.0.3] - 2026-07-20](#103-2026-07-20)
+  - [Fixed](#fixed)
+- [[1.0.2] - 2026-07-20](#102-2026-07-20)
+  - [Fixed](#fixed)
+- [[1.0.1] - 2026-07-20](#101-2026-07-20)
+  - [Changed](#changed)
+- [[1.0.0] - 2026-07-20](#100-2026-07-20)
+  - [Added](#added)
+
 ## [Unreleased]
+
+## [1.6.4] - 2026-07-27
+
+### Added
+
+- `make check-open-prs` (REQ-REL-003) wired into `release-check` via `.scripts/check-open-prs.sh`
+- Long-doc tables of contents across `docs/` (REQ-DOCS-005)
+- Demo / docs: FrankenPHP PHP version policy and outbound HTTP timeout hierarchy (REQ-DEMO-010, REQ-RUNTIME-001)
+
+### Changed
+
+- Symfony 8 demo base image: `dunglas/frankenphp:1-php8.5-alpine` (newest Hub PHP allowed by demo constraints)
+- PHPUnit + CI: `SYMFONY_DEPRECATIONS_HELPER=max[direct]=0` (REQ-SF-005)
+- GitHub About: plain-text description, Packagist website, discoverability topics (REQ-DOCS-018)
+- `docs/PERFORMANCE.md`, `docs/DEMO-FRANKENPHP.md`, `docs/RELEASE.md`, `docs/UPGRADING.md` aligned with the above
 
 ## [1.6.3] - 2026-07-23
 
@@ -246,7 +328,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...HEAD
+[1.6.4]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.0...v1.6.1

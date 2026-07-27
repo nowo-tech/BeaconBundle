@@ -5,7 +5,7 @@ COMPOSE_FILE := docker-compose.yml
 COMPOSE     := docker-compose -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: help up down down-dev build shell install ensure-up test test-coverage test-coverage-100 coverage-check coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan update validate assets setup-hooks check-no-cursor-coauthor strip-cursor-coauthor-from-history check-envelope-goldens
+.PHONY: help up down down-dev build shell install ensure-up test test-coverage test-coverage-100 coverage-check coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan update validate assets setup-hooks check-no-cursor-coauthor check-open-prs strip-cursor-coauthor-from-history check-envelope-goldens
 
 help:
 	@echo "Beacon Bundle - Development Commands"
@@ -30,10 +30,11 @@ help:
 	@echo "  rector-dry    Run Rector in dry-run mode"
 	@echo "  phpstan       Run PHPStan static analysis"
 	@echo "  qa            Run all QA checks (cs-check + phpstan + test)"
-	@echo "  release-check Pre-release: git-hygiene, cs-fix, cs-check, rector-dry, phpstan, test-coverage, demos"
+	@echo "  release-check Pre-release: git-hygiene, open-PRs, cs, phpstan, coverage, demos"
 	@echo "  composer-sync Validate composer.json and align composer.lock (no install)"
 	@echo "  setup-hooks   Install git hooks (.githooks, REQ-GIT-001)"
 	@echo "  check-no-cursor-coauthor  Fail if Cursor co-author trailers in history"
+	@echo "  check-open-prs            Fail if unresolved open GitHub PRs remain (REQ-REL-003)"
 	@echo "  check-envelope-goldens    Diff Envelope fixtures vs sibling symfony-beacon"
 	@echo "  clean         Remove vendor and cache"
 	@echo "  update        Update composer.lock (composer update)"
@@ -113,6 +114,10 @@ check-no-cursor-coauthor:
 	@chmod +x .scripts/check-no-cursor-coauthor.sh
 	@./.scripts/check-no-cursor-coauthor.sh HEAD
 
+check-open-prs:
+	@chmod +x .scripts/check-open-prs.sh
+	@bash .scripts/check-open-prs.sh
+
 check-envelope-goldens:
 	@chmod +x .scripts/check-envelope-goldens.sh
 	@./.scripts/check-envelope-goldens.sh
@@ -127,7 +132,7 @@ setup-hooks:
 	@git config core.hooksPath .githooks
 	@echo "✅ Git hooks installed (.githooks — strips Cursor Co-authored-by / Made-with trailers)."
 
-release-check: check-no-cursor-coauthor ensure-up composer-sync cs-fix cs-check rector-dry phpstan test-coverage release-check-demos
+release-check: check-no-cursor-coauthor check-open-prs ensure-up composer-sync cs-fix cs-check rector-dry phpstan test-coverage release-check-demos
 
 release-check-demos:
 	@if [ -f demo/Makefile ]; then $(MAKE) -C demo release-check; else echo "No demo/Makefile — skip release-check-demos"; fi

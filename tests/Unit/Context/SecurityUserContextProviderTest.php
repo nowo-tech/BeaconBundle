@@ -51,6 +51,10 @@ final class SecurityUserContextProviderTest extends TestCase
                 return ['ROLE_USER'];
             }
 
+            public function eraseCredentials(): void
+            {
+            }
+
             public function getUserIdentifier(): string
             {
                 return '42';

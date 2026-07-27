@@ -1,5 +1,47 @@
 # Upgrading
 
+## Table of contents
+
+- [First install -> 1.0.x](#first-install-10x)
+- [Upgrading from 1.0.0 to 1.0.1](#upgrading-from-100-to-101)
+- [Upgrading within 1.0.1 → 1.0.5](#upgrading-within-101-105)
+- [Upgrading to 1.0.6](#upgrading-to-106)
+- [Upgrading from 1.0.6 to 1.1.0](#upgrading-from-106-to-110)
+  - [New optional configuration](#new-optional-configuration)
+  - [New client APIs](#new-client-apis)
+  - [Behaviour](#behaviour)
+  - [Compatibility](#compatibility)
+- [Upgrading from 1.1.0 to 1.1.1](#upgrading-from-110-to-111)
+- [Upgrading from 1.1.1 to 1.2.0](#upgrading-from-111-to-120)
+  - [Richer message events](#richer-message-events)
+  - [Demo / recipe](#demo-recipe)
+- [Upgrading from 1.2.0 to 1.3.0](#upgrading-from-120-to-130)
+  - [Stack source context](#stack-source-context)
+  - [Monolog handler wiring](#monolog-handler-wiring)
+  - [Compatibility](#compatibility)
+- [Upgrading from 1.3.0 to 1.3.1](#upgrading-from-130-to-131)
+- [Upgrading from 1.3.1 to 1.4.0](#upgrading-from-131-to-140)
+  - [New optional configuration](#new-optional-configuration)
+  - [Behaviour](#behaviour)
+  - [Compatibility](#compatibility)
+- [Upgrading from 1.4.0 to 1.4.1](#upgrading-from-140-to-141)
+- [Upgrading from 1.4.1 to 1.4.2](#upgrading-from-141-to-142)
+- [Upgrading from 1.4.2 to 1.4.3](#upgrading-from-142-to-143)
+- [Upgrading from 1.4.3 to 1.5.0](#upgrading-from-143-to-150)
+  - [Breaking: DSN secret required](#breaking-dsn-secret-required)
+  - [Auth wire format](#auth-wire-format)
+  - [Behaviour](#behaviour)
+- [Upgrading from 1.5.0 to 1.5.1](#upgrading-from-150-to-151)
+  - [Symfony constraints / path installs](#symfony-constraints-path-installs)
+  - [Demo sample app (optional)](#demo-sample-app-optional)
+- [Upgrading from 1.5.1 to 1.6.0](#upgrading-from-151-to-160)
+  - [Added (opt-in / additive)](#added-opt-in-additive)
+- [Upgrading from 1.6.0 to 1.6.1](#upgrading-from-160-to-161)
+- [Upgrading from 1.6.1 to 1.6.2](#upgrading-from-161-to-162)
+- [Upgrading from 1.6.2 to 1.6.3](#upgrading-from-162-to-163)
+- [Upgrading from 1.6.3 to 1.6.4](#upgrading-from-163-to-164)
+- [Upgrading from 1.6.4 to the next release](#upgrading-from-164-to-the-next-release)
+
 ## First install -> 1.0.x
 
 `1.0.x` is the first public BeaconBundle line. There is no earlier BeaconBundle version to migrate from.
@@ -244,6 +286,16 @@ Docs / QA / Spec Kit / coverage only. **No consumer API or config changes.**
 - Maintainers: `make test-coverage-100` (alias `coverage-check`) enforces 100% PHP line coverage; `make down-dev` aliases `down`.
 - Optional: ensure `nowo-tech/phpstan-frankenphp` is available in your fork’s `require-dev` if you run the same PHPStan FrankenPHP rulesets locally (already wired in this repo).
 
-## Upgrading from 1.6.3 to the next release
+## Upgrading from 1.6.3 to 1.6.4
+
+Docs / maintainer tooling / demo image only. **No consumer API or config changes.**
+
+- Symfony 8 FrankenPHP demo: base image is `dunglas/frankenphp:1-php8.5-alpine`. Rebuild the demo image after pull (`make -C demo/symfony8 build` or `docker compose build`).
+- Maintainers: `make release-check` now runs `check-open-prs` (fail if unresolved open GitHub PRs remain).
+- CI / PHPUnit fail on **direct** Symfony deprecations (`SYMFONY_DEPRECATIONS_HELPER=max[direct]=0`).
+- Long docs include a Table of contents; DEMO/PERFORMANCE document ingest timeout hierarchy under FrankenPHP.
+
+## Upgrading from 1.6.4 to the next release
 
 No further consumer changes documented yet.
+

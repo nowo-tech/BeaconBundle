@@ -202,9 +202,8 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testAttachesHttpRequestContextWhenAvailable(): void
     {
-        $dsn   = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
-        $stack = new RequestStack();
-        $stack->push(Request::create('https://demo.test/fingerprint?x=1', 'GET'));
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $stack   = new RequestStack([Request::create('https://demo.test/fingerprint?x=1', 'GET')]);
         $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, $stack);
 
         [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'with request'));
@@ -329,9 +328,8 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testTransactionAttachesRequestWithoutPriorContexts(): void
     {
-        $dsn   = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
-        $stack = new RequestStack();
-        $stack->push(Request::create('https://demo.test/checkout', 'POST'));
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $stack   = new RequestStack([Request::create('https://demo.test/checkout', 'POST')]);
         $builder = new EnvelopeBuilder(
             'test',
             null,

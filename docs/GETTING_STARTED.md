@@ -4,6 +4,25 @@ This guide walks through creating a project on **[Symfony Beacon](https://github
 
 All steps below assume English UI labels where applicable.
 
+## Table of contents
+
+- [Overview](#overview)
+- [1. Run Symfony Beacon](#1-run-symfony-beacon)
+- [2. Create a project and obtain a DSN](#2-create-a-project-and-obtain-a-dsn)
+  - [Option A — Seed demo project (local)](#option-a-seed-demo-project-local)
+  - [Option B — Dashboard UI (empty or existing install)](#option-b-dashboard-ui-empty-or-existing-install)
+- [3. Install BeaconBundle in your Symfony app](#3-install-beaconbundle-in-your-symfony-app)
+- [4. Set `BEACON_DSN`](#4-set-beacon_dsn)
+  - [Local self-signed HTTPS](#local-self-signed-https)
+- [5. Start collecting data](#5-start-collecting-data)
+  - [Automatic (recommended)](#automatic-recommended)
+  - [Manual](#manual)
+- [6. Verify in the Beacon dashboard](#6-verify-in-the-beacon-dashboard)
+  - [Quick HTTP checks (server side)](#quick-http-checks-server-side)
+- [7. Checklist](#7-checklist)
+- [Demo app in this repository](#demo-app-in-this-repository)
+- [Related documents](#related-documents)
+
 ## Overview
 
 ```text

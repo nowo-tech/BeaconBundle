@@ -2,6 +2,15 @@
 
 Thanks for contributing to BeaconBundle.
 
+## Table of contents
+
+- [Code of Conduct](#code-of-conduct)
+- [Development setup](#development-setup)
+- [Common commands](#common-commands)
+- [Demo checks](#demo-checks)
+- [Git hygiene](#git-hygiene)
+- [Pull requests](#pull-requests)
+
 ## Code of Conduct
 
 Participation in this project is governed by the [Code of Conduct](../CODE_OF_CONDUCT.md). Please report unacceptable behavior to [hectorfranco@nowo.tech](mailto:hectorfranco@nowo.tech).

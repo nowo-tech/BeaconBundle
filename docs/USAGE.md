@@ -2,6 +2,24 @@
 
 For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, verify issues in the UI), start with [Getting started](GETTING_STARTED.md).
 
+## Table of contents
+
+- [Automatic exception reporting](#automatic-exception-reporting)
+- [Manual reporting](#manual-reporting)
+- [Breadcrumbs](#breadcrumbs)
+- [Tags](#tags)
+- [before_send scrubbing](#before_send-scrubbing)
+- [Automatic Doctrine / HttpClient spans](#automatic-doctrine-httpclient-spans)
+- [Performance transactions](#performance-transactions)
+- [Console errors](#console-errors)
+- [Messenger failures](#messenger-failures)
+- [Automatic HTTP transactions](#automatic-http-transactions)
+- [Monolog](#monolog)
+- [Disabled mode](#disabled-mode)
+- [Ingest endpoint](#ingest-endpoint)
+- [End-to-end against `symfony-beacon`](#end-to-end-against-symfony-beacon)
+- [Scenario matrix](#scenario-matrix)
+
 ## Automatic exception reporting
 
 With `register_error_listener: true` and a non-empty DSN, uncaught HTTP exceptions are reported automatically through the `kernel.exception` listener.
