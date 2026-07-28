@@ -26,6 +26,7 @@ use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Scope\Scope;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -150,6 +151,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$spanBuffer'          => new Reference(SpanBuffer::class),
             '$pendingRegistry'     => new Reference(PendingTransportRegistry::class),
             '$messageBus'          => new Reference('messenger.default_bus', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$clock'               => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
         ]);
         $factory->setAutowired(false);
         $factory->setPublic(false);

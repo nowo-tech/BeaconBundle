@@ -55,6 +55,8 @@ Manual sync (after re-seeding Beacon):
 make sync-beacon
 ```
 
+**Smoke check (REQ-TEST-011):** from the bundle root, `make demo-smoke` boots `demo/symfony8` and asserts `HTTP 200` on `http://localhost:$PORT/` (default **8011**). Also `.github/workflows/demo-smoke.yml`.
+
 Then open `http://localhost:8011` and use `/full-context` or `/exception` (or `/boom` for the HTTP listener) to send errors into the seeded Demo project.
 
 Docker clients must use **HTTP `:9081`** via `host.docker.internal` (not HTTPS `:9444`), with a DSN that includes the **secret** (`PUBLIC:SECRET@…`).

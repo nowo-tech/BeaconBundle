@@ -6,6 +6,7 @@
 - [DSN format](#dsn-format)
 - [YAML reference](#yaml-reference)
   - [`send.*` context switches](#send-context-switches)
+- [Timeout hierarchy (REQ-RUNTIME-001)](#timeout-hierarchy-req-runtime-001)
 - [Important behavior](#important-behavior)
 - [Development with self-signed certificates](#development-with-self-signed-certificates)
 
@@ -82,7 +83,7 @@ nowo_beacon:
 | `release` | `null` | Optional release string such as app version or git SHA. Prefer `%env(string:default::BEACON_RELEASE)%`. |
 | `server_name` | `null` | Optional server/host tag. When null, the bundle falls back to the host name. |
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
-| `timeout` | `5.0` | HTTP timeout in seconds. |
+| `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
@@ -94,6 +95,16 @@ nowo_beacon:
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
+
+## Timeout hierarchy (REQ-RUNTIME-001)
+
+Outbound Envelope ingest uses Symfony HttpClient with `timeout` / `max_duration` from `nowo_beacon.timeout` (default **5.0** seconds). Under FrankenPHP / FPM, keep:
+
+**operation timeout (Beacon HTTP) &lt; PHP request budget &lt; Caddy / reverse-proxy write timeout**
+
+so the bundle deadline fires first, the transport fails soft (log + `false`), and the worker thread is released. Demo Caddy/PHP budgets: [PERFORMANCE.md](PERFORMANCE.md#timeout-hierarchy) and [DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md#timeout-hierarchy-req-runtime-001).
+
+When raising `timeout`, raise PHP `max_execution_time` and Caddy `servers.timeouts.write` in the **same** change.
 
 ### `send.*` context switches
 

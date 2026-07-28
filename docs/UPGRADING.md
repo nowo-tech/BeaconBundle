@@ -41,7 +41,7 @@
 - [Upgrading from 1.6.2 to 1.6.3](#upgrading-from-162-to-163)
 - [Upgrading from 1.6.3 to 1.6.4](#upgrading-from-163-to-164)
 - [Upgrading from 1.6.4 to 1.6.5](#upgrading-from-164-to-165)
-- [Upgrading from 1.6.5 to the next release](#upgrading-from-165-to-the-next-release)
+- [Upgrading from 1.6.5 to 1.6.6](#upgrading-from-165-to-166)
 
 ## First install -> 1.0.x
 
@@ -302,7 +302,11 @@ Maintainer / CI only. **No consumer API or config changes.**
 
 - `composer validate --strict` and `make composer-sync` work again after the `platform.php` lock-hash fix (no application code changes).
 
-## Upgrading from 1.6.5 to the next release
+## Upgrading from 1.6.5 to 1.6.6
 
-No further consumer changes documented yet.
+Backward compatible for typical apps.
+
+- New runtime dependency: `psr/clock` (^1.0). Run `composer update nowo-tech/beacon-bundle`.
+- If you **manually** instantiate `EnvelopeBuilder` or rely on a custom `BeaconClientFactory` wiring, you may pass an optional `Psr\Clock\ClockInterface` (defaults to system clock; DI injects it when available).
+- `SendBeaconEnvelopeMessageHandler` carries `#[AsMessageHandler]` (Messenger mode unchanged when configured via the Extension).
 

@@ -18,6 +18,7 @@ use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Scope\Scope;
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -40,6 +41,7 @@ final class BeaconClientFactory
         private readonly ?SpanBuffer $spanBuffer = null,
         private readonly ?PendingTransportRegistry $pendingRegistry = null,
         private readonly ?object $messageBus = null,
+        private readonly ?ClockInterface $clock = null,
     ) {
     }
 
@@ -109,6 +111,7 @@ final class BeaconClientFactory
             $this->requestStack,
             5,
             $this->scope,
+            $this->clock,
         );
         $sync = new EnvelopeTransport(
             $this->httpClient,

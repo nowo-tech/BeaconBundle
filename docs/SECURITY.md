@@ -8,6 +8,7 @@
 - [Supported Versions](#supported-versions)
 - [Reporting a Vulnerability](#reporting-a-vulnerability)
 - [Release security checklist (12.4.1)](#release-security-checklist-1241)
+- [AI security audit](#ai-security-audit)
 
 ## Security considerations for integrators
 
@@ -81,6 +82,7 @@ Before tagging a release, confirm:
 | **Logging** | No code path logs full DSNs, secrets, or unrelated request secrets. |
 | **Dependencies** | `composer audit` has been run and findings triaged. |
 | **Timeouts / DoS** | `timeout` stays documented and intentionally low; no hidden retry loop was introduced. |
+| **AI security audit (REQ-SEC-004)** | Grade **Pass (good)** / risk **Low** (2026-07-28). Recorded in the Nowo monorepo `BUNDLES_SECURITY_ANALYSIS.md`. |
 | **Release notes** | Security-relevant changes are reflected in `CHANGELOG.md` and `UPGRADING.md` when needed. |
 
 Recommended commands:
@@ -89,3 +91,13 @@ Recommended commands:
 composer audit
 make release-check
 ```
+
+## AI security audit
+
+| Field | Value |
+| ----- | ----- |
+| Date | 2026-07-28 |
+| Grade | Pass (good) |
+| Risk | Low |
+| Method | Cursor security-review / campaign static pass (`src/`, recipe, demo, SECURITY docs) |
+| Open residuals | None Critical/High. App-owned: DSN secret hygiene; `send.request` URL/query sensitivity; `send.user` PII when enabled. |

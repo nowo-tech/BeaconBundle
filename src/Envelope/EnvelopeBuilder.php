@@ -10,6 +10,7 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Scope\Scope;
+use Psr\Clock\ClockInterface;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -38,6 +39,8 @@ final class EnvelopeBuilder
     /** @var array<string, list<string>|null> */
     private array $sourceLineCache = [];
 
+    private readonly ClockInterface $clock;
+
     public function __construct(
         private readonly string $environment = 'prod',
         private readonly ?string $release = null,
@@ -48,7 +51,14 @@ final class EnvelopeBuilder
         private readonly ?RequestStack $requestStack = null,
         private readonly int $stackContextLines = 5,
         private readonly ?Scope $scope = null,
+        ?ClockInterface $clock = null,
     ) {
+        $this->clock = $clock ?? new class implements ClockInterface {
+            public function now(): DateTimeImmutable
+            {
+                return new DateTimeImmutable();
+            }
+        };
     }
 
     /**
@@ -66,7 +76,7 @@ final class EnvelopeBuilder
         ?array $fingerprint = null,
     ): string {
         $eventId    = $this->generateEventId();
-        $occurredAt = new DateTimeImmutable('now');
+        $occurredAt = $this->clock->now();
         $sentAt     = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
         $timestamp  = (float) $occurredAt->format('U.u');
 
@@ -164,7 +174,7 @@ final class EnvelopeBuilder
         array $extra = [],
     ): string {
         $eventId = $this->generateEventId();
-        $sentAt  = (new DateTimeImmutable('now'))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $sentAt  = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
 
         $envelopeHeader = [
             'event_id' => $eventId,

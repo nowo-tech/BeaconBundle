@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.6] - 2026-07-28](#166-2026-07-28)
+  - [Added](#added)
+  - [Changed](#changed)
 - [[1.6.5] - 2026-07-27](#165-2026-07-27)
   - [Fixed](#fixed)
 - [[1.6.4] - 2026-07-27](#164-2026-07-27)
@@ -74,6 +77,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.6] - 2026-07-28
+
+### Added
+
+- **`Psr\Clock\ClockInterface`** on `EnvelopeBuilder` / `BeaconClientFactory` (REQ-DI-001); runtime dep `psr/clock`.
+- **`#[AsMessageHandler]`** on `SendBeaconEnvelopeMessageHandler` (REQ-MSG-001).
+- **`make demo-smoke`** + `.github/workflows/demo-smoke.yml` (REQ-TEST-011).
+
+### Changed
+
+- PHPStan: `ignoreErrors: []` (REQ-CS-006).
+- `docs/CONFIGURATION.md`: timeout hierarchy section (REQ-RUNTIME-001).
+- **REQ-SEC-004**: AI security audit grade **Pass (good)** / risk **Low** recorded in `docs/SECURITY.md` and monorepo analysis (2026-07-28).
+- `check-open-prs`: resolve `owner/repo` from `origin` and pass `-R` to `gh` (SSH remotes).
 
 ## [1.6.5] - 2026-07-27
 
@@ -337,7 +355,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...HEAD
+[1.6.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.2...v1.6.3
