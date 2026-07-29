@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.7] - 2026-07-29](#167-2026-07-29)
+  - [Changed](#changed)
 - [[1.6.6] - 2026-07-28](#166-2026-07-28)
   - [Added](#added)
   - [Changed](#changed)
@@ -77,6 +79,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.7] - 2026-07-29
+
+### Changed
+
+- Makefiles prefer `docker compose` (V2) with fallback to `docker-compose` (REQ-MAKE-010).
+- Demo Makefile forces compose through the shell (`:;`) so a local `docker/` directory does not break Make’s direct-exec path.
+- Optional `-include` of monorepo `update-deps` helpers so standalone CI checkouts do not fail (REQ-MAKE-009).
 
 ## [1.6.6] - 2026-07-28
 
@@ -355,7 +365,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...HEAD
+[1.6.7]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.3...v1.6.4

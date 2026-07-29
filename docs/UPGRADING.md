@@ -42,6 +42,7 @@
 - [Upgrading from 1.6.3 to 1.6.4](#upgrading-from-163-to-164)
 - [Upgrading from 1.6.4 to 1.6.5](#upgrading-from-164-to-165)
 - [Upgrading from 1.6.5 to 1.6.6](#upgrading-from-165-to-166)
+- [Upgrading from 1.6.6 to 1.6.7](#upgrading-from-166-to-167)
 
 ## First install -> 1.0.x
 
@@ -309,4 +310,12 @@ Backward compatible for typical apps.
 - New runtime dependency: `psr/clock` (^1.0). Run `composer update nowo-tech/beacon-bundle`.
 - If you **manually** instantiate `EnvelopeBuilder` or rely on a custom `BeaconClientFactory` wiring, you may pass an optional `Psr\Clock\ClockInterface` (defaults to system clock; DI injects it when available).
 - `SendBeaconEnvelopeMessageHandler` carries `#[AsMessageHandler]` (Messenger mode unchanged when configured via the Extension).
+
+## Upgrading from 1.6.6 to 1.6.7
+
+Maintainer / demo tooling only. **No consumer API or config changes.**
+
+- Root and demo Makefiles prefer `docker compose` when available (still fall back to `docker-compose`).
+- Demo recipes invoke compose via the shell so a local `demo/symfony8/docker/` directory does not cause `make: docker: Permission denied`.
+- Monorepo `update-deps` Makefile includes are optional (`-include`) so a standalone clone / GitHub Actions checkout does not break `make`.
 

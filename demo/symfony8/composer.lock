@@ -115,7 +115,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "9a775913e7c52f38cf8ec42adc5dd802f5fff046"
+                "reference": "b231f5b90c39893e715a50a51cca769f6acd69a8"
             },
             "require": {
                 "php": ">=8.2 <8.6",
