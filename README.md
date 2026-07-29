@@ -165,9 +165,3 @@ Coverage (Lines): **100.00%** (measured with `make test-coverage` / PCOV).
 | PHP unit + integration | 100.00% Lines |
 | TypeScript / Python | N/A (no frontend or Python in this bundle) |
 
-## Found this useful?
-
-If BeaconBundle helps your project, please star the repository, report issues, and share feedback:
-
-- Repository: [nowo-tech/BeaconBundle](https://github.com/nowo-tech/BeaconBundle)
-- Package: [nowo-tech/beacon-bundle](https://packagist.org/packages/nowo-tech/beacon-bundle)
