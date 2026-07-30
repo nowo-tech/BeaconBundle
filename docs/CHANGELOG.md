@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.8] - 2026-07-30](#168-2026-07-30)
+  - [Added](#added)
+  - [Changed](#changed)
 - [[1.6.7] - 2026-07-29](#167-2026-07-29)
   - [Changed](#changed)
 - [[1.6.6] - 2026-07-28](#166-2026-07-28)
@@ -79,6 +82,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.8] - 2026-07-30
+
+### Added
+
+- **`ignore_paths`** config for the HTTP exception listener and auto HTTP transactions (`IgnoredRequestPath`). Defaults reuse Beacon host infra exclusions (`/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`) plus Chrome DevTools Appspecific probe `/.well-known/appspecific/com.chrome.devtools.json` (set `ignore_paths: []` to disable).
+
+### Changed
+
+- `auto_http_transaction` skip list is driven by `ignore_paths` (same defaults as before for profiler / WDT / health / build, plus `/assets` and the Chrome DevTools probe).
+- README / recipe note `ignore_paths` alongside `ignore_exceptions`.
 
 ## [1.6.7] - 2026-07-29
 
@@ -365,7 +379,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...HEAD
+[1.6.8]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...v1.6.8
 [1.6.7]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.4...v1.6.5

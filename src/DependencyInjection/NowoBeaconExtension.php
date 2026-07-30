@@ -110,6 +110,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $container->setParameter('nowo.beacon.verify_peer', (bool) $config['verify_peer']);
         $container->setParameter('nowo.beacon.timeout', (float) $config['timeout']);
         $container->setParameter('nowo.beacon.ignore_exceptions', $config['ignore_exceptions']);
+        $container->setParameter('nowo.beacon.ignore_paths', $config['ignore_paths']);
         $container->setParameter('nowo.beacon.send', $send);
         $transportMode = (string) ($config['transport']['mode'] ?? 'sync');
         $container->setParameter('nowo.beacon.transport.mode', $transportMode);
@@ -217,6 +218,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $listener->setArgument('$enabled', true);
             $listener->setArgument('$ignoreExceptions', $config['ignore_exceptions']);
             $listener->setArgument('$sendRequest', (bool) ($send['request'] ?? true));
+            $listener->setArgument('$ignorePaths', $config['ignore_paths']);
         } else {
             $container->removeDefinition(BeaconExceptionListener::class);
         }
@@ -247,8 +249,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
 
         if ((bool) ($config['auto_http_transaction'] ?? false)) {
             $tx = new Definition(BeaconRequestTransactionListener::class, [
-                '$client'  => new Reference(BeaconClientInterface::class),
-                '$enabled' => true,
+                '$client'      => new Reference(BeaconClientInterface::class),
+                '$enabled'     => true,
+                '$ignorePaths' => $config['ignore_paths'],
             ]);
             $tx->addTag('kernel.event_subscriber');
             $tx->addTag('kernel.reset', ['method' => 'reset']);

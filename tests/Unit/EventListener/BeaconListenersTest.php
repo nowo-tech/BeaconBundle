@@ -136,4 +136,18 @@ final class BeaconListenersTest extends TestCase
         $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
         $listener->onKernelTerminate(new TerminateEvent($kernel, $request, new Response('ok', 200)));
     }
+
+    public function testRequestTransactionListenerSkipsChromeDevtoolsProbe(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::never())->method('captureTransaction');
+
+        $listener = new BeaconRequestTransactionListener($client, true);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+        $request  = Request::create('/.well-known/appspecific/com.chrome.devtools.json/');
+
+        $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
+        $listener->onKernelTerminate(new TerminateEvent($kernel, $request, new Response('ok', 200)));
+    }
 }

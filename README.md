@@ -19,7 +19,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Versioned `User-Agent` (`beacon-bundle/{composer-version}`)
 - Manual APIs through `BeaconClientInterface`
 - Optional `kernel.exception` listener for uncaught HTTP exceptions
-- `ignore_exceptions` support for listener-side filtering
+- `ignore_exceptions` / `ignore_paths` support for listener-side filtering (defaults align with Beacon host infra exclusions + Chrome DevTools probe)
 - Configurable outbound context (`send.*`: stacktrace, request, user, PHP/Symfony versions, OS, …)
 - Message events can include current stacktrace; frames may include source context when files are readable
 - HTTP events attach request URL/method (and safe headers) when available

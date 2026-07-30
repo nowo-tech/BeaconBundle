@@ -35,6 +35,14 @@ final class ConfigurationTest extends TestCase
         self::assertFalse($config['monolog_handler']['enabled']);
         self::assertSame('error', $config['monolog_handler']['level']);
         self::assertSame([], $config['ignore_exceptions']);
+        self::assertSame([
+            '/_profiler',
+            '/_wdt',
+            '/build',
+            '/assets',
+            '/health',
+            '/.well-known/appspecific/com.chrome.devtools.json',
+        ], $config['ignore_paths']);
         self::assertTrue($config['send']['environment']);
         self::assertTrue($config['send']['release']);
         self::assertTrue($config['send']['server_name']);
@@ -67,6 +75,10 @@ final class ConfigurationTest extends TestCase
                 RuntimeException::class,
                 InvalidArgumentException::class,
             ],
+            'ignore_paths' => [
+                '/health',
+                '/custom-noise',
+            ],
             'send' => [
                 'user'       => true,
                 'stacktrace' => false,
@@ -90,6 +102,7 @@ final class ConfigurationTest extends TestCase
             RuntimeException::class,
             InvalidArgumentException::class,
         ], $config['ignore_exceptions']);
+        self::assertSame(['/health', '/custom-noise'], $config['ignore_paths']);
         self::assertTrue($config['send']['user']);
         self::assertFalse($config['send']['stacktrace']);
         self::assertFalse($config['send']['request']);

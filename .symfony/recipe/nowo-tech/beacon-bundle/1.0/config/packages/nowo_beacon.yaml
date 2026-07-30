@@ -25,6 +25,8 @@ nowo_beacon:
     #     doctrine: false                 # requires doctrine/dbal
     #     http_client: false
     ignore_exceptions: []
+    # ignore_paths defaults: /_profiler, /_wdt, /build, /assets, /health, Chrome DevTools probe; set [] to disable:
+    # ignore_paths: []
     # Per-category outbound context (user is opt-in; may include PII):
     send:
         environment: true

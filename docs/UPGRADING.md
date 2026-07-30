@@ -43,6 +43,7 @@
 - [Upgrading from 1.6.4 to 1.6.5](#upgrading-from-164-to-165)
 - [Upgrading from 1.6.5 to 1.6.6](#upgrading-from-165-to-166)
 - [Upgrading from 1.6.6 to 1.6.7](#upgrading-from-166-to-167)
+- [Upgrading from 1.6.7 to 1.6.8](#upgrading-from-167-to-168)
 
 ## First install -> 1.0.x
 
@@ -175,7 +176,7 @@ nowo_beacon:
 ### Behaviour
 
 - With default `register_messenger_listener: true`, final Messenger failures (no retry) are reported when `symfony/messenger` is installed. Disable if you do not want worker failures in Beacon.
-- `auto_http_transaction` stays **off** by default. Enable only if you want one transaction per main request (routes under `/_profiler`, `/_wdt`, `/health/`, `/build` are skipped).
+- `auto_http_transaction` stays **off** by default. Enable only if you want one transaction per main request (`ignore_paths` are skipped; defaults cover profiler / WDT / build / assets / health / Chrome DevTools).
 - `ignore_exceptions` also applies to the Messenger failure listener.
 
 ### Compatibility
@@ -318,4 +319,14 @@ Maintainer / demo tooling only. **No consumer API or config changes.**
 - Root and demo Makefiles prefer `docker compose` when available (still fall back to `docker-compose`).
 - Demo recipes invoke compose via the shell so a local `demo/symfony8/docker/` directory does not cause `make: docker: Permission denied`.
 - Monorepo `update-deps` Makefile includes are optional (`-include`) so a standalone clone / GitHub Actions checkout does not break `make`.
+
+## Upgrading from 1.6.7 to 1.6.8
+
+Backward compatible for typical apps; default noise filtering is slightly broader.
+
+- New optional config: `ignore_paths` (defaults listed in `CONFIGURATION.md` / `IgnoredRequestPath::DEFAULTS`).
+- The **HTTP exception listener** now skips those paths (previously only `auto_http_transaction` had a hard-coded skip list).
+- `auto_http_transaction` uses the same `ignore_paths` list (adds `/assets` and the Chrome DevTools Appspecific probe vs the old hard-coded set).
+- To report every path again: `ignore_paths: []`.
+- Replacing the list removes the defaults (same pattern as other array nodes).
 

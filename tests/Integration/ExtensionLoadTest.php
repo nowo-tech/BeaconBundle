@@ -94,6 +94,14 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($listenerDefinition->getArgument('$enabled'));
         self::assertSame([RuntimeException::class], $listenerDefinition->getArgument('$ignoreExceptions'));
         self::assertTrue($listenerDefinition->getArgument('$sendRequest'));
+        self::assertSame([
+            '/_profiler',
+            '/_wdt',
+            '/build',
+            '/assets',
+            '/health',
+            '/.well-known/appspecific/com.chrome.devtools.json',
+        ], $listenerDefinition->getArgument('$ignorePaths'));
         self::assertArrayHasKey('user', $clientDefinition->getArgument('$send'));
         self::assertFalse($clientDefinition->getArgument('$send')['user']);
     }

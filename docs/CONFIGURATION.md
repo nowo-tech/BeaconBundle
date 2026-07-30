@@ -60,6 +60,13 @@ nowo_beacon:
         doctrine: false
         http_client: false
     ignore_exceptions: []
+    ignore_paths:
+        - '/_profiler'
+        - '/_wdt'
+        - '/build'
+        - '/assets'
+        - '/health'
+        - '/.well-known/appspecific/com.chrome.devtools.json'
     monolog_handler:
         enabled: false
         level: error
@@ -88,11 +95,12 @@ nowo_beacon:
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
-| `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `/_profiler`, `/health`, `/build`). |
+| `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |
 | `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest URLs are skipped. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
+| `ignore_paths` | `IgnoredRequestPath::DEFAULTS` | HTTP path prefixes skipped by the exception listener and auto HTTP transactions (trailing slashes ignored). Defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools Appspecific probe — aligned with Symfony Beacon security/PWA/site-backup/setup exclusions. Replacing the list removes defaults; use `[]` to report every path. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
 
@@ -137,6 +145,7 @@ nowo_beacon:
 
 - Empty `dsn` means the bundle wires `NullBeaconClient`.
 - `ignore_exceptions` only affects the automatic listener. Manual `captureException()` calls still send unless your own code avoids them.
+- `ignore_paths` only affects the HTTP exception listener and `auto_http_transaction`. Console / Messenger listeners are unaffected.
 - `timeout` applies to the synchronous HTTP request path.
 - `verify_peer: false` also disables host verification in the underlying HTTP client and should stay limited to local dev.
 - Enabling `send.user` transmits account identifiers to your Beacon host; align with GDPR / privacy policy and legal pages on the Beacon UI.

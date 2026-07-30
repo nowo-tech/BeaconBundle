@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -21,6 +22,8 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         /** @var list<class-string> */
         private readonly array $ignoreExceptions = [],
         private readonly bool $sendRequest = true,
+        /** @var list<string> */
+        private readonly array $ignorePaths = IgnoredRequestPath::DEFAULTS,
     ) {
     }
 
@@ -40,6 +43,10 @@ final class BeaconExceptionListener implements EventSubscriberInterface
     public function onKernelException(ExceptionEvent $event): void
     {
         if (!$this->enabled || !$this->client->isEnabled()) {
+            return;
+        }
+
+        if (IgnoredRequestPath::matches($event->getRequest()->getPathInfo(), $this->ignorePaths)) {
             return;
         }
 

@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
+use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
@@ -104,6 +105,40 @@ final class BeaconExceptionListenerTest extends TestCase
 
         $listener = new BeaconExceptionListener($client, true, [], false);
         $listener->onKernelException($this->createEvent(new RuntimeException('boom')));
+    }
+
+    public function testIgnoresConfiguredPathsIncludingChromeDevtoolsProbe(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::never())->method('captureException');
+
+        $listener = new BeaconExceptionListener($client, true, [], true, IgnoredRequestPath::DEFAULTS);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+        $event    = new ExceptionEvent(
+            $kernel,
+            Request::create('/.well-known/appspecific/com.chrome.devtools.json/'),
+            HttpKernelInterface::MAIN_REQUEST,
+            new RuntimeException('No routes found'),
+        );
+        $listener->onKernelException($event);
+    }
+
+    public function testEmptyIgnorePathsStillReports(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException');
+
+        $listener = new BeaconExceptionListener($client, true, [], true, []);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+        $event    = new ExceptionEvent(
+            $kernel,
+            Request::create('/.well-known/appspecific/com.chrome.devtools.json/'),
+            HttpKernelInterface::MAIN_REQUEST,
+            new RuntimeException('No routes found'),
+        );
+        $listener->onKernelException($event);
     }
 
     private function createEvent(Throwable $throwable): ExceptionEvent

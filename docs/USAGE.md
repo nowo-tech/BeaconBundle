@@ -175,7 +175,7 @@ nowo_beacon:
     auto_http_transaction: true
 ```
 
-Profiler, WDT, `/health/*`, and `/build*` paths are skipped. Prefer this for coarse request timing; use `captureTransaction()` for finer spans.
+Paths in `ignore_paths` are skipped (defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools probe). Prefer this for coarse request timing; use `captureTransaction()` for finer spans.
 
 ## Monolog
 

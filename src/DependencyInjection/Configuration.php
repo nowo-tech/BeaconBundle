@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\DependencyInjection;
 
+use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -76,6 +77,11 @@ final class Configuration implements ConfigurationInterface
                     ->scalarPrototype()->end()
                     ->defaultValue([])
                 ->end()
+                ->arrayNode('ignore_paths')
+                    ->info('HTTP path prefixes skipped by the exception listener and auto HTTP transactions. Trailing slashes are ignored. Defaults match Beacon host infra exclusions (profiler, WDT, build, assets, health) plus Chrome DevTools Appspecific probe.')
+                    ->scalarPrototype()->end()
+                    ->defaultValue(IgnoredRequestPath::DEFAULTS)
+                ->end()
                 ->booleanNode('register_console_listener')
                     ->info('When true, report uncaught console command errors (ConsoleEvents::ERROR).')
                     ->defaultTrue()
@@ -85,7 +91,7 @@ final class Configuration implements ConfigurationInterface
                     ->defaultTrue()
                 ->end()
                 ->booleanNode('auto_http_transaction')
-                    ->info('When true, send a performance transaction for each main HTTP request (skips profiler/health/build).')
+                    ->info('When true, send a performance transaction for each main HTTP request (skips ignore_paths).')
                     ->defaultFalse()
                 ->end()
                 ->scalarNode('before_send')

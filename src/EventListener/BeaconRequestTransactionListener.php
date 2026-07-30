@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -23,9 +24,13 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
 
     private ?Request $request = null;
 
+    /**
+     * @param list<string> $ignorePaths Path prefixes skipped (defaults: {@see IgnoredRequestPath::DEFAULTS})
+     */
     public function __construct(
         private readonly BeaconClientInterface $client,
         private readonly bool $enabled = true,
+        private readonly array $ignorePaths = IgnoredRequestPath::DEFAULTS,
     ) {
     }
 
@@ -50,7 +55,7 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
         }
 
         $request = $event->getRequest();
-        if ($this->shouldSkip($request)) {
+        if (IgnoredRequestPath::matches($request->getPathInfo(), $this->ignorePaths)) {
             return;
         }
 
@@ -94,18 +99,5 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
     {
         $this->startedAt = null;
         $this->request   = null;
-    }
-
-    /**
-     * Skip profiler, WDT, health checks, and static build assets.
-     */
-    private function shouldSkip(Request $request): bool
-    {
-        $path = $request->getPathInfo();
-
-        return str_starts_with($path, '/_profiler')
-            || str_starts_with($path, '/_wdt')
-            || str_starts_with($path, '/health/')
-            || str_starts_with($path, '/build');
     }
 }
