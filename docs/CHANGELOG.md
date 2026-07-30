@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.9] - 2026-07-30](#169-2026-07-30)
+  - [Changed](#changed)
 - [[1.6.8] - 2026-07-30](#168-2026-07-30)
   - [Added](#added)
   - [Changed](#changed)
@@ -82,6 +84,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.9] - 2026-07-30
+
+### Changed
+
+- Spec Kit baseline (`specs/001-baseline/spec.md`, `code-inventory.md`) aligned with **v1.6.8** `ignore_paths` / FR-LI-005.
 
 ## [1.6.8] - 2026-07-30
 
@@ -379,7 +387,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...HEAD
+[1.6.9]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...v1.6.9
 [1.6.8]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...v1.6.8
 [1.6.7]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.5...v1.6.6

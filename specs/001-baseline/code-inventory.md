@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-07-23  
-**Aligned with:** **v1.6.x**
+**Last audited:** 2026-07-30  
+**Aligned with:** **v1.6.8** (`ignore_paths` / FR-LI-005)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
@@ -33,15 +33,16 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/PendingTransportRegistry.php` | Tracks flushable transports | FR-TR-002 |
 | `src/Envelope/SendBeaconEnvelopeMessage.php` | Messenger message | FR-TR-002 |
 | `src/Envelope/SendBeaconEnvelopeMessageHandler.php` | Messenger handler | FR-TR-002 |
-| `src/EventListener/BeaconExceptionListener.php` | `kernel.exception` | FR-LI-001 |
+| `src/EventListener/BeaconExceptionListener.php` | `kernel.exception` | FR-LI-001, FR-LI-005 |
 | `src/EventListener/BeaconConsoleErrorListener.php` | `ConsoleEvents::ERROR` | FR-LI-002 |
 | `src/EventListener/BeaconMessengerFailedListener.php` | Messenger final failures | FR-LI-003 |
-| `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004 |
+| `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004, FR-LI-005 |
 | `src/EventListener/FlushPendingTransportsListener.php` | Flush on terminate | FR-TR-002 |
+| `src/Support/IgnoredRequestPath.php` | Path-prefix matcher + default ignore list | FR-LI-005 |
 | `src/Instrumentation/SpanBuffer.php` | In-request SQL/HTTP spans | FR-INS-001 |
 | `src/Instrumentation/SqlNormalizer.php` | Normalize SQL for spans | FR-INS-001 |
 | `src/Instrumentation/DoctrineSqlMiddleware.php` | DBAL middleware (+ tracing driver/connection) | FR-INS-001 |
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 35 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 36 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

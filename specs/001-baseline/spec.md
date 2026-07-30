@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-07-23  
-**Aligned with:** public API / config through **v1.6.x**
+**Last audited:** 2026-07-30  
+**Aligned with:** public API / config through **v1.6.8** (`ignore_paths`)
 
 ## Summary
 
@@ -19,6 +19,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Manual capture APIs for messages, exceptions, breadcrumbs, and performance transactions
 - Configurable outbound context via `send.*` (stacktrace with optional source snippets, HTTP request, user, runtime/framework/os, …)
 - Optional Monolog forwarding (`monolog_handler`) wired through MonologBundle `handlers`
+- Path-based ignore list for HTTP exception reporting and auto HTTP transactions (`ignore_paths`)
 
 ## Non-goals
 
@@ -36,6 +37,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-02 | As a developer, I inject `BeaconClientInterface` and call `captureException` / `captureMessage` | Returns local `event_id`; POSTs envelope |
 | US-03 | As a developer, uncaught HTTP exceptions are reported automatically | Listener on `kernel.exception` when enabled |
 | US-04 | As a developer, I ignore noisy exception classes | `ignore_exceptions` skips by `instanceof` (HTTP + console listeners) |
+| US-04b | As a developer, I ignore noisy HTTP paths by default | `ignore_paths` skips prefixes (defaults: profiler, WDT, build, assets, health, Chrome DevTools Appspecific probe); set `[]` to report all |
 | US-05 | As a developer, local self-signed HTTPS works in dev | `verify_peer: false` disables TLS verify |
 | US-06 | As a developer, network failures must not break the app request | Transport logs and returns false; no rethrow |
 | US-07 | As a developer, I attach breadcrumbs before the next capture | `addBreadcrumb` → attached then cleared |
@@ -80,12 +82,13 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, monolog_handler.*, send.*, instrumentation.*, before_send |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, before_send |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
 | FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`) |
 | FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`) |
-| FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false) |
+| FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths` |
+| FR-LI-005 | `ignore_paths` defaults MUST include `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, and `/.well-known/appspecific/com.chrome.devtools.json` (aligned with typical Symfony Beacon host infra exclusions); trailing slashes are normalized; empty list disables path filtering; applies to HTTP exception listener and auto HTTP transactions only (not console/Messenger) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
 
 ## Sample application

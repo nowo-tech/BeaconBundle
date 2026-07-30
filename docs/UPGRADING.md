@@ -44,6 +44,7 @@
 - [Upgrading from 1.6.5 to 1.6.6](#upgrading-from-165-to-166)
 - [Upgrading from 1.6.6 to 1.6.7](#upgrading-from-166-to-167)
 - [Upgrading from 1.6.7 to 1.6.8](#upgrading-from-167-to-168)
+- [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 
 ## First install -> 1.0.x
 
@@ -329,4 +330,8 @@ Backward compatible for typical apps; default noise filtering is slightly broade
 - `auto_http_transaction` uses the same `ignore_paths` list (adds `/assets` and the Chrome DevTools Appspecific probe vs the old hard-coded set).
 - To report every path again: `ignore_paths: []`.
 - Replacing the list removes the defaults (same pattern as other array nodes).
+
+## Upgrading from 1.6.8 to 1.6.9
+
+Spec Kit / inventory docs only. **No consumer API or config changes.**
 
