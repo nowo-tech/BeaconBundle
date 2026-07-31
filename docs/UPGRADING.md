@@ -45,6 +45,7 @@
 - [Upgrading from 1.6.6 to 1.6.7](#upgrading-from-166-to-167)
 - [Upgrading from 1.6.7 to 1.6.8](#upgrading-from-167-to-168)
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
+- [Upgrading from 1.6.9 to the next release](#upgrading-from-169-to-the-next-release)
 
 ## First install -> 1.0.x
 
@@ -334,4 +335,47 @@ Backward compatible for typical apps; default noise filtering is slightly broade
 ## Upgrading from 1.6.8 to 1.6.9
 
 Spec Kit / inventory docs only. **No consumer API or config changes.**
+
+## Upgrading from 1.6.9 to the next release
+
+Backward compatible for typical apps; console `extra` shape changed for dashboards / custom parsers.
+
+### Console `extra` shape
+
+Previously:
+
+```json
+{ "console": true, "command": "app:demo" }
+```
+
+Now (Messenger-aligned nested object):
+
+```json
+{
+  "console": {
+    "command": "app:demo",
+    "exit_code": 1,
+    "php_sapi": "cli"
+  }
+}
+```
+
+Raw argv / input arguments are **never** attached (cron wrappers often pass secrets on the CLI).
+
+### Scheduler context (optional)
+
+New config `include_scheduler_context` (default `true`). When `symfony/scheduler` stamps a failing Messenger envelope with `ScheduledStamp`, final failures (`willRetry() === false`) also include:
+
+```json
+{
+  "scheduler": {
+    "schedule_name": "default",
+    "recurring_id": "…",
+    "triggered_at": "2026-07-31T10:00:00+00:00",
+    "trigger": "0 * * * *"
+  }
+}
+```
+
+Disable with `include_scheduler_context: false`. Without `symfony/scheduler` installed the flag is a no-op. Scheduled **message bodies** are never sent.
 

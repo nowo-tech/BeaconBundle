@@ -82,11 +82,11 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, before_send |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, include_scheduler_context, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, before_send |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
-| FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`) |
-| FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`) |
+| FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`); nested `extra.console` with `command`, `exit_code`, `php_sapi`; MUST NOT attach argv/input arguments |
+| FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`); when `include_scheduler_context` and envelope has `ScheduledStamp`, attach `extra.scheduler` (no message body); do not also capture `FailureEvent` (avoids duplicates / retries) |
 | FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths` |
 | FR-LI-005 | `ignore_paths` defaults MUST include `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, and `/.well-known/appspecific/com.chrome.devtools.json` (aligned with typical Symfony Beacon host infra exclusions); trailing slashes are normalized; empty list disables path filtering; applies to HTTP exception listener and auto HTTP transactions only (not console/Messenger) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |

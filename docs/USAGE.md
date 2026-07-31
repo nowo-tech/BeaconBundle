@@ -160,11 +160,23 @@ Transactions appear under **Performance** in Symfony Beacon.
 
 ## Console errors
 
-With `register_console_listener: true` (default), uncaught console command errors are reported with `extra.console` / `extra.command`.
+With `register_console_listener: true` (default), uncaught console command errors (including typical cron wrappers that run `bin/console …`) are reported with nested `extra.console`:
+
+| Key | Meaning |
+|-----|---------|
+| `command` | Command name (or `null` if unavailable) |
+| `exit_code` | Console exit code from the error event |
+| `php_sapi` | PHP SAPI (usually `cli`) |
+
+Raw argv / input arguments are **not** sent (secrets on the CLI).
 
 ## Messenger failures
 
 With `register_messenger_listener: true` (default) and `symfony/messenger` installed, final worker failures (`WorkerMessageFailedEvent` when `willRetry()` is false) are reported with `extra.messenger.message_class` / `receiver_name`.
+
+### Scheduled tasks (Symfony Scheduler)
+
+When `include_scheduler_context: true` (default) and the failing envelope carries a `ScheduledStamp`, the same event also includes `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`). Reporting stays on the Messenger listener only (no duplicate `FailureEvent` capture; retries are still skipped via `willRetry()`). Message bodies are never attached.
 
 ## Automatic HTTP transactions
 
@@ -248,7 +260,7 @@ when@dev:
 | N+1 transaction | Valid DSN | `GET /transaction-nplus1` | Transaction with ≥5 similar DB spans; Beacon marks an N+1 group. |
 | Auto HTTP transaction | `auto_http_transaction: true` | `GET /auto-http` (or any non-skipped page) | Message + terminate transaction named after the route. |
 | Messenger failure | `register_messenger_listener: true` + Messenger | `GET /messenger-fail` | Exception event with `extra.messenger` (same shape as the worker listener). |
-| Console failure | `register_console_listener: true` | `php bin/console app:demo-console-boom` | Exception event with console extra. |
+| Console failure | `register_console_listener: true` | `php bin/console app:demo-console-boom` | Exception event with nested `extra.console` (`command`, `exit_code`, `php_sapi`). |
 | Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |

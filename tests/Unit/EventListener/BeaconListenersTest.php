@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
+use DateTimeImmutable;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
+use Stringable;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -18,6 +20,13 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Scheduler\Generator\MessageContext;
+use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
+use Symfony\Component\Scheduler\Trigger\TriggerInterface;
+
+use function is_array;
+
+use const DATE_ATOM;
 
 final class BeaconListenersTest extends TestCase
 {
@@ -25,13 +34,87 @@ final class BeaconListenersTest extends TestCase
     {
         $client = $this->createMock(BeaconClientInterface::class);
         $client->method('isEnabled')->willReturn(true);
-        $client->expects(self::once())->method('captureException');
+        $client->expects(self::once())->method('captureException')->with(
+            self::isInstanceOf(RuntimeException::class),
+            self::callback(static function (array $extra): bool {
+                return ($extra['messenger']['message_class'] ?? null) === stdClass::class
+                    && ($extra['messenger']['receiver_name'] ?? null) === 'async'
+                    && !isset($extra['scheduler']);
+            }),
+        );
 
         $listener = new BeaconMessengerFailedListener($client, true, []);
         $envelope = new Envelope(new stdClass());
         $event    = new WorkerMessageFailedEvent($envelope, 'async', new RuntimeException('boom'));
         // Default willRetry is false when not set for retry — ensure final failure path
         $listener($event);
+    }
+
+    public function testMessengerListenerAttachesSchedulerContextFromStamp(): void
+    {
+        $triggeredAt = new DateTimeImmutable('2026-07-31T10:00:00+00:00');
+        $trigger     = new class implements TriggerInterface, Stringable {
+            public function __toString(): string
+            {
+                return '0 * * * *';
+            }
+
+            public function getNextRunDate(DateTimeImmutable $run): DateTimeImmutable
+            {
+                return $run;
+            }
+        };
+
+        $context  = new MessageContext('default', 'cleanup-old', $trigger, $triggeredAt);
+        $envelope = new Envelope(new stdClass(), [new ScheduledStamp($context)]);
+
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException')->with(
+            self::anything(),
+            self::callback(static function (array $extra) use ($triggeredAt): bool {
+                $scheduler = $extra['scheduler'] ?? null;
+
+                return is_array($scheduler)
+                    && $scheduler['schedule_name'] === 'default'
+                    && $scheduler['recurring_id'] === 'cleanup-old'
+                    && $scheduler['triggered_at'] === $triggeredAt->format(DATE_ATOM)
+                    && $scheduler['trigger'] === '0 * * * *'
+                    && !isset($extra['scheduler']['message']);
+            }),
+        );
+
+        $listener = new BeaconMessengerFailedListener($client, true, [], true);
+        $listener(new WorkerMessageFailedEvent($envelope, 'scheduler_default', new RuntimeException('scheduled boom')));
+    }
+
+    public function testMessengerListenerOmitsSchedulerContextWhenDisabled(): void
+    {
+        $trigger = new class implements TriggerInterface {
+            public function __toString(): string
+            {
+                return '@hourly';
+            }
+
+            public function getNextRunDate(DateTimeImmutable $run): DateTimeImmutable
+            {
+                return $run;
+            }
+        };
+        $context  = new MessageContext('default', 'id-1', $trigger, new DateTimeImmutable());
+        $envelope = new Envelope(new stdClass(), [new ScheduledStamp($context)]);
+
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException')->with(
+            self::anything(),
+            self::callback(static function (array $extra): bool {
+                return isset($extra['messenger']) && !isset($extra['scheduler']);
+            }),
+        );
+
+        $listener = new BeaconMessengerFailedListener($client, true, [], false);
+        $listener(new WorkerMessageFailedEvent($envelope, 'async', new RuntimeException('boom')));
     }
 
     public function testMessengerListenerSkipsWhenDisabledOrRetryingOrIgnored(): void

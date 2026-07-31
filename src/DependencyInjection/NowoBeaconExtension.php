@@ -236,9 +236,10 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             && class_exists(WorkerMessageFailedEvent::class)
         ) {
             $messenger = new Definition(BeaconMessengerFailedListener::class, [
-                '$client'           => new Reference(BeaconClientInterface::class),
-                '$enabled'          => true,
-                '$ignoreExceptions' => $config['ignore_exceptions'],
+                '$client'                  => new Reference(BeaconClientInterface::class),
+                '$enabled'                 => true,
+                '$ignoreExceptions'        => $config['ignore_exceptions'],
+                '$includeSchedulerContext' => (bool) ($config['include_scheduler_context'] ?? true),
             ]);
             $messenger->addTag('kernel.event_listener', [
                 'event' => WorkerMessageFailedEvent::class,
