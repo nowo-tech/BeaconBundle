@@ -45,7 +45,7 @@
 - [Upgrading from 1.6.6 to 1.6.7](#upgrading-from-166-to-167)
 - [Upgrading from 1.6.7 to 1.6.8](#upgrading-from-167-to-168)
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
-- [Upgrading from 1.6.9 to the next release](#upgrading-from-169-to-the-next-release)
+- [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
 
 ## First install -> 1.0.x
 
@@ -336,7 +336,7 @@ Backward compatible for typical apps; default noise filtering is slightly broade
 
 Spec Kit / inventory docs only. **No consumer API or config changes.**
 
-## Upgrading from 1.6.9 to the next release
+## Upgrading from 1.6.9 to 1.6.10
 
 Backward compatible for typical apps; console `extra` shape changed for dashboards / custom parsers.
 
