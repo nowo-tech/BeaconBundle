@@ -55,7 +55,7 @@ Manual sync (after re-seeding Beacon):
 make sync-beacon
 ```
 
-**Smoke check (REQ-TEST-011):** from the bundle root, `make demo-smoke` boots `demo/symfony8` and asserts `HTTP 200` on `http://localhost:$PORT/` (default **8011**). Also `.github/workflows/demo-smoke.yml`.
+**Smoke check (REQ-TEST-011):** from the bundle root, `make demo-smoke` boots `demo/symfony8` and asserts `HTTP 200` on `http://localhost:$PORT/` (default **8011**). Also `.github/workflows/demo-smoke.yml`. Fresh clones install Composer deps via an ephemeral `compose run` container first — FrankenPHP worker mode needs `vendor/` before the long-lived `php` service can stay up.
 
 Then open `http://localhost:8011` and use `/full-context` or `/exception` (or `/boom` for the HTTP listener) to send errors into the seeded Demo project.
 

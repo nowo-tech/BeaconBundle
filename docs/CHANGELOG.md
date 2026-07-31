@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.11] - 2026-07-31](#1611-2026-07-31)
+  - [Fixed](#fixed)
 - [[1.6.10] - 2026-07-31](#1610-2026-07-31)
   - [Added](#added)
   - [Changed](#changed)
@@ -88,6 +90,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.11] - 2026-07-31
+
+### Fixed
+
+- `composer.lock`: keep `symfony/scheduler` on **7.4.x** so `composer install` works on PHP 8.2 (CI code-style / matrix). Symfony 8 apps still resolve `^8` via `composer update` on PHP ≥8.4.1.
+- `make demo-smoke` / `demo/symfony8` `make up`: install Composer deps via ephemeral `compose run` **before** starting FrankenPHP worker (fresh CI clones have no `vendor/`, so the long-lived `php` service was exiting before `exec composer install`).
 
 ## [1.6.10] - 2026-07-31
 
@@ -407,7 +416,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.11...HEAD
+[1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10
 [1.6.9]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...v1.6.9
 [1.6.8]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...v1.6.8

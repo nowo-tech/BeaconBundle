@@ -46,6 +46,7 @@
 - [Upgrading from 1.6.7 to 1.6.8](#upgrading-from-167-to-168)
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 - [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
+- [Upgrading from 1.6.10 to 1.6.11](#upgrading-from-1610-to-1611)
 
 ## First install -> 1.0.x
 
@@ -378,4 +379,11 @@ New config `include_scheduler_context` (default `true`). When `symfony/scheduler
 ```
 
 Disable with `include_scheduler_context: false`. Without `symfony/scheduler` installed the flag is a no-op. Scheduled **message bodies** are never sent.
+
+## Upgrading from 1.6.10 to 1.6.11
+
+Maintainer / CI / demo tooling only. **No consumer API or config changes.**
+
+- `composer.lock` again pins `require-dev` Symfony packages (including `symfony/scheduler`) to **7.4** so PHP 8.2 CI `composer install` succeeds. Run `make composer-sync` after adding Symfony `require-dev` packages.
+- Demo smoke / `make up` installs Composer deps before starting the FrankenPHP worker (needed for clean GitHub Actions checkouts).
 

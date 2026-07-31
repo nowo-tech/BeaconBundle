@@ -1,4 +1,4 @@
-.PHONY: help up down build install shell logs test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon
+.PHONY: help up down build install shell logs logs-tail test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon composer-install
 
 # Sibling checkout: repositories/other/symfony-beacon (override with BEACON_REPO=...)
 # demo/symfony8 → demo → BeaconBundle → bundles → repositories → other/symfony-beacon
@@ -28,15 +28,30 @@ help:
 	@echo ""
 	@echo "  BEACON_REPO=$(BEACON_REPO)"
 
+# Composer install without starting FrankenPHP. Fresh CI checkouts have no vendor/;
+# worker mode would crash index.php before `exec composer install` can run.
+composer-install:
+	@echo "Installing Composer dependencies (ephemeral container)..."
+	$(DC) run --rm --no-deps --entrypoint "" -e COMPOSER_MEMORY_LIMIT=-1 php \
+		composer install --no-interaction
+
 up:
 	@if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || true; fi
 	@if [ -f "$(CLIENT_ENV)" ]; then $(MAKE) sync-beacon; \
 	else echo "Note: missing $(CLIENT_ENV) — in symfony-beacon run: make bootstrap, then here: make sync-beacon && make restart"; fi
+	@$(MAKE) composer-install
 	$(DC) up -d
-	@echo "Waiting for container to be ready..."
-	@sleep 5
-	@echo "Installing dependencies..."
-	@$(DC) exec -T -e COMPOSER_MEMORY_LIMIT=-1 php composer install --no-interaction
+	@echo "Waiting for FrankenPHP to stay up..."
+	@ok=0; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do \
+		if $(COMPOSE) exec -T php true 2>/dev/null; then ok=1; break; fi; \
+		sleep 2; \
+	done; \
+	if [ "$$ok" != "1" ]; then \
+		echo "Demo php container failed to stay up. Recent logs:"; \
+		$(COMPOSE) logs --tail=100 php || true; \
+		exit 1; \
+	fi
 	@$(DC) exec -T php php bin/console assets:install public --symlink --no-interaction 2>/dev/null || true
 	@$(MAKE) assets
 	@PORT=$$(grep "^PORT=" .env 2>/dev/null | cut -d= -f2 | tr -d '\r'); \
@@ -67,8 +82,14 @@ sync-beacon:
 ensure-up:
 	@if ! $(COMPOSE) exec -T php true 2>/dev/null; then \
 		echo "Starting demo container..."; \
+		if [ ! -d vendor ]; then $(MAKE) composer-install; fi; \
 		$(COMPOSE) up -d; \
 		sleep 3; \
+		if ! $(COMPOSE) exec -T php true 2>/dev/null; then \
+			echo "Demo php container failed to stay up. Recent logs:"; \
+			$(COMPOSE) logs --tail=100 php || true; \
+			exit 1; \
+		fi; \
 	fi
 
 down:
@@ -93,6 +114,9 @@ shell: ensure-up
 
 logs:
 	$(DC) logs -f
+
+logs-tail:
+	$(DC) logs --tail=100 php
 
 test: ensure-up
 	$(DC) exec -T -e APP_ENV=test php php bin/phpunit
