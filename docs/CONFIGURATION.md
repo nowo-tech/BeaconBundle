@@ -54,6 +54,7 @@ nowo_beacon:
     register_error_listener: true
     register_console_listener: true
     register_messenger_listener: true
+    include_scheduler_context: true
     auto_http_transaction: false
     before_send: null
     instrumentation:
@@ -93,8 +94,9 @@ nowo_beacon:
 | `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
-| `register_console_listener` | `true` | Reports uncaught console command errors. |
+| `register_console_listener` | `true` | Reports uncaught console command errors with nested `extra.console` (`command`, `exit_code`, `php_sapi`). Does not send argv. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
+| `include_scheduler_context` | `true` | When a failing envelope carries Symfony Scheduler `ScheduledStamp`, attach `extra.scheduler` (name, recurring id, trigger, triggered_at). Never attaches the message body. No-op without `symfony/scheduler`. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |

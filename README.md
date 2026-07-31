@@ -26,7 +26,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Breadcrumbs (`addBreadcrumb`) and performance transactions (`captureTransaction`)
 - Public **tags** API (`setTag` / `setTags`) and optional **`before_send`** scrubbing hook
 - Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
-- Optional console / Messenger failure listeners and optional Monolog handler
+- Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)
 - Local FrankenPHP demo covering messages, exceptions, full context, fingerprints, breadcrumbs, user, transactions / N+1, auto HTTP tx, Monolog, Messenger failures, and console errors

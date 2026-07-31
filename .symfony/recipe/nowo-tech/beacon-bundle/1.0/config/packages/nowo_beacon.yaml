@@ -19,6 +19,7 @@ nowo_beacon:
     register_error_listener: true
     register_console_listener: true
     # register_messenger_listener: true   # needs symfony/messenger
+    # include_scheduler_context: true     # attach extra.scheduler when ScheduledStamp present
     # auto_http_transaction: false        # opt-in per-request performance transactions
     # before_send: App\Beacon\ScrubPii    # invokable service: (array): ?array
     # instrumentation:

@@ -7,8 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+  - [Added](#added)
+  - [Changed](#changed-1)
+  - [Security](#security)
 - [[1.6.9] - 2026-07-30](#169-2026-07-30)
-  - [Changed](#changed)
+  - [Changed](#changed-2)
 - [[1.6.8] - 2026-07-30](#168-2026-07-30)
   - [Added](#added)
   - [Changed](#changed)
@@ -84,6 +87,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+### Added
+
+- **`include_scheduler_context`** (default `true`): when a final Messenger failure envelope carries Symfony Scheduler `ScheduledStamp`, attach `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`). Message bodies are never attached. Requires `symfony/scheduler` at runtime for the stamp class; without it the flag is a no-op.
+
+### Changed
+
+- Console failure extras are nested under `extra.console` (`command`, `exit_code`, `php_sapi`) instead of flat `extra.console: true` + `extra.command` (see UPGRADING).
+- `symfony/scheduler` added as `require-dev` for unit coverage of scheduled-task context.
+
+### Security
+
+- Console listener does **not** send argv / input arguments (credential leakage via cron wrappers).
+- Scheduler context omits the scheduled message object payload.
 
 ## [1.6.9] - 2026-07-30
 

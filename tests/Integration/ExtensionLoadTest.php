@@ -168,6 +168,7 @@ final class ExtensionLoadTest extends TestCase
             'dsn'                         => 'https://pubkey:secret@beacon.example.com/5',
             'register_console_listener'   => false,
             'register_messenger_listener' => true,
+            'include_scheduler_context'   => false,
             'auto_http_transaction'       => true,
             'monolog_handler'             => ['enabled' => true, 'level' => 'warning'],
             'instrumentation'             => [
@@ -178,6 +179,9 @@ final class ExtensionLoadTest extends TestCase
 
         self::assertFalse($container->hasDefinition(BeaconConsoleErrorListener::class));
         self::assertTrue($container->hasDefinition(BeaconMessengerFailedListener::class));
+        self::assertFalse(
+            $container->getDefinition(BeaconMessengerFailedListener::class)->getArgument('$includeSchedulerContext'),
+        );
         self::assertTrue($container->hasDefinition(BeaconRequestTransactionListener::class));
         self::assertTrue($container->hasDefinition(DoctrineSqlMiddleware::class));
         self::assertTrue($container->hasDefinition(TraceableBeaconHttpClient::class));

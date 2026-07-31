@@ -12,8 +12,13 @@ use Throwable;
 
 use function is_string;
 
+use const PHP_SAPI;
+
 /**
  * Reports uncaught console command errors to Beacon (optional).
+ *
+ * Extra shape (Messenger-aligned nested object; no argv — secrets risk):
+ * `console.command`, `console.exit_code`, `console.php_sapi`.
  */
 final class BeaconConsoleErrorListener implements EventSubscriberInterface
 {
@@ -49,8 +54,11 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
 
         $command = $event->getCommand();
         $this->client->captureException($error, [
-            'console' => true,
-            'command' => $command?->getName(),
+            'console' => [
+                'command'   => $command?->getName(),
+                'exit_code' => $event->getExitCode(),
+                'php_sapi'  => PHP_SAPI,
+            ],
         ]);
     }
 
