@@ -7,11 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.6.10] - 2026-07-31](#1610-2026-07-31)
   - [Added](#added)
-  - [Changed](#changed-1)
+  - [Changed](#changed)
   - [Security](#security)
 - [[1.6.9] - 2026-07-30](#169-2026-07-30)
-  - [Changed](#changed-2)
+  - [Changed](#changed-1)
 - [[1.6.8] - 2026-07-30](#168-2026-07-30)
   - [Added](#added)
   - [Changed](#changed)
@@ -87,6 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.6.10] - 2026-07-31
 
 ### Added
 
@@ -404,7 +407,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...HEAD
+[1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10
 [1.6.9]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...v1.6.9
 [1.6.8]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.7...v1.6.8
 [1.6.7]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.6...v1.6.7

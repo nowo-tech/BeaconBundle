@@ -84,7 +84,7 @@
     },
     "config": {
         "sort-packages": true,
-        "root-version": "1.6.9",
+        "root-version": "1.6.10",
         "allow-plugins": {
             "phpstan/extension-installer": true
         },
