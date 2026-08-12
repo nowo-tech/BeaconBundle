@@ -23,7 +23,7 @@ final class BeaconDsn
     private readonly string $projectId;
 
     /**
-     * @param string|int $projectId Positive numeric legacy id or canonical project UUID
+     * @param int|string $projectId Positive numeric legacy id or canonical project UUID
      */
     public function __construct(
         private readonly string $scheme,

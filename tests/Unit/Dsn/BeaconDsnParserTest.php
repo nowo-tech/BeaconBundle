@@ -64,11 +64,11 @@ final class BeaconDsnParserTest extends TestCase
     public function testParsesProjectUuid(): void
     {
         $uuid = '019fea2d-507b-7890-8b33-ca488db6f696';
-        $dsn = $this->parser->parse('https://key:secret@localhost:9447/'.$uuid);
+        $dsn  = $this->parser->parse('https://key:secret@localhost:9447/' . $uuid);
 
         self::assertSame($uuid, $dsn->getProjectId());
-        self::assertSame('https://localhost:9447/api/'.$uuid.'/envelope/', $dsn->getEnvelopeUrl());
-        self::assertSame('https://key:secret@localhost:9447/'.$uuid, $dsn->toString());
+        self::assertSame('https://localhost:9447/api/' . $uuid . '/envelope/', $dsn->getEnvelopeUrl());
+        self::assertSame('https://key:secret@localhost:9447/' . $uuid, $dsn->toString());
     }
 
     public function testNormalizesProjectUuidCase(): void
