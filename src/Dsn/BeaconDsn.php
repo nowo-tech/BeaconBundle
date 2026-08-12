@@ -4,25 +4,36 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Dsn;
 
+use function is_int;
+
 /**
  * Parsed Beacon DSN (authority + project id).
  *
  * Format: `{scheme}://{public_key}:{secret}@{host}[:{port}]/{project_id}`
  *
+ * `project_id` is a positive numeric legacy id or a canonical project UUID.
+ *
  * Examples:
  * - `https://9cb5e28adc3ed7a40052e2a17e327220:abcdef0123456789@localhost:9444/1`
+ * - `https://PUBLIC:SECRET@localhost:9447/019fea2d-507b-7890-8b33-ca488db6f696`
  * - `http://PUBLIC:SECRET@beacon.internal:9081/2`
  */
 final class BeaconDsn
 {
+    private readonly string $projectId;
+
+    /**
+     * @param string|int $projectId Positive numeric legacy id or canonical project UUID
+     */
     public function __construct(
         private readonly string $scheme,
         private readonly string $publicKey,
         private readonly string $secretKey,
         private readonly string $host,
         private readonly ?int $port,
-        private readonly int $projectId,
+        string|int $projectId,
     ) {
+        $this->projectId = is_int($projectId) ? (string) $projectId : $projectId;
     }
 
     /**
@@ -66,9 +77,9 @@ final class BeaconDsn
     }
 
     /**
-     * Numeric Beacon project id.
+     * Beacon project id (positive numeric legacy string or canonical UUID).
      */
-    public function getProjectId(): int
+    public function getProjectId(): string
     {
         return $this->projectId;
     }

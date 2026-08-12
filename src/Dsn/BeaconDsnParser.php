@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Dsn;
 
+use function ctype_digit;
 use function in_array;
 use function is_string;
+use function preg_match;
 use function sprintf;
 
 /**
@@ -13,6 +15,11 @@ use function sprintf;
  */
 final class BeaconDsnParser
 {
+    /**
+     * Canonical UUID (with hyphens), including UUIDv7 used by Symfony Beacon.
+     */
+    private const string PROJECT_UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+
     /**
      * Parse and validate a Beacon DSN string.
      *
@@ -57,15 +64,32 @@ final class BeaconDsnParser
         }
 
         $path = trim($parts['path'], '/');
-        if ($path === '' || !ctype_digit($path)) {
-            throw new InvalidBeaconDsnException('DSN path must be a numeric project id (e.g. https://KEY:SECRET@host:9444/1).');
-        }
-
-        $projectId = (int) $path;
-        if ($projectId < 1) {
-            throw new InvalidBeaconDsnException('DSN project id must be a positive integer.');
-        }
+        $projectId = $this->parseProjectId($path);
 
         return new BeaconDsn($scheme, $publicKey, $secretKey, $host, $port, $projectId);
+    }
+
+    /**
+     * @throws InvalidBeaconDsnException
+     */
+    private function parseProjectId(string $path): string
+    {
+        if ($path === '') {
+            throw new InvalidBeaconDsnException('DSN path must be a positive numeric project id or a UUID (e.g. https://KEY:SECRET@host:9444/1 or .../019fea2d-507b-7890-8b33-ca488db6f696).');
+        }
+
+        if (ctype_digit($path)) {
+            if ((int) $path < 1) {
+                throw new InvalidBeaconDsnException('DSN project id must be a positive integer.');
+            }
+
+            return $path;
+        }
+
+        if (preg_match(self::PROJECT_UUID_PATTERN, $path) === 1) {
+            return strtolower($path);
+        }
+
+        throw new InvalidBeaconDsnException('DSN path must be a positive numeric project id or a UUID (e.g. https://KEY:SECRET@host:9444/1 or .../019fea2d-507b-7890-8b33-ca488db6f696).');
     }
 }

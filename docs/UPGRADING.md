@@ -47,6 +47,7 @@
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 - [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
 - [Upgrading from 1.6.10 to 1.6.11](#upgrading-from-1610-to-1611)
+- [Upgrading from 1.6.11 to 1.7.0](#upgrading-from-1611-to-170)
 
 ## First install -> 1.0.x
 
@@ -386,4 +387,21 @@ Maintainer / CI / demo tooling only. **No consumer API or config changes.**
 
 - `composer.lock` again pins `require-dev` Symfony packages (including `symfony/scheduler`) to **7.4** so PHP 8.2 CI `composer install` succeeds. Run `make composer-sync` after adding Symfony `require-dev` packages.
 - Demo smoke / `make up` installs Composer deps before starting the FrankenPHP worker (needed for clean GitHub Actions checkouts).
+
+## Upgrading from 1.6.11 to 1.7.0
+
+### DSN project UUID
+
+Symfony Beacon now emits DSNs whose path is a **project UUID**. `BeaconDsnParser` accepts:
+
+- legacy positive numeric ids (`/1`)
+- canonical UUIDs with hyphens (`/019fea2d-507b-7890-8b33-ca488db6f696`)
+
+Arbitrary path segments remain rejected.
+
+### Breaking: `BeaconDsn::getProjectId()` return type
+
+Return type is now `string` (was `int`). Numeric DSNs still work; the getter returns `"1"` instead of `1`. Update any strict `int` type hints or `assertSame(1, …)` comparisons.
+
+The constructor accepts `string|int` for the project id argument.
 

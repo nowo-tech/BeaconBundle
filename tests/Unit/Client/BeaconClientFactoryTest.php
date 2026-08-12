@@ -61,7 +61,7 @@ final class BeaconClientFactoryTest extends TestCase
         $factory   = new BeaconClientFactory(new BeaconDsnParser(), new MockHttpClient());
         $transport = $factory->createSyncTransport(true, 'https://pubkey:secret@beacon.example.com/5', false, 1.5);
 
-        self::assertSame(5, $transport->getDsn()->getProjectId());
+        self::assertSame('5', $transport->getDsn()->getProjectId());
         self::assertSame('https://beacon.example.com/api/5/envelope/', $transport->getDsn()->getEnvelopeUrl());
     }
 

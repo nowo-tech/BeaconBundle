@@ -23,11 +23,16 @@
 {scheme}://{public_key}:{secret}@{host}[:{port}]/{project_id}
 ```
 
+`project_id` accepts a positive numeric legacy id **or** a canonical project UUID.
+
 Examples:
 
 ```env
-# Local Symfony Beacon over HTTPS (secret required)
+# Local Symfony Beacon over HTTPS (secret required) — numeric legacy id
 BEACON_DSN=https://PUBLIC:SECRET@localhost:9444/1
+
+# Same host with project UUID (preferred in current Symfony Beacon UI)
+BEACON_DSN=https://PUBLIC:SECRET@localhost:9447/019fea2d-507b-7890-8b33-ca488db6f696
 
 # Production subdomain
 BEACON_DSN=https://PUBLIC:SECRET@errors.example.com/7

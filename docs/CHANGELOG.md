@@ -91,6 +91,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-12
+
+### Added
+
+- DSN path may be a **canonical project UUID** (e.g. `…/019fea2d-507b-7890-8b33-ca488db6f696`) in addition to legacy positive numeric ids. Envelope URL becomes `/api/{uuid}/envelope/`.
+
+### Changed
+
+- `BeaconDsn::getProjectId()` now returns `string` (numeric ids are returned as digit strings such as `"1"`). Constructor accepts `string|int` for the project id.
+
 ## [1.6.11] - 2026-07-31
 
 ### Fixed

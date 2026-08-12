@@ -107,9 +107,12 @@ final class PaymentService
 {scheme}://{public_key}:{secret}@{host}[:{port}]/{project_id}
 ```
 
+`project_id` is a **positive numeric legacy id** or a **canonical project UUID** (Symfony Beacon settings / `buildDsn`).
+
 | Example | Meaning |
 |---------|---------|
-| `https://KEY:SECRET@localhost:9444/1` | Local HTTPS Beacon on port `9444`, project `1` |
+| `https://KEY:SECRET@localhost:9444/1` | Local HTTPS Beacon on port `9444`, numeric project `1` |
+| `https://KEY:SECRET@localhost:9447/019fea2d-507b-7890-8b33-ca488db6f696` | Local HTTPS Beacon, project UUID |
 | `https://KEY:SECRET@errors.example.com/3` | Hosted Beacon over default HTTPS port |
 | `http://KEY:SECRET@beacon.internal:9081/2` | Internal HTTP Beacon (Docker ingest) |
 

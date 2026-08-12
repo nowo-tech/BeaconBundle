@@ -28,7 +28,7 @@ final class BeaconDsnParserTest extends TestCase
         self::assertSame('abcdef0123456789', $dsn->getSecretKey());
         self::assertSame('localhost', $dsn->getHost());
         self::assertSame(9444, $dsn->getPort());
-        self::assertSame(1, $dsn->getProjectId());
+        self::assertSame('1', $dsn->getProjectId());
         self::assertSame('https://localhost:9444', $dsn->getOrigin());
         self::assertSame('https://localhost:9444/api/1/envelope/', $dsn->getEnvelopeUrl());
         self::assertSame(
@@ -46,7 +46,7 @@ final class BeaconDsnParserTest extends TestCase
         self::assertSame('secret', $dsn->getSecretKey());
         self::assertSame('beacon.internal', $dsn->getHost());
         self::assertSame(9081, $dsn->getPort());
-        self::assertSame(2, $dsn->getProjectId());
+        self::assertSame('2', $dsn->getProjectId());
         self::assertSame('http://beacon.internal:9081', $dsn->getOrigin());
     }
 
@@ -56,9 +56,26 @@ final class BeaconDsnParserTest extends TestCase
 
         self::assertSame('errors.example.com', $dsn->getHost());
         self::assertNull($dsn->getPort());
-        self::assertSame(3, $dsn->getProjectId());
+        self::assertSame('3', $dsn->getProjectId());
         self::assertSame('https://errors.example.com', $dsn->getOrigin());
         self::assertSame('https://errors.example.com/api/3/envelope/', $dsn->getEnvelopeUrl());
+    }
+
+    public function testParsesProjectUuid(): void
+    {
+        $uuid = '019fea2d-507b-7890-8b33-ca488db6f696';
+        $dsn = $this->parser->parse('https://key:secret@localhost:9447/'.$uuid);
+
+        self::assertSame($uuid, $dsn->getProjectId());
+        self::assertSame('https://localhost:9447/api/'.$uuid.'/envelope/', $dsn->getEnvelopeUrl());
+        self::assertSame('https://key:secret@localhost:9447/'.$uuid, $dsn->toString());
+    }
+
+    public function testNormalizesProjectUuidCase(): void
+    {
+        $dsn = $this->parser->parse('https://key:secret@host/019FEA2D-507B-7890-8B33-CA488DB6F696');
+
+        self::assertSame('019fea2d-507b-7890-8b33-ca488db6f696', $dsn->getProjectId());
     }
 
     public function testParsesRequiredSecret(): void
@@ -128,7 +145,8 @@ final class BeaconDsnParserTest extends TestCase
             ['https://:secret@host/1', 'public key'],
             ['https://host/1', 'Invalid DSN'],
             ['https://only-public@host/1', 'DSN secret key is required'],
-            ['https://key:secret@host/not-a-number', 'numeric project id'],
+            ['https://key:secret@host/not-a-number', 'positive numeric project id or a UUID'],
+            ['https://key:secret@host/019fea2d-507b-7890-8b33-ca488db6f69', 'positive numeric project id or a UUID'],
             ['https://key:secret@host/0', 'positive integer'],
         ];
     }
