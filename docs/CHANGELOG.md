@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.3] - 2026-08-16](#173-2026-08-16)
 - [[1.7.2] - 2026-08-16](#172-2026-08-16)
 - [[1.6.11] - 2026-07-31](#1611-2026-07-31)
   - [Fixed](#fixed)
@@ -91,6 +92,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.7.3] - 2026-08-16
+
+### Added
+
+- Console command `nowo:beacon:test` probes Symfony Beacon with the configured DSN (sync Envelope POST). Supports `--check-only` (parse/display without sending) and `--message=`.
+- `BeaconConnectionTester` + `EnvelopeTransport::sendDetailed()` for structured ingest diagnostics (HTTP status / transport errors without exposing secrets).
+
+### Fixed
+
+- `BeaconDsnParser` no longer uses a typed class constant (`const string`), restoring PHP **8.2** parse compatibility for CI and consumers still on 8.2.
 
 ## [1.7.2] - 2026-08-16
 

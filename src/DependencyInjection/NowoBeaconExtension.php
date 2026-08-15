@@ -10,6 +10,8 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
+use Nowo\BeaconBundle\Command\TestConnectionCommand;
+use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\Context\SecurityUserContextProvider;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
@@ -126,6 +128,17 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
 
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yaml');
+
+        $this->registerConnectionTestCommand(
+            $container,
+            $enabledFlag,
+            $config['dsn'] ?? '',
+            (bool) $config['verify_peer'],
+            (float) $config['timeout'],
+            (string) $config['environment'],
+            is_string($config['release'] ?? null) ? $config['release'] : null,
+            $serverName,
+        );
 
         $userProvider = new Definition(SecurityUserContextProvider::class, [
             '$tokenStorage' => new Reference(
@@ -355,6 +368,46 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
     public function getAlias(): string
     {
         return Configuration::ALIAS;
+    }
+
+    /**
+     * Registers {@see BeaconConnectionTester} and {@see TestConnectionCommand} when Console is available.
+     *
+     * Always registered (including NullBeaconClient mode) so operators get a clear failure for empty DSNs.
+     */
+    private function registerConnectionTestCommand(
+        ContainerBuilder $container,
+        bool $reportingEnabled,
+        mixed $dsn,
+        bool $verifyPeer,
+        float $timeout,
+        string $environment,
+        ?string $release,
+        string $serverName,
+    ): void {
+        $tester = new Definition(BeaconConnectionTester::class, [
+            '$parser'           => new Reference(BeaconDsnParser::class),
+            '$httpClient'       => new Reference('http_client'),
+            '$reportingEnabled' => $reportingEnabled && trim((string) $dsn) !== '',
+            '$dsn'              => $dsn,
+            '$verifyPeer'       => $verifyPeer,
+            '$timeout'          => $timeout,
+            '$environment'      => $environment,
+            '$release'          => $release,
+            '$serverName'       => $serverName,
+            '$logger'           => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $tester->setAutowired(false);
+        $tester->setPublic(false);
+        $container->setDefinition(BeaconConnectionTester::class, $tester);
+
+        $command = new Definition(TestConnectionCommand::class, [
+            '$tester' => new Reference(BeaconConnectionTester::class),
+        ]);
+        $command->setAutowired(false);
+        $command->setPublic(false);
+        $command->addTag('console.command');
+        $container->setDefinition(TestConnectionCommand::class, $command);
     }
 
     /**

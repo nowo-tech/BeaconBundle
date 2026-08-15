@@ -4,6 +4,7 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
 
 ## Table of contents
 
+- [Connection test command](#connection-test-command)
 - [Automatic exception reporting](#automatic-exception-reporting)
 - [Manual reporting](#manual-reporting)
 - [Breadcrumbs](#breadcrumbs)
@@ -22,6 +23,18 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
 - [Ingest endpoint](#ingest-endpoint)
 - [End-to-end against `symfony-beacon`](#end-to-end-against-symfony-beacon)
 - [Scenario matrix](#scenario-matrix)
+
+## Connection test command
+
+After setting `BEACON_DSN`, verify reachability and credentials:
+
+```bash
+php bin/console nowo:beacon:test
+php bin/console nowo:beacon:test --check-only
+php bin/console nowo:beacon:test --message='Hello from CI'
+```
+
+The probe always uses **sync** HTTP (ignores `transport.mode`) so the exit code matches the ingest ACK. Output includes origin, project id, truncated public key, HTTP status, and event id — never the secret.
 
 ## Automatic exception reporting
 

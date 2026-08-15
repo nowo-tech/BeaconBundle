@@ -47,6 +47,7 @@
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 - [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
 - [Upgrading from 1.6.10 to 1.6.11](#upgrading-from-1610-to-1611)
+- [Upgrading from 1.7.2 to 1.7.3](#upgrading-from-172-to-173)
 - [Upgrading from 1.7.0 to 1.7.2](#upgrading-from-170-to-172)
 - [Upgrading from 1.6.11 to 1.7.0](#upgrading-from-1611-to-170)
 
@@ -388,6 +389,30 @@ Maintainer / CI / demo tooling only. **No consumer API or config changes.**
 
 - `composer.lock` again pins `require-dev` Symfony packages (including `symfony/scheduler`) to **7.4** so PHP 8.2 CI `composer install` succeeds. Run `make composer-sync` after adding Symfony `require-dev` packages.
 - Demo smoke / `make up` installs Composer deps before starting the FrankenPHP worker (needed for clean GitHub Actions checkouts).
+
+## Upgrading from 1.7.2 to 1.7.3
+
+Additive diagnostics only. **No breaking API or config changes.**
+
+### Connection test command
+
+After setting `BEACON_DSN`, verify ingest reachability and credentials:
+
+```bash
+php bin/console nowo:beacon:test
+php bin/console nowo:beacon:test --check-only
+php bin/console nowo:beacon:test --message='Hello from CI'
+```
+
+The probe always uses **synchronous** HTTP (ignores `transport.mode`) so the exit code matches the real ingest ACK. Console output never includes the DSN secret.
+
+Optional: `symfony/console` (already present in typical FrameworkBundle apps). Suggested in `composer.json` for the `nowo:beacon:test` command.
+
+### Compatibility
+
+- Existing capture APIs and config keys unchanged.
+- `EnvelopeTransport::send()` behaviour unchanged; `sendDetailed()` is additive for diagnostics.
+- PHP **8.2** compatibility restored for `BeaconDsnParser` (typed class constants require 8.3+).
 
 ## Upgrading from 1.7.0 to 1.7.2
 

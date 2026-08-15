@@ -195,4 +195,47 @@ final class EnvelopeTransportTest extends TestCase
 
         self::assertFalse($transport->send("header\nitem\npayload\n"));
     }
+
+    public function testSendDetailedReturnsStatusOnSuccess(): void
+    {
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $transport = new EnvelopeTransport(
+            new MockHttpClient(new MockResponse('', ['http_code' => 202])),
+            $dsn,
+        );
+
+        $result = $transport->sendDetailed("header\nitem\npayload\n");
+        self::assertTrue($result->isAccepted());
+        self::assertSame(202, $result->getStatusCode());
+        self::assertNull($result->getErrorMessage());
+    }
+
+    public function testSendDetailedReturnsTransportErrorMessage(): void
+    {
+        $dsn        = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient
+            ->method('request')
+            ->willThrowException(new class('boom') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $result = (new EnvelopeTransport($httpClient, $dsn))->sendDetailed("header\nitem\npayload\n");
+        self::assertFalse($result->isAccepted());
+        self::assertNull($result->getStatusCode());
+        self::assertSame('boom', $result->getErrorMessage());
+    }
+
+    public function testFinalizeResponseDetailedReturnsErrorWhenStatusThrows(): void
+    {
+        $dsn      = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $response = $this->createMock(ResponseInterface::class);
+        $response
+            ->method('getStatusCode')
+            ->willThrowException(new class('status failed') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $result = (new EnvelopeTransport(new MockHttpClient(), $dsn))->finalizeResponseDetailed($response);
+        self::assertFalse($result->isAccepted());
+        self::assertSame('status failed', $result->getErrorMessage());
+    }
 }

@@ -162,6 +162,16 @@ Keep `verify_peer: true` in production.
 
 ## 5. Start collecting data
 
+### Verify the DSN (recommended)
+
+```bash
+php bin/console nowo:beacon:test
+# parse only (no HTTP POST):
+php bin/console nowo:beacon:test --check-only
+```
+
+The command always uses **synchronous** HTTP so the exit code reflects the real ingest ACK (even if `transport.mode` is `async` or `messenger`). A successful run prints origin, project id, HTTP status, and a local event id — never the DSN secret.
+
 ### Automatic (recommended)
 
 With `register_error_listener: true` and a non-empty DSN, uncaught HTTP exceptions are reported via `kernel.exception`.
@@ -217,6 +227,7 @@ BeaconBundle logs transport failures (`warning` for non-2xx, `error` for network
 - [ ] Project + active API key exist; DSN copied
 - [ ] App has `nowo-tech/beacon-bundle` installed
 - [ ] `BEACON_DSN` set and reachable from the app host/container
+- [ ] `php bin/console nowo:beacon:test` exits successfully
 - [ ] `verify_peer: false` only if using local self-signed HTTPS in `dev`
 - [ ] Automatic listener enabled **or** manual `capture*` called
 - [ ] Event visible in the Beacon project UI

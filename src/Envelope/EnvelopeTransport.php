@@ -23,6 +23,8 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
 {
     private readonly string $clientName;
 
+    private ?string $lastStartError = null;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly BeaconDsn $dsn,
@@ -47,12 +49,25 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function send(string $envelopeBody): bool
     {
-        $response = $this->startRequest($envelopeBody);
+        return $this->sendDetailed($envelopeBody)->isAccepted();
+    }
+
+    /**
+     * POST an Envelope and return status / error details (for diagnostics).
+     */
+    public function sendDetailed(string $envelopeBody): TransportResult
+    {
+        $this->lastStartError = null;
+        $response             = $this->startRequest($envelopeBody);
         if (!$response instanceof ResponseInterface) {
-            return false;
+            return new TransportResult(
+                false,
+                null,
+                $this->lastStartError ?? 'HTTP client could not start the ingest request.',
+            );
         }
 
-        return $this->finalizeResponse($response);
+        return $this->finalizeResponseDetailed($response);
     }
 
     /**
@@ -81,6 +96,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
         try {
             return $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
         } catch (TransportExceptionInterface $exception) {
+            $this->lastStartError = $exception->getMessage();
             $this->logger()->error('Beacon ingest transport failed.', [
                 'exception' => $exception->getMessage(),
                 'url'       => $this->dsn->getEnvelopeUrl(),
@@ -97,6 +113,16 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function finalizeResponse(ResponseInterface $response): bool
     {
+        return $this->finalizeResponseDetailed($response)->isAccepted();
+    }
+
+    /**
+     * Read status / log rejection and return a structured result.
+     *
+     * @internal
+     */
+    public function finalizeResponseDetailed(ResponseInterface $response): TransportResult
+    {
         try {
             $status = $response->getStatusCode();
         } catch (TransportExceptionInterface $exception) {
@@ -105,16 +131,16 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
                 'url'       => $this->dsn->getEnvelopeUrl(),
             ]);
 
-            return false;
+            return new TransportResult(false, null, $exception->getMessage());
         }
 
         if ($status >= 200 && $status < 300) {
-            return true;
+            return new TransportResult(true, $status);
         }
 
         $this->logRejectedResponse($status, $response);
 
-        return false;
+        return new TransportResult(false, $status);
     }
 
     /**
