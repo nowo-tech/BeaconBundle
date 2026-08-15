@@ -46,6 +46,9 @@ final class EnvelopeGoldenShapeTest extends TestCase
         $raw  = file_get_contents($path);
         self::assertNotFalse($raw);
         self::assertStringEndsWith("\n", $raw);
+        self::assertStringContainsString('__HTTPS_PORT__', $raw, 'Golden DSN must use __HTTPS_PORT__ placeholder');
+
+        $raw = self::expandHttpsPort($raw);
 
         $lines = explode("\n", rtrim($raw, "\n"));
         self::assertCount(3, $lines, sprintf('%s must be exactly 3 NDJSON lines', $file));
@@ -103,9 +106,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testAuthHeaderContractMatchesBeaconParserExpectation(): void
     {
-        $dsn = (new BeaconDsnParser())->parse(
-            'https://pubkey:secret@beacon.example.com:9444/1',
-        );
+        $dsn = (new BeaconDsnParser())->parse(self::goldenDsn());
 
         self::assertSame(
             'Beacon beacon_key=pubkey, beacon_secret=secret',
@@ -115,9 +116,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testLiveBuilderEventShapeAlignsWithGoldenRequiredKeys(): void
     {
-        $dsn = (new BeaconDsnParser())->parse(
-            'https://pubkey:secret@beacon.example.com:9444/1',
-        );
+        $dsn = (new BeaconDsnParser())->parse(self::goldenDsn());
         $builder = new EnvelopeBuilder('test', '1.2.3', 'ci-host');
         $body    = $builder->buildEventEnvelope($dsn, 'Something broke', 'error');
 
@@ -137,5 +136,28 @@ final class EnvelopeGoldenShapeTest extends TestCase
         self::assertSame('php', $payload['platform']);
         self::assertArrayHasKey('timestamp', $payload);
         self::assertArrayHasKey('datetime', $payload);
+    }
+
+    /**
+     * Contract DSN host port — same default as symfony-beacon .env.dist HTTPS_PORT.
+     */
+    private static function httpsPort(): string
+    {
+        $port = $_ENV['HTTPS_PORT'] ?? $_SERVER['HTTPS_PORT'] ?? getenv('HTTPS_PORT');
+        if (!is_string($port) || $port === '') {
+            return '9447';
+        }
+
+        return $port;
+    }
+
+    private static function goldenDsn(): string
+    {
+        return sprintf('https://pubkey:secret@beacon.example.com:%s/1', self::httpsPort());
+    }
+
+    private static function expandHttpsPort(string $raw): string
+    {
+        return str_replace('__HTTPS_PORT__', self::httpsPort(), $raw);
     }
 }
