@@ -28,6 +28,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
 - Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
+- Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)
 - Local FrankenPHP demo covering messages, exceptions, full context, fingerprints, breadcrumbs, user, transactions / N+1, auto HTTP tx, Monolog, Messenger failures, and console errors
 
@@ -71,6 +72,12 @@ nowo_beacon:
 ```
 
 See [Configuration](docs/CONFIGURATION.md) for the full `send.*` reference.
+
+Verify the DSN:
+
+```bash
+php bin/console nowo:beacon:test
+```
 
 For local self-signed HTTPS only:
 

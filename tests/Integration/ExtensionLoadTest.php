@@ -8,6 +8,8 @@ use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
+use Nowo\BeaconBundle\Command\TestConnectionCommand;
+use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\DependencyInjection\Configuration;
 use Nowo\BeaconBundle\DependencyInjection\NowoBeaconExtension;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
@@ -42,6 +44,8 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($container->hasDefinition(NullBeaconClient::class));
         self::assertFalse($container->hasDefinition(BeaconExceptionListener::class));
         self::assertSame(Configuration::ALIAS, $extension->getAlias());
+        self::assertTrue($container->hasDefinition(BeaconConnectionTester::class));
+        self::assertTrue($container->hasDefinition(TestConnectionCommand::class));
     }
 
     public function testEnabledFalseRegistersNullClientEvenWithValidDsn(): void

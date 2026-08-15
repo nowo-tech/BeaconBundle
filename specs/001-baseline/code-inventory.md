@@ -7,9 +7,12 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/NowoBeaconBundle.php` | Bundle entrypoint | Registers extension |
+| `src/Command/TestConnectionCommand.php` | Console `nowo:beacon:test` | FR-CMD-001..007 (`specs/003-connection-test-command`) |
+| `src/Connection/BeaconConnectionTester.php` | DSN parse + sync probe | FR-CMD-002..007 |
+| `src/Connection/ConnectionTestResult.php` | Probe result VO | FR-CMD-* |
+| `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
 | `src/DependencyInjection/Configuration.php` | Config tree `nowo_beacon` | FR-DI-001 |
-| `src/DependencyInjection/NowoBeaconExtension.php` | DI wiring, Monolog prepend, enable/disable, transports, instrumentation | FR-DI-001/002, FR-CL-004, FR-MO-001, FR-LI-*, FR-TR-002, FR-INS-001 |
+| `src/DependencyInjection/NowoBeaconExtension.php` | DI wiring, Monolog prepend, enable/disable, transports, instrumentation, connection test command | FR-DI-001/002, FR-CL-004, FR-MO-001, FR-LI-*, FR-TR-002, FR-INS-001, FR-CMD-001 |
 | `src/Resources/config/services.yaml` | Shared service defaults | — |
 | `src/Dsn/BeaconDsn.php` | DSN value object | FR-DSN-003 |
 | `src/Dsn/BeaconDsnParser.php` | Parse/validate DSN | FR-DSN-001/002 |
@@ -45,4 +48,4 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 36 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 40 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
