@@ -13,6 +13,9 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
 - [Performance transactions](#performance-transactions)
 - [Console errors](#console-errors)
 - [Messenger failures](#messenger-failures)
+- [HTTP extras](#http-extras)
+- [Trace correlation](#trace-correlation)
+- [Fatal PHP errors](#fatal-php-errors)
 - [Automatic HTTP transactions](#automatic-http-transactions)
 - [Monolog](#monolog)
 - [Disabled mode](#disabled-mode)
@@ -165,18 +168,68 @@ With `register_console_listener: true` (default), uncaught console command error
 | Key | Meaning |
 |-----|---------|
 | `command` | Command name (or `null` if unavailable) |
+| `command_class` | Command FQCN when available |
 | `exit_code` | Console exit code from the error event |
 | `php_sapi` | PHP SAPI (usually `cli`) |
+| `verbosity` | Output verbosity level when available |
+| `cwd` | Process working directory when resolvable |
+| `interactive` | Whether the input was interactive |
+| `arguments` | Bound argument map (values redacted for secret-like names / credential URIs) |
+| `options` | Bound option map (same redaction rules) |
+| `missing_arguments` | Names of required arguments that were missing/empty |
 
-Raw argv / input arguments are **not** sent (secrets on the CLI).
+Raw `argv` is **never** sent. Argument/option **values** that look like secrets are replaced with `[Filtered]`.
 
 ## Messenger failures
 
-With `register_messenger_listener: true` (default) and `symfony/messenger` installed, final worker failures (`WorkerMessageFailedEvent` when `willRetry()` is false) are reported with `extra.messenger.message_class` / `receiver_name`.
+With `register_messenger_listener: true` (default) and `symfony/messenger` installed, final worker failures (`WorkerMessageFailedEvent` when `willRetry()` is false) are reported with `extra.messenger`:
+
+| Key | Meaning |
+|-----|---------|
+| `message_class` | Message FQCN |
+| `receiver_name` | Worker receiver name |
+| `retry_count` | Redelivery count from the envelope |
+| `bus` | Bus name when a `BusNameStamp` is present |
+| `transport_message_id` | Transport id when a `TransportMessageIdStamp` is present |
+| `transport` | Transport name from `ReceivedStamp` when present |
+| `handler_class` | Failing handler FQCN when recoverable from `HandlerFailedException` |
+| `first_failure_at` | ISO-8601 time of the first `RedeliveryStamp` when present |
+
+Message bodies are never attached. When the envelope carries a `BeaconTraceStamp`, the listener restores that id into `TraceIdProvider` before capture (see [Trace correlation](#trace-correlation)).
 
 ### Scheduled tasks (Symfony Scheduler)
 
 When `include_scheduler_context: true` (default) and the failing envelope carries a `ScheduledStamp`, the same event also includes `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`). Reporting stays on the Messenger listener only (no duplicate `FailureEvent` capture; retries are still skipped via `willRetry()`). Message bodies are never attached.
+
+## HTTP extras
+
+With `register_error_listener: true` and `send.request: true` (defaults), automatic HTTP exception events include nested `extra.http` when data is available:
+
+| Key | Meaning |
+|-----|---------|
+| `route` | `_route` attribute |
+| `controller` | `_controller` (string or `Class::method`) |
+| `status_code` | Status from `HttpExceptionInterface` when applicable |
+| `query_keys` | Query parameter **names** only (no values) |
+| `client` | Optional `{ip, user_agent}` when `send.client: true` (default **false**; may be PII) |
+
+`extra.request_uri` / `extra.request_method` are still attached under the same `send.request` gate.
+
+## Trace correlation
+
+Every outbound event gets a correlation id via `TraceIdProvider`:
+
+- `extra.trace_id` and tag `trace_id` on the payload
+- HTTP: `BeaconTraceRequestListener` seeds from inbound `X-Beacon-Trace-Id` (or generates one) and stores it on the request attribute `_beacon_trace_id`
+- Messenger: `BeaconTraceMiddleware` is prepended on `messenger.bus.default` — stamps `BeaconTraceStamp` on dispatch and restores the id on consume
+
+Ids must match `^[A-Za-z0-9._-]{8,128}$`; invalid inbound values are ignored and a new id is generated.
+
+## Fatal PHP errors
+
+With `register_fatal_handler: true` (default), a shutdown function reports fatal PHP errors (`E_ERROR`, `E_PARSE`, `E_CORE_ERROR`, `E_COMPILE_ERROR`, `E_USER_ERROR`) that never reach `kernel.exception` / `ConsoleEvents::ERROR`. Events include `extra.fatal` (`type`, `file`, `line`).
+
+Disable with `register_fatal_handler: false` if you already handle fatals yourself.
 
 ## Automatic HTTP transactions
 
@@ -259,8 +312,8 @@ when@dev:
 | Transaction | Valid DSN | `GET /transaction` | Performance transaction appears in Beacon. |
 | N+1 transaction | Valid DSN | `GET /transaction-nplus1` | Transaction with ≥5 similar DB spans; Beacon marks an N+1 group. |
 | Auto HTTP transaction | `auto_http_transaction: true` | `GET /auto-http` (or any non-skipped page) | Message + terminate transaction named after the route. |
-| Messenger failure | `register_messenger_listener: true` + Messenger | `GET /messenger-fail` | Exception event with `extra.messenger` (same shape as the worker listener). |
-| Console failure | `register_console_listener: true` | `php bin/console app:demo-console-boom` | Exception event with nested `extra.console` (`command`, `exit_code`, `php_sapi`). |
+| Messenger failure | `register_messenger_listener: true` + Messenger | `GET /messenger-fail` | Exception event with `extra.messenger` (includes `handler_class` / `transport` when available). |
+| Console failure | `register_console_listener: true` | `php bin/console app:demo-console-boom` | Exception event with nested `extra.console` (`command`, `command_class`, `exit_code`, `php_sapi`, …). |
 | Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |

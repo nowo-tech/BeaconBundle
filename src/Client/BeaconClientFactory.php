@@ -18,6 +18,7 @@ use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -42,6 +43,7 @@ final class BeaconClientFactory
         private readonly ?PendingTransportRegistry $pendingRegistry = null,
         private readonly ?object $messageBus = null,
         private readonly ?ClockInterface $clock = null,
+        private readonly ?TraceIdProvider $traceIdProvider = null,
     ) {
     }
 
@@ -111,6 +113,7 @@ final class BeaconClientFactory
             $this->requestStack,
             5,
             $this->scope,
+            $this->traceIdProvider,
             $this->clock,
         );
         $sync = new EnvelopeTransport(

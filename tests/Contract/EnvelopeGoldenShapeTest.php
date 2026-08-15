@@ -48,7 +48,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
         self::assertStringEndsWith("\n", $raw);
         self::assertStringContainsString('__HTTPS_PORT__', $raw, 'Golden DSN must use __HTTPS_PORT__ placeholder');
 
-        $raw = self::expandHttpsPort($raw);
+        $raw = $this->expandHttpsPort($raw);
 
         $lines = explode("\n", rtrim($raw, "\n"));
         self::assertCount(3, $lines, sprintf('%s must be exactly 3 NDJSON lines', $file));
@@ -106,7 +106,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testAuthHeaderContractMatchesBeaconParserExpectation(): void
     {
-        $dsn = (new BeaconDsnParser())->parse(self::goldenDsn());
+        $dsn = (new BeaconDsnParser())->parse($this->goldenDsn());
 
         self::assertSame(
             'Beacon beacon_key=pubkey, beacon_secret=secret',
@@ -116,7 +116,7 @@ final class EnvelopeGoldenShapeTest extends TestCase
 
     public function testLiveBuilderEventShapeAlignsWithGoldenRequiredKeys(): void
     {
-        $dsn = (new BeaconDsnParser())->parse(self::goldenDsn());
+        $dsn     = (new BeaconDsnParser())->parse($this->goldenDsn());
         $builder = new EnvelopeBuilder('test', '1.2.3', 'ci-host');
         $body    = $builder->buildEventEnvelope($dsn, 'Something broke', 'error');
 
@@ -141,8 +141,9 @@ final class EnvelopeGoldenShapeTest extends TestCase
     /**
      * Contract DSN host port — same default as symfony-beacon .env.dist HTTPS_PORT.
      */
-    private static function httpsPort(): string
+    private function httpsPort(): string
     {
+        // @phpstan-ignore frankenphp.worker.noEnvMutation (test-only contract fixture port)
         $port = $_ENV['HTTPS_PORT'] ?? $_SERVER['HTTPS_PORT'] ?? getenv('HTTPS_PORT');
         if (!is_string($port) || $port === '') {
             return '9447';
@@ -151,13 +152,13 @@ final class EnvelopeGoldenShapeTest extends TestCase
         return $port;
     }
 
-    private static function goldenDsn(): string
+    private function goldenDsn(): string
     {
-        return sprintf('https://pubkey:secret@beacon.example.com:%s/1', self::httpsPort());
+        return sprintf('https://pubkey:secret@beacon.example.com:%s/1', $this->httpsPort());
     }
 
-    private static function expandHttpsPort(string $raw): string
+    private function expandHttpsPort(string $raw): string
     {
-        return str_replace('__HTTPS_PORT__', self::httpsPort(), $raw);
+        return str_replace('__HTTPS_PORT__', $this->httpsPort(), $raw);
     }
 }

@@ -39,6 +39,7 @@ final class BeaconListenersTest extends TestCase
             self::callback(static function (array $extra): bool {
                 return ($extra['messenger']['message_class'] ?? null) === stdClass::class
                     && ($extra['messenger']['receiver_name'] ?? null) === 'async'
+                    && ($extra['messenger']['retry_count'] ?? null) === 0
                     && !isset($extra['scheduler']);
             }),
         );

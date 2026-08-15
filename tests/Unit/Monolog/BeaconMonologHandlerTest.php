@@ -12,6 +12,8 @@ use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function is_array;
+
 final class BeaconMonologHandlerTest extends TestCase
 {
     public function testForwardsMessage(): void
@@ -21,7 +23,13 @@ final class BeaconMonologHandlerTest extends TestCase
         $client->expects(self::once())->method('captureMessage')->with(
             'boom log',
             'error',
-            self::callback(static fn (array $extra): bool => ($extra['monolog'] ?? false) === true),
+            self::callback(static function (array $extra): bool {
+                $monolog = $extra['monolog'] ?? null;
+
+                return is_array($monolog)
+                    && ($monolog['channel'] ?? null) === 'app'
+                    && ($monolog['level'] ?? null) === 'ERROR';
+            }),
         );
 
         $handler = new BeaconMonologHandler($client, Level::Error);

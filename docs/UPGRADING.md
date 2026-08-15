@@ -47,6 +47,7 @@
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 - [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
 - [Upgrading from 1.6.10 to 1.6.11](#upgrading-from-1610-to-1611)
+- [Upgrading from 1.7.0 to 1.7.2](#upgrading-from-170-to-172)
 - [Upgrading from 1.6.11 to 1.7.0](#upgrading-from-1611-to-170)
 
 ## First install -> 1.0.x
@@ -387,6 +388,32 @@ Maintainer / CI / demo tooling only. **No consumer API or config changes.**
 
 - `composer.lock` again pins `require-dev` Symfony packages (including `symfony/scheduler`) to **7.4** so PHP 8.2 CI `composer install` succeeds. Run `make composer-sync` after adding Symfony `require-dev` packages.
 - Demo smoke / `make up` installs Composer deps before starting the FrankenPHP worker (needed for clean GitHub Actions checkouts).
+
+## Upgrading from 1.7.0 to 1.7.2
+
+Additive / richer extras. **No breaking API changes.** Defaults stay privacy-safe (`send.client` off; fatals on).
+
+### New optional configuration
+
+```yaml
+nowo_beacon:
+    register_fatal_handler: true   # shutdown capture of fatal PHP errors
+    send:
+        client: false              # extra.http.client ip/UA (PII) — opt-in
+```
+
+### Behaviour
+
+- HTTP exceptions (`send.request: true`): nested `extra.http` with `route`, `controller`, `status_code`, `query_keys`; optional `client` when `send.client: true`.
+- Console: also `command_class`, `verbosity`, `cwd`, `missing_arguments`.
+- Messenger: also `handler_class`, `transport`, `first_failure_at`; restores `BeaconTraceStamp` into the active trace before capture.
+- Correlation: `TraceIdProvider` attaches `extra.trace_id` + tag `trace_id`; HTTP seeds/propagates `X-Beacon-Trace-Id`; Messenger gets `BeaconTraceMiddleware` on `messenger.bus.default`.
+- Fatals: `register_fatal_handler: true` (default) reports `E_ERROR` / `E_PARSE` / … with `extra.fatal` (`type`, `file`, `line`).
+
+### Compatibility
+
+- Existing capture APIs unchanged. Disable fatals with `register_fatal_handler: false` if you already handle them.
+
 
 ## Upgrading from 1.6.11 to 1.7.0
 

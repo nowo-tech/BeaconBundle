@@ -63,7 +63,7 @@ final class BeaconDsnParser
             throw new InvalidBeaconDsnException(sprintf('Invalid DSN port "%d".', $port));
         }
 
-        $path = trim($parts['path'], '/');
+        $path      = trim($parts['path'], '/');
         $projectId = $this->parseProjectId($path);
 
         return new BeaconDsn($scheme, $publicKey, $secretKey, $host, $port, $projectId);

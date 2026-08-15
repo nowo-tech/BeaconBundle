@@ -8,6 +8,7 @@ use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Throwable;
 
 /**
@@ -33,14 +34,20 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
         }
 
         $extra = [
-            'monolog' => true,
-            'channel' => $record->channel,
+            'monolog' => [
+                'channel' => $record->channel,
+                'level'   => $record->level->getName(),
+            ],
         ];
-        if ($record->context !== []) {
-            $extra['context'] = $record->context;
+
+        $context   = $record->context;
+        $exception = $context['exception'] ?? null;
+        unset($context['exception']);
+
+        if ($context !== []) {
+            $extra['context'] = SensitiveValueRedactor::redactMap($context);
         }
 
-        $exception = $record->context['exception'] ?? null;
         if ($exception instanceof Throwable) {
             $this->client->captureException($exception, $extra);
 

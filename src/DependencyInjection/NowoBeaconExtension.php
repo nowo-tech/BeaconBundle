@@ -18,14 +18,18 @@ use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
+use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
+use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
+use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -54,32 +58,37 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
      */
     public function prepend(ContainerBuilder $container): void
     {
-        if (!$container->hasExtension('monolog')) {
-            return;
-        }
-
         $configs = $container->getExtensionConfig($this->getAlias());
         $config  = $this->processConfiguration(new Configuration(), $configs);
-        $monolog = $config['monolog_handler'] ?? [];
 
-        if (!(bool) ($monolog['enabled'] ?? false)) {
-            return;
+        if ($container->hasExtension('monolog')) {
+            $monolog = $config['monolog_handler'] ?? [];
+            if ((bool) ($monolog['enabled'] ?? false) && class_exists(AbstractProcessingHandler::class)) {
+                $container->prependExtensionConfig('monolog', [
+                    'handlers' => [
+                        'nowo_beacon' => [
+                            'type'  => 'service',
+                            'id'    => BeaconMonologHandler::class,
+                            'level' => (string) ($monolog['level'] ?? 'error'),
+                        ],
+                    ],
+                ]);
+            }
         }
 
-        if (!class_exists(AbstractProcessingHandler::class)) {
-            return; // @codeCoverageIgnore
-        }
-
-        // MonologBundle only wires handlers declared in monolog.handlers (the monolog.handler tag is not enough).
-        $container->prependExtensionConfig('monolog', [
-            'handlers' => [
-                'nowo_beacon' => [
-                    'type'  => 'service',
-                    'id'    => BeaconMonologHandler::class,
-                    'level' => (string) ($monolog['level'] ?? 'error'),
+        if ($container->hasExtension('framework') && interface_exists(MessageBusInterface::class)) {
+            $container->prependExtensionConfig('framework', [
+                'messenger' => [
+                    'buses' => [
+                        'messenger.bus.default' => [
+                            'middleware' => [
+                                BeaconTraceMiddleware::class,
+                            ],
+                        ],
+                    ],
                 ],
-            ],
-        ]);
+            ]);
+        }
     }
 
     /**
@@ -153,6 +162,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$pendingRegistry'     => new Reference(PendingTransportRegistry::class),
             '$messageBus'          => new Reference('messenger.default_bus', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$clock'               => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$traceIdProvider'     => new Reference(TraceIdProvider::class),
         ]);
         $factory->setAutowired(false);
         $factory->setPublic(false);
@@ -219,8 +229,27 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $listener->setArgument('$ignoreExceptions', $config['ignore_exceptions']);
             $listener->setArgument('$sendRequest', (bool) ($send['request'] ?? true));
             $listener->setArgument('$ignorePaths', $config['ignore_paths']);
+            $listener->setArgument('$sendClient', (bool) ($send['client'] ?? false));
         } else {
             $container->removeDefinition(BeaconExceptionListener::class);
+        }
+
+        $traceRequest = new Definition(BeaconTraceRequestListener::class, [
+            '$traceIdProvider' => new Reference(TraceIdProvider::class),
+            '$enabled'         => true,
+        ]);
+        $traceRequest->addTag('kernel.event_subscriber');
+        $traceRequest->setPublic(false);
+        $container->setDefinition(BeaconTraceRequestListener::class, $traceRequest);
+
+        if ((bool) ($config['register_fatal_handler'] ?? true)) {
+            $fatal = new Definition(BeaconFatalErrorHandler::class, [
+                '$client'  => new Reference(BeaconClientInterface::class),
+                '$enabled' => true,
+            ]);
+            $fatal->addMethodCall('register');
+            $fatal->setPublic(false);
+            $container->setDefinition(BeaconFatalErrorHandler::class, $fatal);
         }
 
         if ((bool) ($config['register_console_listener'] ?? true)) {
@@ -240,12 +269,21 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$enabled'                 => true,
                 '$ignoreExceptions'        => $config['ignore_exceptions'],
                 '$includeSchedulerContext' => (bool) ($config['include_scheduler_context'] ?? true),
+                '$traceIdProvider'         => new Reference(TraceIdProvider::class),
             ]);
             $messenger->addTag('kernel.event_listener', [
                 'event' => WorkerMessageFailedEvent::class,
             ]);
             $messenger->setPublic(false);
             $container->setDefinition(BeaconMessengerFailedListener::class, $messenger);
+        }
+
+        if (interface_exists(MessageBusInterface::class)) {
+            $traceMiddleware = new Definition(BeaconTraceMiddleware::class, [
+                '$traceIdProvider' => new Reference(TraceIdProvider::class),
+            ]);
+            $traceMiddleware->setPublic(false);
+            $container->setDefinition(BeaconTraceMiddleware::class, $traceMiddleware);
         }
 
         if ((bool) ($config['auto_http_transaction'] ?? false)) {

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.2] - 2026-08-16](#172-2026-08-16)
 - [[1.6.11] - 2026-07-31](#1611-2026-07-31)
   - [Fixed](#fixed)
 - [[1.6.10] - 2026-07-31](#1610-2026-07-31)
@@ -90,6 +91,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.7.2] - 2026-08-16
+
+### Added
+
+- Console errors include redacted `extra.console.arguments` / `options` / `interactive` (secret-like keys and credential URIs filtered; raw argv still never sent).
+- Console extras also include `command_class`, `verbosity`, `cwd`, and `missing_arguments`.
+- Messenger failures include `retry_count`, optional `bus` / `transport_message_id`, plus `handler_class`, `transport`, and `first_failure_at`; restores `BeaconTraceStamp` into the active trace.
+- Monolog handler nests `extra.monolog.{channel,level}` and redacts `extra.context` keys/values.
+- HTTP extras: nested `extra.http` with `route`, `controller`, `status_code`, `query_keys`; optional `client` IP/UA via `send.client` (default false).
+- Correlation: `TraceIdProvider` + `extra.trace_id` / tag `trace_id` on every event; `X-Beacon-Trace-Id` request header; Messenger `BeaconTraceMiddleware`.
+- Fatal PHP errors: `register_fatal_handler` (default true) shutdown capture with `extra.fatal`.
+
+### Security
+
+- Console/Monolog extras use `SensitiveValueRedactor` so passwords, tokens, DSNs, and private keys are not stored in Beacon.
+- Raw argv and Messenger message bodies remain omitted.
 
 ## [1.7.0] - 2026-08-12
 
@@ -426,7 +444,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.11...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2
 [1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10
 [1.6.9]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.8...v1.6.9

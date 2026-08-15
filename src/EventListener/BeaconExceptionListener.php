@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -24,6 +25,7 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         private readonly bool $sendRequest = true,
         /** @var list<string> */
         private readonly array $ignorePaths = IgnoredRequestPath::DEFAULTS,
+        private readonly bool $sendClient = false,
     ) {
     }
 
@@ -57,10 +59,15 @@ final class BeaconExceptionListener implements EventSubscriberInterface
 
         $extra = [];
         if ($this->sendRequest) {
-            $extra = [
-                'request_uri'    => $event->getRequest()->getUri(),
-                'request_method' => $event->getRequest()->getMethod(),
+            $request = $event->getRequest();
+            $extra   = [
+                'request_uri'    => $request->getUri(),
+                'request_method' => $request->getMethod(),
             ];
+            $http = HttpRequestSnapshot::fromRequest($request, $throwable, $this->sendClient);
+            if ($http !== []) {
+                $extra['http'] = $http;
+            }
         }
 
         $this->client->captureException($throwable, $extra);

@@ -10,6 +10,8 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
@@ -51,6 +53,7 @@ final class EnvelopeBuilder
         private readonly ?RequestStack $requestStack = null,
         private readonly int $stackContextLines = 5,
         private readonly ?Scope $scope = null,
+        private readonly ?TraceIdProvider $traceIdProvider = null,
         ?ClockInterface $clock = null,
     ) {
         $this->clock = $clock ?? new class implements ClockInterface {
@@ -128,7 +131,9 @@ final class EnvelopeBuilder
             $payload['fingerprint'] = $fingerprint;
         }
 
+        $this->seedTraceId();
         $this->attachTags($payload);
+        $this->attachTraceId($payload);
         $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
@@ -202,7 +207,9 @@ final class EnvelopeBuilder
             $payload['extra'] = $extra;
         }
 
+        $this->seedTraceId();
         $this->attachTags($payload);
+        $this->attachTraceId($payload);
         $this->attachRequest($payload);
         $this->attachBreadcrumbs($payload);
 
@@ -211,6 +218,37 @@ final class EnvelopeBuilder
         return $this->encode($envelopeHeader) . "\n"
             . $this->encode($itemHeader) . "\n"
             . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Ensure a correlation id exists on the scope before tags are copied.
+     */
+    private function seedTraceId(): void
+    {
+        if (!$this->traceIdProvider instanceof TraceIdProvider) {
+            return;
+        }
+
+        $traceId = $this->traceIdProvider->getOrCreate();
+        if ($this->scope instanceof Scope) {
+            $this->scope->setTag('trace_id', $traceId);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachTraceId(array &$payload): void
+    {
+        if (!$this->traceIdProvider instanceof TraceIdProvider) {
+            return;
+        }
+
+        $traceId = $this->traceIdProvider->getOrCreate();
+        if (!isset($payload['extra']) || !is_array($payload['extra'])) {
+            $payload['extra'] = [];
+        }
+        $payload['extra'] += ['trace_id' => $traceId];
     }
 
     /**
@@ -232,6 +270,16 @@ final class EnvelopeBuilder
             'method'       => $request->getMethod(),
             'query_string' => $request->getQueryString() ?? '',
         ];
+
+        $http = HttpRequestSnapshot::fromRequest($request, null, $this->sendOptions->client);
+        foreach (['route', 'controller', 'query_keys'] as $key) {
+            if (isset($http[$key])) {
+                $requestContext[$key] = $http[$key];
+            }
+        }
+        if (isset($http['client'])) {
+            $requestContext['client'] = $http['client'];
+        }
 
         $headers = [];
         foreach ([
@@ -268,6 +316,9 @@ final class EnvelopeBuilder
             'request_uri'    => $requestContext['url'],
             'request_method' => $requestContext['method'],
         ];
+        if ($http !== [] && !isset($payload['extra']['http'])) {
+            $payload['extra']['http'] = $http;
+        }
     }
 
     /**

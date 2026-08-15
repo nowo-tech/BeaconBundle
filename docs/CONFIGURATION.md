@@ -59,6 +59,7 @@ nowo_beacon:
     register_error_listener: true
     register_console_listener: true
     register_messenger_listener: true
+    register_fatal_handler: true
     include_scheduler_context: true
     auto_http_transaction: false
     before_send: null
@@ -86,6 +87,7 @@ nowo_beacon:
         runtime: true
         framework: true
         os: true
+        client: false
 ```
 
 | Key | Default | Meaning |
@@ -99,8 +101,9 @@ nowo_beacon:
 | `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
-| `register_console_listener` | `true` | Reports uncaught console command errors with nested `extra.console` (`command`, `exit_code`, `php_sapi`). Does not send argv. |
+| `register_console_listener` | `true` | Reports uncaught console command errors with nested `extra.console` (`command`, `command_class`, `exit_code`, `php_sapi`, `verbosity`, `cwd`, `interactive`, redacted `arguments`/`options`, `missing_arguments`). Does not send raw argv. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
+| `register_fatal_handler` | `true` | Register a shutdown function that reports fatal PHP errors (`E_ERROR`, `E_PARSE`, …) with `extra.fatal`. |
 | `include_scheduler_context` | `true` | When a failing envelope carries Symfony Scheduler `ScheduledStamp`, attach `extra.scheduler` (name, recurring id, trigger, triggered_at). Never attaches the message body. No-op without `symfony/scheduler`. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
@@ -131,13 +134,14 @@ Each flag controls whether that category is attached to outbound events:
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
 | `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). |
-| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available |
+| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |
 | `send.framework` | `true` | `contexts.framework` (Symfony version when available) |
 | `send.os` | `true` | `contexts.os` |
+| `send.client` | `false` | On HTTP exception events, attach `extra.http.client` (`ip` / `user_agent`). **May include PII** — off by default. |
 
-Timestamps (`timestamp` fractional Unix + `datetime` ISO-8601 UTC with microseconds) are always sent.
+Timestamps (`timestamp` fractional Unix + `datetime` ISO-8601 UTC with microseconds) are always sent. Correlation ids (`extra.trace_id` / tag `trace_id`) are always attached when the client is enabled.
 
 Example — diagnostics without request URLs or user identity:
 
@@ -146,6 +150,7 @@ nowo_beacon:
     send:
         request: false
         user: false
+        client: false
 ```
 
 ## Important behavior
@@ -155,7 +160,8 @@ nowo_beacon:
 - `ignore_paths` only affects the HTTP exception listener and `auto_http_transaction`. Console / Messenger listeners are unaffected.
 - `timeout` applies to the synchronous HTTP request path.
 - `verify_peer: false` also disables host verification in the underlying HTTP client and should stay limited to local dev.
-- Enabling `send.user` transmits account identifiers to your Beacon host; align with GDPR / privacy policy and legal pages on the Beacon UI.
+- Enabling `send.user` or `send.client` transmits identifiers that may be personal data; align with GDPR / privacy policy and legal pages on the Beacon UI.
+- `register_fatal_handler: false` skips shutdown capture of fatal PHP errors.
 
 ## Development with self-signed certificates
 

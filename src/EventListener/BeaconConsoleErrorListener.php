@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\ConsoleInputSnapshot;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -17,8 +18,8 @@ use const PHP_SAPI;
 /**
  * Reports uncaught console command errors to Beacon (optional).
  *
- * Extra shape (Messenger-aligned nested object; no argv — secrets risk):
- * `console.command`, `console.exit_code`, `console.php_sapi`.
+ * Extra shape (no raw argv): command, command_class, exit_code, php_sapi,
+ * verbosity, cwd, interactive, redacted arguments/options, missing_arguments.
  */
 final class BeaconConsoleErrorListener implements EventSubscriberInterface
 {
@@ -53,12 +54,16 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
         }
 
         $command = $event->getCommand();
+        $console = [
+            'command'   => $command?->getName(),
+            'exit_code' => $event->getExitCode(),
+            'php_sapi'  => PHP_SAPI,
+            ...ConsoleInputSnapshot::runtime($command, $event->getOutput()),
+            ...ConsoleInputSnapshot::from($event->getInput(), $command),
+        ];
+
         $this->client->captureException($error, [
-            'console' => [
-                'command'   => $command?->getName(),
-                'exit_code' => $event->getExitCode(),
-                'php_sapi'  => PHP_SAPI,
-            ],
+            'console' => $console,
         ]);
     }
 

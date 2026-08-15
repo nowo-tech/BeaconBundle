@@ -6,21 +6,30 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use DateTimeInterface;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\Stamp\BusNameStamp;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
+use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
+use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 use Throwable;
 
+use function array_key_first;
 use function class_exists;
+use function is_int;
+use function is_numeric;
 use function is_string;
 
 /**
  * Reports Messenger worker failures that will not be retried.
  *
  * When `symfony/scheduler` is installed and the envelope carries a
- * {@see ScheduledStamp}, optional `extra.scheduler` context is attached
- * (schedule name, recurring id, trigger, triggered_at). Message bodies are
- * never attached (PII / secrets risk).
+ * {@see ScheduledStamp}, optional `extra.scheduler` context is attached.
+ * Message bodies are never attached (PII / secrets risk).
  */
 final class BeaconMessengerFailedListener
 {
@@ -30,6 +39,7 @@ final class BeaconMessengerFailedListener
         /** @var list<class-string> */
         private readonly array $ignoreExceptions = [],
         private readonly bool $includeSchedulerContext = true,
+        private readonly ?TraceIdProvider $traceIdProvider = null,
     ) {
     }
 
@@ -52,13 +62,46 @@ final class BeaconMessengerFailedListener
         }
 
         $envelope = $event->getEnvelope();
-        $message  = $envelope->getMessage();
+        $this->restoreTrace($envelope);
+
+        $message = $envelope->getMessage();
+
+        $messenger = [
+            'message_class' => $message::class,
+            'receiver_name' => $event->getReceiverName(),
+            'retry_count'   => RedeliveryStamp::getRetryCountFromEnvelope($envelope),
+        ];
+
+        $busStamp = $envelope->last(BusNameStamp::class);
+        if ($busStamp instanceof BusNameStamp) {
+            $messenger['bus'] = $busStamp->getBusName();
+        }
+
+        $transportId = $envelope->last(TransportMessageIdStamp::class);
+        if ($transportId instanceof TransportMessageIdStamp) {
+            $id = $transportId->getId();
+            if (is_string($id) || is_int($id)) {
+                $messenger['transport_message_id'] = $id;
+            }
+        }
+
+        $received = $envelope->last(ReceivedStamp::class);
+        if ($received instanceof ReceivedStamp) {
+            $messenger['transport'] = $received->getTransportName();
+        }
+
+        $handlerClass = $this->handlerClass($throwable);
+        if ($handlerClass !== null) {
+            $messenger['handler_class'] = $handlerClass;
+        }
+
+        $firstFailure = $this->firstFailureAt($envelope);
+        if ($firstFailure !== null) {
+            $messenger['first_failure_at'] = $firstFailure;
+        }
 
         $extra = [
-            'messenger' => [
-                'message_class' => $message::class,
-                'receiver_name' => $event->getReceiverName(),
-            ],
+            'messenger' => $messenger,
         ];
 
         $scheduler = $this->schedulerExtra($envelope);
@@ -67,6 +110,46 @@ final class BeaconMessengerFailedListener
         }
 
         $this->client->captureException($throwable, $extra);
+    }
+
+    private function restoreTrace(Envelope $envelope): void
+    {
+        if (!$this->traceIdProvider instanceof TraceIdProvider) {
+            return;
+        }
+
+        $stamp = $envelope->last(BeaconTraceStamp::class);
+        if ($stamp instanceof BeaconTraceStamp) {
+            $this->traceIdProvider->set($stamp->traceId);
+        }
+    }
+
+    private function handlerClass(Throwable $throwable): ?string
+    {
+        if ($throwable instanceof HandlerFailedException) {
+            foreach ($throwable->getWrappedExceptions() as $handler => $_nested) {
+                if (is_string($handler) && $handler !== '' && !is_numeric($handler)) {
+                    return $handler;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function firstFailureAt(Envelope $envelope): ?string
+    {
+        $stamps = $envelope->all(RedeliveryStamp::class);
+        if ($stamps === []) {
+            return null;
+        }
+
+        $first = $stamps[array_key_first($stamps)] ?? null;
+        if (!$first instanceof RedeliveryStamp) {
+            return null;
+        }
+
+        return $first->getRedeliveredAt()->format(DateTimeInterface::ATOM);
     }
 
     /**
@@ -89,8 +172,7 @@ final class BeaconMessengerFailedListener
             'schedule_name' => $context->name,
             'recurring_id'  => $context->id,
             'triggered_at'  => $context->triggeredAt->format(DateTimeInterface::ATOM),
-            // TriggerInterface is Stringable (cron expression / label); never the message body.
-            'trigger' => (string) $context->trigger,
+            'trigger'       => (string) $context->trigger,
         ];
     }
 

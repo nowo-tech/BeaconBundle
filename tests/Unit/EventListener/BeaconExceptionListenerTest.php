@@ -33,7 +33,8 @@ final class BeaconExceptionListenerTest extends TestCase
                 self::isInstanceOf(RuntimeException::class),
                 self::callback(static function (array $extra): bool {
                     return str_ends_with($extra['request_uri'], '/boom?foo=1')
-                        && $extra['request_method'] === 'POST';
+                        && $extra['request_method'] === 'POST'
+                        && ($extra['http']['query_keys'] ?? null) === ['foo'];
                 }),
             );
 
