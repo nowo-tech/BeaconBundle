@@ -18,7 +18,7 @@ final class BeaconDsnParser
     /**
      * Canonical UUID (with hyphens), including UUIDv7 used by Symfony Beacon.
      */
-    private const string PROJECT_UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+    private const PROJECT_UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
 
     /**
      * Parse and validate a Beacon DSN string.

@@ -412,6 +412,7 @@ Optional: `symfony/console` (already present in typical FrameworkBundle apps). S
 
 - Existing capture APIs and config keys unchanged.
 - `EnvelopeTransport::send()` behaviour unchanged; `sendDetailed()` is additive for diagnostics.
+- PHP **8.2** compatibility restored for `BeaconDsnParser` (typed class constants require 8.3+).
 
 ## Upgrading from 1.7.0 to 1.7.2
 
