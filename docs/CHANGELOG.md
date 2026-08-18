@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.4] - 2026-08-18](#174-2026-08-18)
 - [[1.7.3] - 2026-08-16](#173-2026-08-16)
 - [[1.7.2] - 2026-08-16](#172-2026-08-16)
 - [[1.6.11] - 2026-07-31](#1611-2026-07-31)
@@ -92,6 +93,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.7.4] - 2026-08-18
+
+### Changed
+
+- **Demos:** pin `nowo-tech/hot-reload-bundle` to `^1.4` with FrankenPHP Mercure/`hot_reload` (`dev`/`test` only).
+
+[1.7.4]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.7.4
 
 ## [1.7.3] - 2026-08-16
 
@@ -456,7 +465,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.2...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.4...HEAD
 [1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2
 [1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10
