@@ -1,5 +1,7 @@
 # Demo / FrankenPHP
 
+**REQ-DEMO-001:** FrankenPHP demos must install **Nowo Twig Inspector** and **Nowo Hot Reload** together (`nowo-tech/twig-inspector-bundle` + `nowo-tech/hot-reload-bundle` in `require-dev`). Caddyfile: Mercure + `hot_reload` (and `worker { file …; watch }` in worker mode). Do not enable Hot Reload in production.
+
 BeaconBundle demos use **FrankenPHP + Caddy**. Runtime mode is selected with **`FRANKENPHP_MODE`** (`worker` by default; set `classic` for hot-reload-friendly `Caddyfile.dev`). See [Switching classic vs worker](#switching-classic-vs-worker-frankenphp_mode).
 
 ## Table of contents
