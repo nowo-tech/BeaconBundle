@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.5] - 2026-08-19](#175-2026-08-19)
 - [[1.7.4] - 2026-08-18](#174-2026-08-18)
 - [[1.7.3] - 2026-08-16](#173-2026-08-16)
 - [[1.7.2] - 2026-08-16](#172-2026-08-16)
@@ -93,6 +94,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.7.5] - 2026-08-19
+
+Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
+
+### Changed
+
+- **Tests:** additional unit coverage for Beacon trace/fatal/console handlers (~95% line coverage).
+
+[1.7.5]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.7.5
 
 ## [1.7.4] - 2026-08-18
 
