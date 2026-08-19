@@ -17,7 +17,6 @@ use RuntimeException;
 use stdClass;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\HttpFoundation\Request;
@@ -77,7 +76,7 @@ final class CoverageCompletionTest extends TestCase
     public function testTraceMiddlewareRestoresOrCreatesStamp(): void
     {
         $provider = new TraceIdProvider();
-        $next = $this->createMock(MiddlewareInterface::class);
+        $next     = $this->createMock(MiddlewareInterface::class);
         $next->method('handle')->willReturnCallback(static fn (Envelope $envelope): Envelope => $envelope);
 
         $stack = $this->createMock(StackInterface::class);
