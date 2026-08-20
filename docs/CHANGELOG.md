@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.7] - 2026-08-20](#177-2026-08-20)
 - [[1.7.6] - 2026-08-20](#176-2026-08-20)
 - [[1.7.5] - 2026-08-19](#175-2026-08-19)
 - [[1.7.4] - 2026-08-18](#174-2026-08-18)
@@ -96,10 +97,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-08-20
+
 ### Changed
 
 - **Tests:** extra unit coverage for messenger, fatal errors, snapshots, and redaction (REQ-TEST-003).
 - **Internal:** `BeaconFatalErrorHandler::captureFatalError()` is testable without `trigger_error(E_USER_ERROR)` (deprecated in PHP 8.4).
+
+[1.7.7]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.7.7
 
 ## [1.7.6] - 2026-08-20
 

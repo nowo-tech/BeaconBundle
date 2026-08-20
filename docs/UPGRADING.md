@@ -47,6 +47,7 @@
 - [Upgrading from 1.6.8 to 1.6.9](#upgrading-from-168-to-169)
 - [Upgrading from 1.6.9 to 1.6.10](#upgrading-from-169-to-1610)
 - [Upgrading from 1.6.10 to 1.6.11](#upgrading-from-1610-to-1611)
+- [Upgrading from 1.7.6 to 1.7.7](#upgrading-from-176-to-177)
 - [Upgrading from 1.7.5 to 1.7.6](#upgrading-from-175-to-176)
 - [Upgrading from 1.7.4 to 1.7.5](#upgrading-from-174-to-175)
 - [Upgrading from 1.7.3 to 1.7.4](#upgrading-from-173-to-174)
@@ -392,6 +393,14 @@ Maintainer / CI / demo tooling only. **No consumer API or config changes.**
 
 - `composer.lock` again pins `require-dev` Symfony packages (including `symfony/scheduler`) to **7.4** so PHP 8.2 CI `composer install` succeeds. Run `make composer-sync` after adding Symfony `require-dev` packages.
 - Demo smoke / `make up` installs Composer deps before starting the FrankenPHP worker (needed for clean GitHub Actions checkouts).
+
+## Upgrading from 1.7.6 to 1.7.7
+
+Patch release with test-only changes. **No application upgrade steps.** `captureFatalError()` remains `@internal`.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 ## Upgrading from 1.7.5 to 1.7.6
 
