@@ -54,7 +54,16 @@ final class BeaconFatalErrorHandler
             return;
         }
 
-        $error = error_get_last();
+        $this->captureFatalError(error_get_last());
+    }
+
+    /**
+     * @param array{type?: int, message?: string, file?: string, line?: int}|null $error
+     *
+     * @internal Visible for unit tests (PHP 8.4 deprecates trigger_error E_USER_ERROR).
+     */
+    public function captureFatalError(?array $error): void
+    {
         if ($error === null) {
             return;
         }

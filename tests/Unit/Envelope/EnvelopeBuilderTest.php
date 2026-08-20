@@ -11,6 +11,7 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
@@ -393,6 +394,30 @@ final class EnvelopeBuilderTest extends TestCase
         } finally {
             @unlink($large);
         }
+    }
+
+    public function testSeedsTraceIdOnScopeAndPayloadExtra(): void
+    {
+        $dsn      = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $provider = new TraceIdProvider();
+        $scope    = new Scope();
+        $builder  = new EnvelopeBuilder(
+            'test',
+            '1.0.0',
+            'ci-host',
+            new SendOptions(stacktrace: false, request: false),
+            null,
+            null,
+            null,
+            5,
+            $scope,
+            $provider,
+        );
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'trace seed'));
+
+        self::assertIsString($payload['extra']['trace_id'] ?? null);
+        self::assertSame($payload['extra']['trace_id'], $scope->getTags()['trace_id'] ?? null);
     }
 
     /**

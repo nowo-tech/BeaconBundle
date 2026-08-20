@@ -21,6 +21,7 @@ use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
+use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
@@ -232,6 +233,30 @@ final class ExtensionLoadTest extends TestCase
         self::assertSame('service', $monolog[0]['handlers']['nowo_beacon']['type']);
         self::assertSame(BeaconMonologHandler::class, $monolog[0]['handlers']['nowo_beacon']['id']);
         self::assertSame('warning', $monolog[0]['handlers']['nowo_beacon']['level']);
+    }
+
+    public function testPrependWiresMessengerTraceMiddlewareWhenFrameworkPresent(): void
+    {
+        $container = $this->createContainer();
+        $container->registerExtension(new class extends Extension {
+            public function getAlias(): string
+            {
+                return 'framework';
+            }
+
+            public function load(array $configs, ContainerBuilder $container): void
+            {
+            }
+        });
+
+        (new NowoBeaconExtension())->prepend($container);
+
+        $framework = $container->getExtensionConfig('framework');
+        self::assertNotEmpty($framework);
+        self::assertSame(
+            BeaconTraceMiddleware::class,
+            $framework[0]['messenger']['buses']['messenger.bus.default']['middleware'][0],
+        );
     }
 
     public function testRegisterNullClientRemovesOptionalListenersWhenPresent(): void

@@ -61,6 +61,27 @@ final class BeaconMonologHandlerTest extends TestCase
         ));
     }
 
+    public function testForwardsMessageWithRedactedContext(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureMessage')->with(
+            'ctx log',
+            'info',
+            self::callback(static fn (array $extra): bool => ($extra['context']['password'] ?? null) === '[Filtered]'),
+        );
+
+        $handler = new BeaconMonologHandler($client, Level::Info);
+        $handler->handle(new LogRecord(
+            datetime: new DateTimeImmutable(),
+            channel: 'app',
+            level: Level::Info,
+            message: 'ctx log',
+            context: ['password' => 'secret'],
+            extra: [],
+        ));
+    }
+
     public function testSkipsWhenClientDisabled(): void
     {
         $client = $this->createMock(BeaconClientInterface::class);

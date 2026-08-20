@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit;
 
+use DateTimeImmutable;
+use ErrorException;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
@@ -11,12 +13,17 @@ use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
 use Nowo\BeaconBundle\Support\ConsoleInputSnapshot;
+use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
+use Stringable;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,11 +31,16 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\BusNameStamp;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
+
+use const E_USER_ERROR;
+use const E_USER_NOTICE;
 
 final class CoverageCompletionTest extends TestCase
 {
@@ -51,6 +63,40 @@ final class CoverageCompletionTest extends TestCase
         $clientOff->method('isEnabled')->willReturn(false);
         $clientOff->expects(self::never())->method('captureException');
         (new BeaconFatalErrorHandler($clientOff, true))->onShutdown();
+    }
+
+    public function testFatalErrorHandlerCapturesUserError(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException')->with(
+            self::isInstanceOf(ErrorException::class),
+            self::callback(static fn (array $extra): bool => isset($extra['fatal']['type'], $extra['fatal']['file'], $extra['fatal']['line'])),
+        );
+
+        $handler = new BeaconFatalErrorHandler($client, true);
+        $handler->captureFatalError([
+            'type'    => E_USER_ERROR,
+            'message' => 'coverage fatal',
+            'file'    => __FILE__,
+            'line'    => __LINE__,
+        ]);
+    }
+
+    public function testFatalErrorHandlerIgnoresNonFatalErrorTypes(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::never())->method('captureException');
+
+        $handler = new BeaconFatalErrorHandler($client, true);
+        $handler->captureFatalError([
+            'type'    => E_USER_NOTICE,
+            'message' => 'notice only',
+            'file'    => __FILE__,
+            'line'    => __LINE__,
+        ]);
+        $handler->captureFatalError(null);
     }
 
     public function testTraceRequestListenerSeedsAndPropagatesHeader(): void
@@ -91,6 +137,37 @@ final class CoverageCompletionTest extends TestCase
         $envelope = new Envelope(new stdClass(), [new BeaconTraceStamp('trace-from-stamp-12345678')]);
         $middleware->handle($envelope, $stack);
         self::assertSame('trace-from-stamp-12345678', $provider->get());
+    }
+
+    public function testMessengerListenerAddsHandlerTransportAndFirstFailureMetadata(): void
+    {
+        $provider = new TraceIdProvider();
+        $client   = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureException')->with(
+            self::isInstanceOf(HandlerFailedException::class),
+            self::callback(static function (array $extra): bool {
+                $messenger = $extra['messenger'] ?? [];
+
+                return ($messenger['transport'] ?? null) === 'async'
+                    && ($messenger['handler_class'] ?? null) === 'App\\Handler\\DemoHandler::__invoke'
+                    && isset($messenger['first_failure_at']);
+            }),
+        );
+
+        $failedAt = new DateTimeImmutable('2026-08-19T12:00:00+00:00');
+        $envelope = new Envelope(new stdClass(), [
+            new ReceivedStamp('async'),
+            new RedeliveryStamp(1, $failedAt),
+        ]);
+        $throwable = new HandlerFailedException($envelope, [
+            'App\\Handler\\DemoHandler::__invoke' => new RuntimeException('handler failed'),
+        ]);
+
+        $event = new WorkerMessageFailedEvent($envelope, 'async', $throwable);
+        self::assertFalse($event->willRetry());
+
+        (new BeaconMessengerFailedListener($client, true, [], true, $provider))($event);
     }
 
     public function testMessengerListenerRestoresTraceAndAddsMetadata(): void
@@ -158,5 +235,81 @@ final class CoverageCompletionTest extends TestCase
     {
         self::assertNull(TraceIdProvider::fromMixed(123));
         self::assertSame('valid-trace-12345678', TraceIdProvider::fromMixed(' valid-trace-12345678 '));
+    }
+
+    public function testHttpRequestSnapshotHandlesArrayControllersAndEdgeCases(): void
+    {
+        $objectController = Request::create('/');
+        $objectController->attributes->set('_controller', [new class {
+            public function show(): void
+            {
+            }
+        }, 'show']);
+        self::assertStringContainsString('::show', HttpRequestSnapshot::fromRequest($objectController)['controller'] ?? '');
+
+        $callableController = Request::create('/');
+        $callableController->attributes->set('_controller', ['App\\Controller\\DemoController', 'index']);
+        self::assertSame('App\\Controller\\DemoController::index', HttpRequestSnapshot::fromRequest($callableController)['controller'] ?? null);
+
+        $classOnly = Request::create('/');
+        $classOnly->attributes->set('_controller', ['App\\Controller\\DemoController']);
+        self::assertSame('App\\Controller\\DemoController', HttpRequestSnapshot::fromRequest($classOnly)['controller'] ?? null);
+
+        $fallback = Request::create('/');
+        $fallback->attributes->set('_controller', [123, null]);
+        self::assertSame('array', HttpRequestSnapshot::fromRequest($fallback)['controller'] ?? null);
+    }
+
+    public function testConsoleInputSnapshotHandlesUnboundInputAndMissingArguments(): void
+    {
+        $command = new Command('needs-arg');
+        $command->addArgument('required', InputArgument::REQUIRED);
+
+        $broken = $this->createMock(InputInterface::class);
+        $broken->method('isInteractive')->willReturn(false);
+        $broken->method('getArguments')->willThrowException(new RuntimeException('unbound'));
+        $broken->method('getOptions')->willThrowException(new RuntimeException('unbound'));
+        $broken->method('hasArgument')->willReturnMap([['required', false]]);
+        $broken->method('getArgument')->willReturn('');
+
+        $snapshot = ConsoleInputSnapshot::from($broken, $command);
+        self::assertFalse($snapshot['interactive']);
+        self::assertSame(['required'], $snapshot['missing_arguments'] ?? null);
+
+        $throwsOnGet = $this->createMock(InputInterface::class);
+        $throwsOnGet->method('isInteractive')->willReturn(false);
+        $throwsOnGet->method('getArguments')->willThrowException(new RuntimeException('unbound'));
+        $throwsOnGet->method('getOptions')->willThrowException(new RuntimeException('unbound'));
+        $throwsOnGet->method('hasArgument')->willReturn(true);
+        $throwsOnGet->method('getArgument')->willThrowException(new RuntimeException('missing'));
+
+        self::assertSame(['required'], ConsoleInputSnapshot::from($throwsOnGet, $command)['missing_arguments'] ?? null);
+
+        $optionCommand = new Command('opts');
+        $optionCommand->addOption('flag', null, InputOption::VALUE_NONE);
+        $optionInput = new ArrayInput(['--flag' => true], $optionCommand->getDefinition());
+        self::assertTrue(ConsoleInputSnapshot::from($optionInput, $optionCommand)['options']['flag'] ?? false);
+        self::assertSame(['interactive' => false], ConsoleInputSnapshot::from($broken, null));
+    }
+
+    public function testSensitiveValueRedactorCoversStringablePrivateKeyAndUnknownTypes(): void
+    {
+        $stringable = new class implements Stringable {
+            public function __toString(): string
+            {
+                return 'mysql://user:secret@db/app';
+            }
+        };
+
+        self::assertSame('', SensitiveValueRedactor::redactValue(''));
+        self::assertSame(
+            'mysql://' . SensitiveValueRedactor::FILTERED . '@db/app',
+            SensitiveValueRedactor::redactValue($stringable),
+        );
+        self::assertSame(
+            SensitiveValueRedactor::FILTERED,
+            SensitiveValueRedactor::redactValue("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----"),
+        );
+        self::assertSame(SensitiveValueRedactor::FILTERED, SensitiveValueRedactor::redactValue(fopen('php://memory', 'r')));
     }
 }

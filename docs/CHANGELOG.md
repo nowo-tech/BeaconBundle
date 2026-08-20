@@ -96,6 +96,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Tests:** extra unit coverage for messenger, fatal errors, snapshots, and redaction (REQ-TEST-003).
+- **Internal:** `BeaconFatalErrorHandler::captureFatalError()` is testable without `trigger_error(E_USER_ERROR)` (deprecated in PHP 8.4).
+
 ## [1.7.6] - 2026-08-20
 
 ### Security
