@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.7.6] - 2026-08-20](#176-2026-08-20)
 - [[1.7.5] - 2026-08-19](#175-2026-08-19)
 - [[1.7.4] - 2026-08-18](#174-2026-08-18)
 - [[1.7.3] - 2026-08-16](#173-2026-08-16)
@@ -94,6 +95,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.7.6] - 2026-08-20
+
+### Security
+
+- **CI:** run `composer audit --locked` after dependency install (REQ-SEC / P3).
 
 ## [1.7.5] - 2026-08-19
 
