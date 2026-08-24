@@ -2,6 +2,8 @@
 
 ## Table of contents
 
+
+- [From 1.7.7 to 1.7.8](#from-177-to-178)
 - [First install -> 1.0.x](#first-install-10x)
 - [Upgrading from 1.0.0 to 1.0.1](#upgrading-from-100-to-101)
 - [Upgrading within 1.0.1 → 1.0.5](#upgrading-within-101-105)

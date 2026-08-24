@@ -97,6 +97,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+## [1.7.8] - 2026-08-24
+
+### Changed
+
+- **QA:** add `phpstan-frankenphp` extension (REQ-CS-005).
+- **Docs:** PHP-FIG PSR evaluation (REQ-CS-007).
+- **Style:** PHP CS Fixer alignment.
+
+### Notes
+
+- **No API or configuration changes** for integrators unless noted above.
+
+[1.7.8]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.7.8
+
 ## [1.7.7] - 2026-08-20
 
 ### Changed
