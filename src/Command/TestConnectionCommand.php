@@ -56,9 +56,9 @@ final class TestConnectionCommand extends Command
         if ($target !== []) {
             $io->definitionList(
                 ['Origin' => $target['origin'] ?? ''],
-                ['Project'           => $target['project_id'] ?? ''],
-                ['Public key'        => $target['public_key'] ?? ''],
-                ['Envelope URL'      => $target['envelope_url'] ?? ''],
+                ['Project' => $target['project_id'] ?? ''],
+                ['Public key' => $target['public_key'] ?? ''],
+                ['Envelope URL' => $target['envelope_url'] ?? ''],
                 ['Reporting enabled' => ($target['reporting_enabled'] ?? false) ? 'yes' : 'no'],
             );
         }
