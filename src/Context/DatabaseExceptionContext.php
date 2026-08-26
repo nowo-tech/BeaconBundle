@@ -26,7 +26,7 @@ use function trim;
  */
 final class DatabaseExceptionContext
 {
-    public const int MAX_SQL_LENGTH = 8192;
+    public const MAX_SQL_LENGTH = 8192;
 
     /**
      * @return array<string, mixed>|null
