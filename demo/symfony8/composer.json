@@ -7,7 +7,7 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "nowo-tech/beacon-bundle": "@dev",
-        "nowo-tech/password-toggle-bundle": "^2.0.2",
+        "nowo-tech/password-toggle-bundle": "^2.1.4",
         "pentatrion/vite-bundle": "^8.2.4",
         "php": ">=8.4",
         "symfony/asset": "8.1.*",
@@ -91,9 +91,9 @@
         }
     ],
     "require-dev": {
-        "nowo-tech/hot-reload-bundle": "^1.4",
+        "nowo-tech/hot-reload-bundle": "^1.4.2",
         "nowo-tech/twig-inspector-bundle": "@dev",
-        "phpunit/phpunit": "^13.2.5",
+        "phpunit/phpunit": "^13.3.1",
         "symfony/browser-kit": "8.1.*",
         "symfony/css-selector": "8.1.*",
         "symfony/debug-bundle": "8.1.*",
