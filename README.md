@@ -26,6 +26,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Breadcrumbs (`addBreadcrumb`) and performance transactions (`captureTransaction`)
 - Public **tags** API (`setTag` / `setTags`) and optional **`before_send`** scrubbing hook
 - Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
+- Database exceptions attach `contexts.db` (SQLSTATE / SQL) without requiring Doctrine instrumentation
 - Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)

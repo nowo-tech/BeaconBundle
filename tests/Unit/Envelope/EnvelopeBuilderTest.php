@@ -12,6 +12,7 @@ use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
+use PDOException;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
@@ -68,6 +69,21 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('outer boom', $payload['exception']['values'][1]['value']);
         self::assertIsString($payload['culprit']);
         self::assertArrayNotHasKey('user', $payload);
+    }
+
+    public function testAttachesContextsDbForDatabaseException(): void
+    {
+        $dsn            = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $pdo            = new PDOException('SQLSTATE[42000]: Syntax error or access violation: 1055 (SQL: select id from t)');
+        $pdo->errorInfo = ['42000', 1055, 'syntax'];
+        $builder        = new EnvelopeBuilder('test', '1.0.0', 'ci-host');
+        $body           = $builder->buildEventEnvelope($dsn, 'db boom', 'error', $pdo);
+        [, , $payload]  = $this->decodeEnvelope($body);
+
+        self::assertSame('sql', $payload['contexts']['db']['type']);
+        self::assertSame('42000', $payload['contexts']['db']['sqlstate']);
+        self::assertSame('1055', $payload['contexts']['db']['code']);
+        self::assertStringContainsString('select id from t', $payload['contexts']['db']['sql']);
     }
 
     public function testRespectsSendOptionsOmissionsAndUserOptIn(): void

@@ -48,6 +48,8 @@ nowo_beacon:
         - InvalidArgumentException
 ```
 
+Database exceptions (PDO, Doctrine DBAL when present, or `SQLSTATE[…]` in the message) also attach **`contexts.db`** (SQLSTATE, vendor code, scrubbed SQL). Symfony Beacon 107+ shows that as the Query panel. Opt-in `instrumentation.doctrine` breadcrumbs remain separate.
+
 ## Manual reporting
 
 ```php

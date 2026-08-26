@@ -7,6 +7,7 @@ namespace Nowo\BeaconBundle\Envelope;
 use DateTimeImmutable;
 use DateTimeZone;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Scope\Scope;
@@ -112,6 +113,12 @@ final class EnvelopeBuilder
         }
 
         $contexts = $this->buildContexts();
+        if ($throwable instanceof Throwable) {
+            $db = DatabaseExceptionContext::fromThrowable($throwable);
+            if ($db !== null) {
+                $contexts['db'] = $db;
+            }
+        }
         if ($contexts !== []) {
             $payload['contexts'] = $contexts;
         }

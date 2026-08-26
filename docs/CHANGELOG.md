@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.8.0] - 2026-08-26](#180-2026-08-26)
+- [[1.7.8] - 2026-08-24](#178-2026-08-24)
 - [[1.7.7] - 2026-08-20](#177-2026-08-20)
 - [[1.7.6] - 2026-08-20](#176-2026-08-20)
 - [[1.7.5] - 2026-08-19](#175-2026-08-19)
@@ -97,6 +99,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-26
+
+### Added
+
+- **`contexts.db`** on captured database exceptions: SQLSTATE, vendor code, driver hint, `sql_mode`, and SQL (quoted literals scrubbed, max 8 KiB). Built from `PDOException::$errorInfo`, duck-typed Doctrine `getSQLState()` / `getQuery()`, and Laravel-style `(SQL: …)` messages. Does **not** require `instrumentation.doctrine`. Symfony Beacon **107** renders this as the Query panel.
+
+### Notes
+
+- Additive Envelope field. Older Beacon servers ignore unknown `contexts` keys.
+- No YAML changes.
+
+[1.8.0]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.8.0
 
 ## [1.7.8] - 2026-08-24
 
@@ -508,7 +522,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.4...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.0...HEAD
 [1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2
 [1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10
