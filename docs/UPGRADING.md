@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [From 1.8.0 to 1.8.1](#from-180-to-181)
 
 - [From 1.7.7 to 1.7.8](#from-177-to-178)
 - [First install -> 1.0.x](#first-install-10x)
@@ -494,4 +495,12 @@ Arbitrary path segments remain rejected.
 Return type is now `string` (was `int`). Numeric DSNs still work; the getter returns `"1"` instead of `1`. Update any strict `int` type hints or `assertSame(1, …)` comparisons.
 
 The constructor accepts `string|int` for the project id argument.
+
+## From 1.8.0 to 1.8.1
+
+No application upgrade steps.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 

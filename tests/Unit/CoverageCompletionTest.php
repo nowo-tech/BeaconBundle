@@ -20,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 use Stringable;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -199,10 +200,9 @@ final class CoverageCompletionTest extends TestCase
 
     public function testConsoleInputSnapshotCapturesArgumentsOptionsAndRuntime(): void
     {
-        $command = new class extends Command {
+        $command = new #[AsCommand(name: 'demo')] class extends Command {
             protected function configure(): void
             {
-                $this->setName('demo');
                 $this->addArgument('name');
                 $this->addOption('verbose', null, InputOption::VALUE_NONE);
             }
@@ -220,13 +220,14 @@ final class CoverageCompletionTest extends TestCase
         self::assertTrue($snapshot['options']['verbose'] ?? false);
 
         $runtime = ConsoleInputSnapshot::runtime($command, $output);
+        self::assertArrayHasKey('command_class', $runtime);
         self::assertSame($command::class, $runtime['command_class']);
         self::assertArrayHasKey('cwd', $runtime);
     }
 
     public function testConsoleInputSnapshotRuntimeWithoutCommand(): void
     {
-        $runtime = ConsoleInputSnapshot::runtime(null, null);
+        $runtime = ConsoleInputSnapshot::runtime(null);
         self::assertArrayNotHasKey('command_class', $runtime);
         self::assertArrayNotHasKey('verbosity', $runtime);
     }

@@ -105,7 +105,7 @@ final class BeaconConnectionTester
             return new ConnectionTestResult(
                 true,
                 'Beacon ingest accepted the test envelope (HTTP '
-                    . (string) ($result->getStatusCode() ?? 200)
+                    . ($result->getStatusCode() ?? 200)
                     . ').' . $suffix,
                 $target,
                 $eventId,
@@ -160,7 +160,7 @@ final class BeaconConnectionTester
 
         return match ($status) {
             401, 403 => 'Beacon ingest rejected authentication (HTTP '
-                . (string) $status
+                . $status
                 . '). Confirm BEACON_DSN includes public:secret and matches the project.',
             404     => 'Beacon ingest returned HTTP 404. Confirm the project id in the DSN path exists on this server.',
             429     => 'Beacon ingest rate limited (HTTP 429). Retry later.',

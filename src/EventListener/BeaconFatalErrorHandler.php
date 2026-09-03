@@ -9,6 +9,7 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 
 use function error_get_last;
 use function in_array;
+use function is_int;
 use function register_shutdown_function;
 
 use const E_COMPILE_ERROR;
@@ -68,18 +69,19 @@ final class BeaconFatalErrorHandler
             return;
         }
 
-        if (!in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        $type = $error['type'] ?? null;
+        if (!is_int($type) || !in_array($type, [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
             return;
         }
 
-        $message = $error['message'];
-        $file    = $error['file'];
-        $line    = $error['line'];
+        $message = $error['message'] ?? '';
+        $file    = $error['file'] ?? '';
+        $line    = $error['line'] ?? 0;
 
-        $exception = new ErrorException($message, 0, $error['type'], $file, $line);
+        $exception = new ErrorException($message, 0, $type, $file, $line);
         $this->client->captureException($exception, [
             'fatal' => [
-                'type' => $error['type'],
+                'type' => $type,
                 'file' => $file,
                 'line' => $line,
             ],

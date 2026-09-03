@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.8.1] - 2026-09-03](#181-2026-09-03)
 - [[1.8.0] - 2026-08-26](#180-2026-08-26)
 - [[1.7.8] - 2026-08-24](#178-2026-08-24)
 - [[1.7.7] - 2026-08-20](#177-2026-08-20)
@@ -98,6 +99,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.8.1] - 2026-09-03
+
+### Fixed
+
+- **CI / PHP 8.2:** regenerate `composer.lock` for PHP 8.2-compatible Symfony 7.4 resolution so Code Style Check can `composer install` on PHP 8.2.
+- PHP 8.2-compatible constant usage where needed for CS/install jobs.
+
+### Changed
+
+- **Deps (dev):** refresh Composer lockfiles (includes newer php-cs-fixer).
+
+[1.8.1]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.8.1
 
 ## [1.8.0] - 2026-08-26
 
