@@ -116,7 +116,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          # composer.lock tracks Symfony 8.1 (php >=8.4.1); plain composer install cannot run on 8.2.
+          php-version: '8.4'
           tools: composer:v2, cs2pr
 
       - name: Install dependencies
@@ -155,7 +156,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          # composer.lock tracks Symfony 8.1 (php >=8.4.1); plain composer install cannot run on 8.2.
+          php-version: '8.4'
           tools: composer:v2, cs2pr
 
       - name: Install dependencies
