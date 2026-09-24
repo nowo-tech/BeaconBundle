@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-07-30  
-**Aligned with:** **v1.6.8** (`ignore_paths` / FR-LI-005)
+**Last audited:** 2026-09-24  
+**Aligned with:** **v1.8.2** (FrankenPHP worker scenario B / FR-WK-*)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
@@ -27,7 +27,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Context/UserContextProviderInterface.php` | Optional user context | FR-ENV-006 |
 | `src/Context/SecurityUserContextProvider.php` | Security token → user summary | FR-ENV-006 (`send.user`) |
 | `src/Envelope/SendOptions.php` | `send.*` value object | FR-ENV-004..006 |
-| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events + transactions) | FR-ENV-001..006 |
+| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events + transactions) | FR-ENV-001..006, FR-WK-004 |
 | `src/Envelope/EnvelopeTransportInterface.php` | Transport contract | FR-TR-001 |
 | `src/Envelope/FlushableEnvelopeTransportInterface.php` | Async flush contract | FR-TR-002 |
 | `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest | FR-TR-001, FR-ENV-002 |
@@ -39,8 +39,12 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/EventListener/BeaconExceptionListener.php` | `kernel.exception` | FR-LI-001, FR-LI-005 |
 | `src/EventListener/BeaconConsoleErrorListener.php` | `ConsoleEvents::ERROR` | FR-LI-002 |
 | `src/EventListener/BeaconMessengerFailedListener.php` | Messenger final failures | FR-LI-003 |
-| `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004, FR-LI-005 |
-| `src/EventListener/FlushPendingTransportsListener.php` | Flush on terminate | FR-TR-002 |
+| `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004, FR-LI-005, FR-WK-002 |
+| `src/EventListener/BeaconRequestScopeResetListener.php` | Worker-safe request buffer reset | FR-WK-001, FR-WK-003 |
+| `src/EventListener/BeaconTraceRequestListener.php` | Seed / honour trace id | FR-WK-001 |
+| `src/EventListener/BeaconFatalErrorHandler.php` | Process shutdown fatals | FR-WK-005 |
+| `src/EventListener/FlushPendingTransportsListener.php` | Flush on terminate | FR-TR-002, FR-WK-003 |
+| `src/Trace/TraceIdProvider.php` | Request-scoped trace id | FR-WK-001 |
 | `src/Support/IgnoredRequestPath.php` | Path-prefix matcher + default ignore list | FR-LI-005 |
 | `src/Instrumentation/SpanBuffer.php` | In-request SQL/HTTP spans | FR-INS-001 |
 | `src/Instrumentation/SqlNormalizer.php` | Normalize SQL for spans | FR-INS-001 |
@@ -48,4 +52,4 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 40 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 50 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

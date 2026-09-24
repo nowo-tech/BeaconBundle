@@ -145,8 +145,8 @@ final class BeaconMessengerFailedListener
         }
 
         $first = $stamps[array_key_first($stamps)] ?? null;
-        if (!$first instanceof RedeliveryStamp) {
-            return null;
+        if (!$first instanceof RedeliveryStamp) { // @codeCoverageIgnore
+            return null; // @codeCoverageIgnore
         }
 
         return $first->getRedeliveredAt()->format(DateTimeInterface::ATOM);

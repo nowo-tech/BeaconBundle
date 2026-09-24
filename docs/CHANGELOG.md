@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.8.2] - 2026-09-24](#182-2026-09-24)
+  - [Fixed](#fixed)
+  - [Added](#added)
 - [[1.8.1] - 2026-09-03](#181-2026-09-03)
 - [[1.8.0] - 2026-08-26](#180-2026-08-26)
 - [[1.7.8] - 2026-08-24](#178-2026-08-24)
@@ -100,6 +103,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-09-24
+
+### Fixed
+
+- **FrankenPHP worker mode (kernel not reset between requests)** – see [`docs/FRANKENPHP-WORKER-AUDIT.md`](FRANKENPHP-WORKER-AUDIT.md):
+  - New `BeaconRequestScopeResetListener` resets breadcrumbs, spans, scope tags and the trace id at the start of every main request (and flushes leftover async pending POSTs); `kernel.reset` tags are kept.
+  - `BeaconRequestTransactionListener` clears stored Request/timing on every main request (including ignored paths) so timing cannot leak across users.
+  - `FlushPendingTransportsListener` terminate priority is `-2048` so auto HTTP transactions enqueue before async flush in the same terminate cycle.
+  - `EnvelopeBuilder` source-line cache is bounded (LRU, 64 files).
+  - `BeaconFatalErrorHandler` is public and registered from `NowoBeaconBundle::boot()` (`register_fatal_handler` previously had no effect).
+
+### Added
+
+- Audit document `docs/FRANKENPHP-WORKER-AUDIT.md` and Spec Kit requirements FR-WK-001..005.
+
 ## [1.8.1] - 2026-09-03
 
 ### Fixed
@@ -112,6 +130,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Deps (dev):** refresh Composer lockfiles (includes newer php-cs-fixer).
 
 [1.8.1]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.8.1
+[1.8.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.1...v1.8.2
 
 ## [1.8.0] - 2026-08-26
 
@@ -536,7 +555,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.2...HEAD
 [1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2
 [1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10

@@ -260,8 +260,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$client'  => new Reference(BeaconClientInterface::class),
                 '$enabled' => true,
             ]);
-            $fatal->addMethodCall('register');
-            $fatal->setPublic(false);
+            // Public so NowoBeaconBundle::boot() can instantiate it; nothing else references it.
+            $fatal->setPublic(true);
             $container->setDefinition(BeaconFatalErrorHandler::class, $fatal);
         }
 

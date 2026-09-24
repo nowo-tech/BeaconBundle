@@ -291,6 +291,15 @@ final class CoverageCompletionTest extends TestCase
         $optionInput = new ArrayInput(['--flag' => true], $optionCommand->getDefinition());
         self::assertTrue(ConsoleInputSnapshot::from($optionInput, $optionCommand)['options']['flag'] ?? false);
         self::assertSame(['interactive' => false], ConsoleInputSnapshot::from($broken, null));
+
+        $throwsOnOption = $this->createMock(InputInterface::class);
+        $throwsOnOption->method('isInteractive')->willReturn(false);
+        $throwsOnOption->method('getArguments')->willReturn([]);
+        $throwsOnOption->method('getOptions')->willReturn([]);
+        $throwsOnOption->method('hasArgument')->willReturn(false);
+        $throwsOnOption->method('hasOption')->willReturn(true);
+        $throwsOnOption->method('getOption')->willThrowException(new RuntimeException('option boom'));
+        self::assertSame([], ConsoleInputSnapshot::from($throwsOnOption, $optionCommand)['options'] ?? []);
     }
 
     public function testSensitiveValueRedactorCoversStringablePrivateKeyAndUnknownTypes(): void

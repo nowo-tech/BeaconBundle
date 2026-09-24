@@ -47,10 +47,19 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
 
     /**
      * Start timing for main requests that are not skipped.
+     *
+     * Always clears leftover state first so FrankenPHP workers without services_resetter
+     * cannot carry a previous Request into an ignored path or the next terminate.
      */
     public function onKernelRequest(RequestEvent $event): void
     {
-        if (!$this->enabled || !$this->client->isEnabled() || !$event->isMainRequest()) {
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
+        $this->reset();
+
+        if (!$this->enabled || !$this->client->isEnabled()) {
             return;
         }
 

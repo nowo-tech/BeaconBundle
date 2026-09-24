@@ -16,7 +16,9 @@ use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
+use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
@@ -109,6 +111,23 @@ final class ExtensionLoadTest extends TestCase
         ], $listenerDefinition->getArgument('$ignorePaths'));
         self::assertArrayHasKey('user', $clientDefinition->getArgument('$send'));
         self::assertFalse($clientDefinition->getArgument('$send')['user']);
+    }
+
+    public function testWorkerSafetyServicesAreRegistered(): void
+    {
+        $container = $this->createContainer();
+
+        (new NowoBeaconExtension())->load([[
+            'enabled' => true,
+            'dsn'     => 'https://pubkey:secret@beacon.example.com/5',
+        ]], $container);
+
+        self::assertTrue($container->hasDefinition(BeaconRequestScopeResetListener::class));
+        self::assertTrue($container->getDefinition(BeaconRequestScopeResetListener::class)->hasTag('kernel.event_subscriber'));
+
+        $fatal = $container->getDefinition(BeaconFatalErrorHandler::class);
+        self::assertTrue($fatal->isPublic());
+        self::assertFalse($fatal->hasMethodCall('register'));
     }
 
     public function testRegisterErrorListenerFalseRemovesListener(): void

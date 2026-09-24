@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-07-30  
-**Aligned with:** public API / config through **v1.6.8** (`ignore_paths`)
+**Last audited:** 2026-09-24  
+**Aligned with:** public API / config through **v1.8.2** (FrankenPHP worker scenario B)
 
 ## Summary
 
@@ -20,6 +20,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Configurable outbound context via `send.*` (stacktrace with optional source snippets, HTTP request, user, runtime/framework/os, …)
 - Optional Monolog forwarding (`monolog_handler`) wired through MonologBundle `handlers`
 - Path-based ignore list for HTTP exception reporting and auto HTTP transactions (`ignore_paths`)
+- Safe operation under FrankenPHP worker mode when the kernel is **not** reset between requests (scenario B)
 
 ## Non-goals
 
@@ -44,6 +45,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-08 | As a developer, I send performance transactions | `captureTransaction` → Envelope item `type: transaction` |
 | US-09 | As a developer, I control outbound PII/context | `send.*` switches; `send.user` opt-in |
 | US-10 | As a developer, Monolog errors can forward to Beacon | `monolog_handler.enabled` prepends `type: service` handler |
+| US-11 | As a developer, I run FrankenPHP worker without kernel reset between requests | Breadcrumbs, spans, tags, trace id, auto HTTP transaction Request, and async pending POSTs do not leak across requests |
 
 ## Functional requirements
 
@@ -90,6 +92,11 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths` |
 | FR-LI-005 | `ignore_paths` defaults MUST include `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, and `/.well-known/appspecific/com.chrome.devtools.json` (aligned with typical Symfony Beacon host infra exclusions); trailing slashes are normalized; empty list disables path filtering; applies to HTTP exception listener and auto HTTP transactions only (not console/Messenger) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
+| FR-WK-001 | On every **main** `kernel.request`, reset `BreadcrumbBuffer`, `SpanBuffer`, `Scope`, and `TraceIdProvider` (in addition to `kernel.reset` tags) so FrankenPHP workers without `services_resetter` do not leak per-request data |
+| FR-WK-002 | `BeaconRequestTransactionListener` MUST clear stored Request/timing at the start of every main request (before ignore-path early returns) |
+| FR-WK-003 | `FlushPendingTransportsListener` terminate priority MUST be lower than the auto HTTP transaction listener so async POSTs enqueued on terminate are drained in the same cycle; leftover pending MAY also flush at the next main request start |
+| FR-WK-004 | `EnvelopeBuilder` source-line cache MUST be bounded (LRU); workers SHOULD still be recycled on deploy |
+| FR-WK-005 | When `register_fatal_handler` is true, `BeaconFatalErrorHandler` MUST be registered once per process (`Bundle::boot()`); in worker mode the shutdown function runs when the worker exits |
 
 ## Sample application
 

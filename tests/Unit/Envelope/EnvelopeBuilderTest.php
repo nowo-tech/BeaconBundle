@@ -15,6 +15,7 @@ use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PDOException;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -374,6 +375,41 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertArrayNotHasKey('tags', $payload);
     }
 
+    public function testSourceLineCacheIsBoundedAndKeepsRecentlyUsedFiles(): void
+    {
+        $builder = new EnvelopeBuilder('test', null, 'ci');
+        $load    = new ReflectionMethod(EnvelopeBuilder::class, 'loadSourceLines');
+        $cache   = new ReflectionProperty(EnvelopeBuilder::class, 'sourceLineCache');
+
+        $dir = sys_get_temp_dir() . '/beacon-lru-' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        $files = [];
+        try {
+            for ($i = 0; $i < 80; ++$i) {
+                $files[$i] = $dir . '/f' . $i . '.php';
+                file_put_contents($files[$i], "line {$i}\n");
+            }
+
+            self::assertSame(['line 0'], $load->invoke($builder, $files[0]));
+            for ($i = 1; $i < 80; ++$i) {
+                $load->invoke($builder, $files[$i]);
+                // Keep file 0 hot so it survives eviction.
+                $load->invoke($builder, $files[0]);
+            }
+
+            $cached = $cache->getValue($builder);
+            self::assertIsArray($cached);
+            self::assertCount(64, $cached);
+            self::assertArrayHasKey($files[0], $cached);
+            self::assertArrayHasKey($files[79], $cached);
+            self::assertArrayNotHasKey($files[1], $cached);
+            self::assertSame(['line 79'], $load->invoke($builder, $files[79]));
+        } finally {
+            array_map('unlink', $files);
+            rmdir($dir);
+        }
+    }
+
     public function testSourceContextEdgeCasesViaReflection(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci');
@@ -434,6 +470,30 @@ final class EnvelopeBuilderTest extends TestCase
 
         self::assertIsString($payload['extra']['trace_id'] ?? null);
         self::assertSame($payload['extra']['trace_id'], $scope->getTags()['trace_id'] ?? null);
+    }
+
+    public function testAttachesClientContextWhenSendClientEnabled(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $request = Request::create('/api', 'GET', [], [], [], [
+            'REMOTE_ADDR'     => '203.0.113.10',
+            'HTTP_USER_AGENT' => 'BeaconCoverage/1.0',
+        ]);
+        $stack   = new RequestStack([$request]);
+        $builder = new EnvelopeBuilder(
+            'test',
+            '1.0.0',
+            'ci-host',
+            new SendOptions(stacktrace: false, request: true, client: true),
+            null,
+            null,
+            $stack,
+        );
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'with client'));
+
+        self::assertSame('203.0.113.10', $payload['contexts']['request']['client']['ip'] ?? null);
+        self::assertSame('BeaconCoverage/1.0', $payload['contexts']['request']['client']['user_agent'] ?? null);
     }
 
     /**

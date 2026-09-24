@@ -8,6 +8,7 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\AsyncEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
+use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
@@ -29,8 +30,13 @@ final class FlushPendingTransportsListenerTest extends TestCase
     {
         $events = FlushPendingTransportsListener::getSubscribedEvents();
 
-        self::assertSame(['onKernelTerminate', -1024], $events[KernelEvents::TERMINATE]);
-        self::assertSame(['onConsoleTerminate', -1024], $events[ConsoleEvents::TERMINATE]);
+        self::assertSame(['onKernelTerminate', -2048], $events[KernelEvents::TERMINATE]);
+        self::assertSame(['onConsoleTerminate', -2048], $events[ConsoleEvents::TERMINATE]);
+        self::assertLessThan(
+            BeaconRequestTransactionListener::getSubscribedEvents()[KernelEvents::TERMINATE][1],
+            $events[KernelEvents::TERMINATE][1],
+            'Flush must run after auto HTTP transaction capture so async POSTs are drained in the same terminate',
+        );
     }
 
     public function testKernelAndConsoleTerminateFlushRegistry(): void

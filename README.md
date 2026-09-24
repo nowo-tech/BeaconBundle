@@ -128,6 +128,8 @@ Generate keys in Beacon project settings, or run `make seed` in the `symfony-bea
 
 ## FrankenPHP worker
 
+This bundle is **compatible with FrankenPHP worker mode when the kernel is not reset between requests** (scenario B). Request-scoped breadcrumbs, spans, tags, trace ids, auto HTTP transactions and async pending POSTs are cleared without relying on Symfony’s `services_resetter`. Details: [FrankenPHP worker audit](docs/FRANKENPHP-WORKER-AUDIT.md).
+
 The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `classic` for `Caddyfile.dev` (hot-reload friendly). See [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md).
 
 ## Documentation
@@ -150,6 +152,7 @@ The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `cla
 
 - [Getting started (Symfony Beacon + bundle)](docs/GETTING_STARTED.md)
 - [Demo/FrankenPHP](docs/DEMO-FRANKENPHP.md)
+- [FrankenPHP worker audit (reset_kernel false)](docs/FRANKENPHP-WORKER-AUDIT.md)
 - [GitHub CI](docs/GITHUB_CI.md)
 - [Performance](docs/PERFORMANCE.md)
 

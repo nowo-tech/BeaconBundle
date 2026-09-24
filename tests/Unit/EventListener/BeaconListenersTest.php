@@ -234,4 +234,33 @@ final class BeaconListenersTest extends TestCase
         $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
         $listener->onKernelTerminate(new TerminateEvent($kernel, $request, new Response('ok', 200)));
     }
+
+    public function testRequestTransactionListenerClearsPreviousRequestBeforeIgnoredPath(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::never())->method('captureTransaction');
+
+        $listener = new BeaconRequestTransactionListener($client, true);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+
+        $listener->onKernelRequest(new RequestEvent($kernel, Request::create('/dashboard'), HttpKernelInterface::MAIN_REQUEST));
+        // Worker without services_resetter: next main request is ignored — must drop /dashboard timing.
+        $health = Request::create('/health');
+        $listener->onKernelRequest(new RequestEvent($kernel, $health, HttpKernelInterface::MAIN_REQUEST));
+        $listener->onKernelTerminate(new TerminateEvent($kernel, $health, new Response('ok', 200)));
+    }
+
+    public function testRequestTransactionListenerIgnoresSubRequests(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->expects(self::never())->method('captureTransaction');
+
+        $listener = new BeaconRequestTransactionListener($client, true);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+        $request  = Request::create('/fragment');
+
+        $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::SUB_REQUEST));
+        $listener->onKernelTerminate(new TerminateEvent($kernel, $request, new Response('ok', 200)));
+    }
 }

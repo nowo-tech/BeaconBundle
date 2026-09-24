@@ -7,6 +7,7 @@ namespace Nowo\BeaconBundle\Tests\Unit\Context;
 use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
 use PDOException;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use RuntimeException;
 
 final class DatabaseExceptionContextTest extends TestCase
@@ -71,6 +72,43 @@ final class DatabaseExceptionContextTest extends TestCase
         self::assertIsString($ctx['sql']);
         self::assertStringContainsString('INSERT INTO users', $ctx['sql']);
         self::assertStringNotContainsString('a@b.c', $ctx['sql']);
+    }
+
+    public function testDuckTypedGetQueryString(): void
+    {
+        $ex = new class('SQLSTATE[42S02]: Base table or view not found') extends RuntimeException {
+            public function getSQLState(): string
+            {
+                return '42S02';
+            }
+
+            public function getQuery(): string
+            {
+                return "SELECT * FROM missing WHERE email = 'x@y.z'";
+            }
+        };
+
+        $ctx = DatabaseExceptionContext::fromThrowable($ex);
+        self::assertIsArray($ctx);
+        self::assertSame('42S02', $ctx['sqlstate']);
+        self::assertStringContainsString('SELECT * FROM missing', $ctx['sql']);
+        self::assertStringNotContainsString('x@y.z', $ctx['sql']);
+    }
+
+    public function testParsesMysqlStyleParenCodeAndDropsDriverOnly(): void
+    {
+        $ctx = DatabaseExceptionContext::fromThrowable(new RuntimeException('Error (1040, "Too many connections")'));
+        self::assertIsArray($ctx);
+        self::assertSame('1040', $ctx['code']);
+
+        self::assertNull(DatabaseExceptionContext::fromThrowable(new RuntimeException('Connection: mysql')));
+    }
+
+    public function testMergeSkipsEmptyOverlayValues(): void
+    {
+        $method = new ReflectionMethod(DatabaseExceptionContext::class, 'merge');
+        $merged = $method->invoke(null, ['sqlstate' => 'HY000'], ['sqlstate' => '', 'code' => '1040', 'driver' => null]);
+        self::assertSame(['sqlstate' => 'HY000', 'code' => '1040'], $merged);
     }
 
     public function testScrubSqlTruncates(): void

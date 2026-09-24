@@ -148,6 +148,7 @@ final class BeaconDsnParserTest extends TestCase
             ['https://key:secret@host/not-a-number', 'positive numeric project id or a UUID'],
             ['https://key:secret@host/019fea2d-507b-7890-8b33-ca488db6f69', 'positive numeric project id or a UUID'],
             ['https://key:secret@host/0', 'positive integer'],
+            ['https://key:secret@host/', 'positive numeric project id or a UUID'],
         ];
     }
 }

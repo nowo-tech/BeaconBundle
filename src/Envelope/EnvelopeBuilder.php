@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Kernel;
 use Throwable;
 
 use function array_key_exists;
+use function array_key_first;
 use function count;
 use function dirname;
 use function is_array;
@@ -39,6 +40,8 @@ use const PHP_VERSION;
  */
 final class EnvelopeBuilder
 {
+    private const SOURCE_LINE_CACHE_MAX_FILES = 64;
+
     /** @var array<string, list<string>|null> */
     private array $sourceLineCache = [];
 
@@ -580,21 +583,48 @@ final class EnvelopeBuilder
     private function loadSourceLines(string $file): ?array
     {
         if (array_key_exists($file, $this->sourceLineCache)) {
-            return $this->sourceLineCache[$file];
+            $lines = $this->sourceLineCache[$file];
+            unset($this->sourceLineCache[$file]);
+
+            return $this->sourceLineCache[$file] = $lines;
         }
 
+        return $this->rememberSourceLines($file, $this->readSourceLines($file));
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function readSourceLines(string $file): ?array
+    {
         if ($file === '' || !is_file($file) || !is_readable($file)) {
-            return $this->sourceLineCache[$file] = null;
+            return null;
         }
 
         $size = filesize($file);
         if ($size === false || $size > 1_048_576) {
-            return $this->sourceLineCache[$file] = null;
+            return null;
         }
 
         $lines = file($file, FILE_IGNORE_NEW_LINES);
         if ($lines === false) { // @codeCoverageIgnore
-            return $this->sourceLineCache[$file] = null; // @codeCoverageIgnore
+            return null; // @codeCoverageIgnore
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Least-recently-used cap: the builder lives as long as a long-running worker.
+     *
+     * @param list<string>|null $lines
+     *
+     * @return list<string>|null
+     */
+    private function rememberSourceLines(string $file, ?array $lines): ?array
+    {
+        while (count($this->sourceLineCache) >= self::SOURCE_LINE_CACHE_MAX_FILES) {
+            unset($this->sourceLineCache[array_key_first($this->sourceLineCache)]);
         }
 
         return $this->sourceLineCache[$file] = $lines;

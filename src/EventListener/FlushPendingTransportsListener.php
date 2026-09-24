@@ -13,6 +13,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Drains pending async Envelope HTTP responses after the response / console command finishes.
+ *
+ * Terminate priority is lower than {@see BeaconRequestTransactionListener} (-1024) so an
+ * opt-in auto HTTP transaction can enqueue its POST before this listener drains the queue.
  */
 final class FlushPendingTransportsListener implements EventSubscriberInterface
 {
@@ -27,11 +30,11 @@ final class FlushPendingTransportsListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         $events = [
-            KernelEvents::TERMINATE => ['onKernelTerminate', -1024],
+            KernelEvents::TERMINATE => ['onKernelTerminate', -2048],
         ];
 
         if (class_exists(ConsoleEvents::class)) {
-            $events[ConsoleEvents::TERMINATE] = ['onConsoleTerminate', -1024];
+            $events[ConsoleEvents::TERMINATE] = ['onConsoleTerminate', -2048];
         }
 
         return $events;

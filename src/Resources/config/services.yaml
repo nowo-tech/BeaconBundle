@@ -24,6 +24,10 @@ services:
 
     Nowo\BeaconBundle\Envelope\PendingTransportRegistry: ~
 
+    Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener:
+        tags:
+            - { name: kernel.event_subscriber }
+
     Nowo\BeaconBundle\EventListener\BeaconExceptionListener:
         tags:
             - { name: kernel.event_subscriber }

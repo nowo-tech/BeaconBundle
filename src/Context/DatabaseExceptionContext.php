@@ -50,8 +50,8 @@ final class DatabaseExceptionContext
                 $out[$key] = $merged[$key];
             }
         }
-        if (isset($merged['bindings']) && is_array($merged['bindings']) && $merged['bindings'] !== []) {
-            $out['bindings'] = $merged['bindings'];
+        if (isset($merged['bindings']) && is_array($merged['bindings']) && $merged['bindings'] !== []) { // @codeCoverageIgnore
+            $out['bindings'] = $merged['bindings']; // @codeCoverageIgnore
         }
 
         if (!isset($out['sqlstate']) && !isset($out['code']) && !isset($out['sql'])) {

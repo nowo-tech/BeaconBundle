@@ -124,3 +124,5 @@ Outbound Beacon ingest uses Symfony HttpClient with an explicit **`timeout`** (a
 | Caddy write / proxy | Longer still (platform default) | Outer HTTP edge |
 
 Prefer `transport.mode: async` or `messenger` in production so HTML/API responses are not delayed by ingest RTT. See [PERFORMANCE.md](PERFORMANCE.md).
+
+**Worker + `reset_kernel` false:** BeaconBundle clears request-scoped buffers without relying on Symfony’s `services_resetter`. Full matrix: [FRANKENPHP-WORKER-AUDIT.md](FRANKENPHP-WORKER-AUDIT.md).

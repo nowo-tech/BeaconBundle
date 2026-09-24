@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
+- [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 - [From 1.7.7 to 1.7.8](#from-177-to-178)
 - [First install -> 1.0.x](#first-install-10x)
@@ -504,3 +505,14 @@ No application upgrade steps.
 composer update nowo-tech/beacon-bundle
 ```
 
+## From 1.8.1 to 1.8.2
+
+FrankenPHP worker safety (kernel not reset between requests). **No configuration key changes.**
+
+1. New `BeaconRequestScopeResetListener` (`kernel.request`, priority 4096, main requests only) resets `BreadcrumbBuffer`, `SpanBuffer`, `Scope` and `TraceIdProvider`, and flushes leftover async pending POSTs. Breadcrumbs, spans or tags added **before** that point of a request (priority > 4096, or at kernel boot) are cleared; add them later or from a lower-priority `kernel.request` listener.
+2. `auto_http_transaction`: stored Request/timing is cleared at the start of every main request (including ignored paths).
+3. Async flush on terminate runs after auto HTTP transaction capture (priority `-2048` vs `-1024`).
+4. `register_fatal_handler: true` (default) now really registers the fatal-error shutdown function via `NowoBeaconBundle::boot()` (once per process; in worker mode it runs when the worker exits). Set `register_fatal_handler: false` to keep the previous inactive behaviour.
+5. `EnvelopeBuilder` source-line cache keeps at most 64 files (LRU). Restart workers on deploy so stack source context stays fresh.
+
+See [`docs/FRANKENPHP-WORKER-AUDIT.md`](FRANKENPHP-WORKER-AUDIT.md).
