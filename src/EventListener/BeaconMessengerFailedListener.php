@@ -120,6 +120,7 @@ final class BeaconMessengerFailedListener
 
         $stamp = $envelope->last(BeaconTraceStamp::class);
         if ($stamp instanceof BeaconTraceStamp) {
+            // @igor-ignore - Not shared worker service state.
             $this->traceIdProvider->set($stamp->traceId);
         }
     }

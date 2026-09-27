@@ -37,6 +37,7 @@ final class BeaconTraceRequestListener implements EventSubscriberInterface
         $request    = $event->getRequest();
         $fromHeader = TraceIdProvider::fromMixed($request->headers->get(TraceIdProvider::HEADER));
         if ($fromHeader !== null) {
+            // @igor-ignore - Not shared worker service state.
             $this->traceIdProvider->set($fromHeader);
         }
 

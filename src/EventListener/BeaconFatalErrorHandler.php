@@ -40,6 +40,7 @@ final class BeaconFatalErrorHandler
             return;
         }
 
+        // @igor-ignore - Not shared worker service state.
         $this->registered = true;
         // Intentional: fatals never hit kernel.exception / ConsoleEvents::ERROR.
         // @phpstan-ignore frankenphp.worker.noRegisterShutdownFunction

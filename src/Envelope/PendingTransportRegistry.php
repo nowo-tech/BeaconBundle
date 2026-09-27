@@ -16,6 +16,7 @@ final class PendingTransportRegistry
      */
     public function register(FlushableEnvelopeTransportInterface $transport): void
     {
+        // @igor-ignore - Not shared worker service state.
         $this->transport = $transport;
     }
 

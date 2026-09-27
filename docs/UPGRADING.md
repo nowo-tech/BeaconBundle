@@ -1,5 +1,19 @@
 # Upgrading
 
+
+## Unreleased
+
+## To 1.8.3
+
+From **1.8.2** — REQ-CS-008 Igor FrankenPHP worker audit (igor-php require-dev, igor.json, make igor).
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- No application upgrade steps for require-dev Igor tooling (REQ-CS-008). Consumers do not pull `igor-php/igor-php` transitively.
+
 ## Table of contents
 
 - [From 1.8.0 to 1.8.1](#from-180-to-181)

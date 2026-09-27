@@ -1,6 +1,6 @@
 {
     "name": "nowo-tech/beacon-bundle",
-    "description": "Symfony client for self-hosted Symfony Beacon — Envelope ingest via configurable DSN (host, subdomain, port).",
+    "description": "Symfony client for self-hosted Symfony Beacon \u2014 Envelope ingest via configurable DSN (host, subdomain, port).",
     "type": "symfony-bundle",
     "license": "MIT",
     "keywords": [
@@ -21,7 +21,7 @@
     },
     "authors": [
         {
-            "name": "Héctor Franco Aceituno",
+            "name": "H\u00e9ctor Franco Aceituno",
             "email": "hectorfranco@nowo.tech",
             "homepage": "https://github.com/HecFranco",
             "role": "Developer"
@@ -44,6 +44,7 @@
     "require-dev": {
         "doctrine/dbal": "^3.8 || ^4.0",
         "friendsofphp/php-cs-fixer": "^3.0",
+        "igor-php/igor-php": "^0.9.7",
         "monolog/monolog": "^3.0",
         "nowo-tech/phpstan-frankenphp": "^1.0",
         "phpstan/extension-installer": "^1.4",
@@ -88,8 +89,7 @@
         "allow-plugins": {
             "phpstan/extension-installer": true
         },
-        "platform": {
-        }
+        "platform": {}
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
@@ -112,7 +112,8 @@
             "@cs-check",
             "@phpstan",
             "@test"
-        ]
+        ],
+        "igor": "igor-php --no-agent ."
     },
     "scripts-descriptions": {
         "test": "Run PHPUnit tests",
@@ -124,7 +125,8 @@
         "phpstan": "Run PHPStan static analysis",
         "update": "Update composer.lock (composer update)",
         "validate": "Validate composer.json (composer validate --strict)",
-        "qa": "Run all quality assurance checks"
+        "qa": "Run all quality assurance checks",
+        "igor": "Run Igor FrankenPHP worker-state audit (REQ-CS-008)"
     },
     "suggest": {
         "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",

@@ -134,7 +134,9 @@ final class TraceableBeaconHttpClient implements HttpClientInterface
             $data['error'] = $error;
         }
 
+        // @igor-ignore - Not shared worker service state.
         $this->spanBuffer->add('http.client', $description, $start, $end, $data);
+        // @igor-ignore - Not shared worker service state.
         $this->breadcrumbBuffer->add(
             $description,
             'http',

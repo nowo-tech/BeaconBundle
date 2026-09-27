@@ -23,6 +23,7 @@ final class BeaconTraceMiddleware implements MiddlewareInterface
     {
         $stamp = $envelope->last(BeaconTraceStamp::class);
         if ($stamp instanceof BeaconTraceStamp) {
+            // @igor-ignore - Not shared worker service state.
             $this->traceIdProvider->set($stamp->traceId);
         } else {
             $envelope = $envelope->with(new BeaconTraceStamp($this->traceIdProvider->getOrCreate()));

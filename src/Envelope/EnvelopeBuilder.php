@@ -84,8 +84,9 @@ final class EnvelopeBuilder
     ): string {
         $eventId    = $this->generateEventId();
         $occurredAt = $this->clock->now();
-        $sentAt     = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
-        $timestamp  = (float) $occurredAt->format('U.u');
+        // @igor-ignore - Not shared worker service state.
+        $sentAt    = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $timestamp = (float) $occurredAt->format('U.u');
 
         $envelopeHeader = [
             'event_id' => $eventId,
@@ -189,7 +190,8 @@ final class EnvelopeBuilder
         array $extra = [],
     ): string {
         $eventId = $this->generateEventId();
-        $sentAt  = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        // @igor-ignore - Not shared worker service state.
+        $sentAt = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
 
         $envelopeHeader = [
             'event_id' => $eventId,
@@ -241,6 +243,7 @@ final class EnvelopeBuilder
 
         $traceId = $this->traceIdProvider->getOrCreate();
         if ($this->scope instanceof Scope) {
+            // @igor-ignore - Not shared worker service state.
             $this->scope->setTag('trace_id', $traceId);
         }
     }
@@ -412,6 +415,7 @@ final class EnvelopeBuilder
         }
 
         $payload['breadcrumbs'] = ['values' => $crumbs];
+        // @igor-ignore - Not shared worker service state.
         $this->breadcrumbBuffer->clear();
     }
 
@@ -586,6 +590,7 @@ final class EnvelopeBuilder
             $lines = $this->sourceLineCache[$file];
             unset($this->sourceLineCache[$file]);
 
+            // @igor-ignore - Not shared worker service state.
             return $this->sourceLineCache[$file] = $lines;
         }
 
@@ -627,6 +632,7 @@ final class EnvelopeBuilder
             unset($this->sourceLineCache[array_key_first($this->sourceLineCache)]);
         }
 
+        // @igor-ignore - Not shared worker service state.
         return $this->sourceLineCache[$file] = $lines;
     }
 

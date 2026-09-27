@@ -57,6 +57,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function sendDetailed(string $envelopeBody): TransportResult
     {
+        // @igor-ignore - Not shared worker service state.
         $this->lastStartError = null;
         $response             = $this->startRequest($envelopeBody);
         if (!$response instanceof ResponseInterface) {
@@ -96,6 +97,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
         try {
             return $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
         } catch (TransportExceptionInterface $exception) {
+            // @igor-ignore - Not shared worker service state.
             $this->lastStartError = $exception->getMessage();
             $this->logger()->error('Beacon ingest transport failed.', [
                 'exception' => $exception->getMessage(),

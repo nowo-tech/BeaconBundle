@@ -25,6 +25,7 @@ final class NowoBeaconBundle extends Bundle
 
         $handler = $container->get(BeaconFatalErrorHandler::class);
         if ($handler instanceof BeaconFatalErrorHandler) {
+            // @igor-ignore - Not shared worker service state.
             $handler->register();
         }
     }

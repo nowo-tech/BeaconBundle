@@ -88,6 +88,7 @@ final class BeaconTracingConnection extends AbstractConnectionMiddleware
 
     public function prepare(string $sql): Statement
     {
+        // @igor-ignore - Not shared worker service state.
         $this->breadcrumbBuffer->add(
             SqlNormalizer::normalize($sql),
             'db.query',
@@ -115,7 +116,9 @@ final class BeaconTracingConnection extends AbstractConnectionMiddleware
             return $callback();
         } finally {
             $end = microtime(true);
+            // @igor-ignore - Not shared worker service state.
             $this->spanBuffer->add('db.sql.query', $description, $start, $end);
+            // @igor-ignore - Not shared worker service state.
             $this->breadcrumbBuffer->add(
                 $description,
                 'db.query',

@@ -43,6 +43,7 @@ Quality checks:
 ```bash
 make cs-check
 make phpstan
+make igor
 make test
 make qa
 ```
@@ -52,6 +53,7 @@ Composer equivalents:
 ```bash
 composer cs-check
 composer phpstan
+composer igor
 composer test
 composer qa
 ```

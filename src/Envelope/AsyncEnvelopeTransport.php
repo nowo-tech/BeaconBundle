@@ -35,6 +35,7 @@ final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterfac
             return false;
         }
 
+        // @igor-ignore - Not shared worker service state.
         $this->pending[] = $response;
 
         return true;
@@ -45,7 +46,8 @@ final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterfac
      */
     public function flush(): void
     {
-        $pending       = $this->pending;
+        $pending = $this->pending;
+        // @igor-ignore - Not shared worker service state.
         $this->pending = [];
 
         foreach ($pending as $response) {
