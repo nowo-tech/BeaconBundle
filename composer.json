@@ -85,17 +85,18 @@
     },
     "config": {
         "sort-packages": true,
-        "root-version": "1.8.2",
+        "root-version": "1.9.0",
         "allow-plugins": {
             "phpstan/extension-installer": true
         },
-        "platform": {}
+        "platform": {
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "extra": {
         "branch-alias": {
-            "dev-main": "1.8.x-dev"
+            "dev-main": "1.9.x-dev"
         }
     },
     "scripts": {

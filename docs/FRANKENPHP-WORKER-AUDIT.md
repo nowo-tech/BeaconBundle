@@ -49,6 +49,7 @@ A bundle that is safe under **B** is safe under **A** and under classic mode / P
 | `EventListener\BeaconRequestTransactionListener` (opt-in) | yes (`kernel.reset`) | `$startedAt`, `$request`; cleared on every main request start, terminate, and `reset()` | ✅ | ✅ |
 | `EventListener\FlushPendingTransportsListener` | yes | none; terminate priority `-2048` (after transaction) | ✅ | ✅ |
 | `EventListener\BeaconFatalErrorHandler` | yes (public, instantiated in `NowoBeaconBundle::boot()`) | `$registered` flag (once per process) | ✅ | ✅ |
+| `EventListener\BeaconPhpWarningHandler` | yes (public, instantiated in `NowoBeaconBundle::boot()`) | `$registered` / `$handling` (process-local `set_error_handler`) | ✅ | ✅ |
 | `Instrumentation\DoctrineSqlMiddleware` (opt-in) + internal driver / connection wrappers | yes | none; writes into the buffers | ✅ | ✅ |
 | `Instrumentation\TraceableBeaconHttpClient` (opt-in, decorates `http_client`) | yes | none; writes into the buffers | ✅ | ✅ |
 | `Messenger\BeaconTraceMiddleware` | yes | none; writes into `TraceIdProvider` | ✅ | ✅ |
@@ -119,4 +120,4 @@ Good patterns observed: every request-scoped service implements `ResetInterface`
 
 ## Re-audit triggers
 
-Re-run this audit when a change adds: a new buffer or cache to the client, `EnvelopeBuilder` or a transport; a service that stores the Request, token or user; removes a `kernel.reset` tag; makes `BeaconFatalErrorHandler` reachable; or adds any use of `$_SERVER` / `$_ENV`, `set_error_handler()` or `set_exception_handler()` at runtime.
+Re-run this audit when a change adds: a new buffer or cache to the client, `EnvelopeBuilder` or a transport; a service that stores the Request, token or user; removes a `kernel.reset` tag; makes `BeaconFatalErrorHandler` / `BeaconPhpWarningHandler` reachable; or adds any use of `$_SERVER` / `$_ENV`, `set_error_handler()` or `set_exception_handler()` at runtime.

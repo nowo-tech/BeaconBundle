@@ -22,6 +22,7 @@ use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
@@ -263,6 +264,24 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             // Public so NowoBeaconBundle::boot() can instantiate it; nothing else references it.
             $fatal->setPublic(true);
             $container->setDefinition(BeaconFatalErrorHandler::class, $fatal);
+        }
+
+        if ((bool) ($config['register_php_warning_handler'] ?? true)) {
+            $warningOpts = $config['php_warning_handler'] ?? [];
+            $levelNames  = $warningOpts['levels'] ?? [];
+            $levels      = $levelNames === []
+                ? BeaconPhpWarningHandler::DEFAULT_LEVELS
+                : BeaconPhpWarningHandler::levelsFromNames($levelNames);
+            $warning = new Definition(BeaconPhpWarningHandler::class, [
+                '$client'          => new Reference(BeaconClientInterface::class),
+                '$enabled'         => true,
+                '$levels'          => $levels,
+                '$continue'        => (bool) ($warningOpts['continue'] ?? true),
+                '$captureSilenced' => (bool) ($warningOpts['capture_silenced'] ?? false),
+            ]);
+            // Public so NowoBeaconBundle::boot() can register set_error_handler.
+            $warning->setPublic(true);
+            $container->setDefinition(BeaconPhpWarningHandler::class, $warning);
         }
 
         if ((bool) ($config['register_console_listener'] ?? true)) {

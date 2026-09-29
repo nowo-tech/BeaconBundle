@@ -125,6 +125,12 @@ nowo_beacon:
     environment: '%kernel.environment%'
     verify_peer: true
     register_error_listener: true
+    # Capture PHP warnings/notices as Beacon issues without breaking the request:
+    register_php_warning_handler: true
+    php_warning_handler:
+        continue: true          # do not convert to ErrorException (keeps request alive)
+        capture_silenced: false # ignore @-silenced warnings
+        # levels: [warning, user_warning, notice, user_notice]  # default when empty
 ```
 
 Prefer `string:default::BEACON_DSN` so an empty env value becomes `""` (disabled client) instead of `null`.

@@ -60,6 +60,11 @@ nowo_beacon:
     register_console_listener: true
     register_messenger_listener: true
     register_fatal_handler: true
+    register_php_warning_handler: true
+    php_warning_handler:
+        continue: true
+        capture_silenced: false
+        # levels: []  # empty = warning+notice (no deprecations)
     include_scheduler_context: true
     auto_http_transaction: false
     before_send: null
@@ -104,6 +109,10 @@ nowo_beacon:
 | `register_console_listener` | `true` | Reports uncaught console command errors with nested `extra.console` (`command`, `command_class`, `exit_code`, `php_sapi`, `verbosity`, `cwd`, `interactive`, redacted `arguments`/`options`, `missing_arguments`). Does not send raw argv. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
 | `register_fatal_handler` | `true` | Register a shutdown function that reports fatal PHP errors (`E_ERROR`, `E_PARSE`, …) with `extra.fatal`. |
+| `register_php_warning_handler` | `true` | Capture PHP warnings/notices as Beacon events without converting them to exceptions (request continues). |
+| `php_warning_handler.continue` | `true` | When true, handled levels are reported and not rethrown (even under Symfony debug ErrorHandler). |
+| `php_warning_handler.capture_silenced` | `false` | When true, also report `@`-silenced warnings/notices. |
+| `php_warning_handler.levels` | `[]` | Named kinds to capture (`warning`, `user_warning`, `notice`, …). Empty = default warnings+notices (no deprecations). |
 | `include_scheduler_context` | `true` | When a failing envelope carries Symfony Scheduler `ScheduledStamp`, attach `extra.scheduler` (name, recurring id, trigger, triggered_at). Never attaches the message body. No-op without `symfony/scheduler`. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
@@ -162,6 +171,7 @@ nowo_beacon:
 - `verify_peer: false` also disables host verification in the underlying HTTP client and should stay limited to local dev.
 - Enabling `send.user` or `send.client` transmits identifiers that may be personal data; align with GDPR / privacy policy and legal pages on the Beacon UI.
 - `register_fatal_handler: false` skips shutdown capture of fatal PHP errors.
+- `register_php_warning_handler: false` skips the PHP warning interceptor (Symfony ErrorHandler / Monolog alone).
 
 ## Development with self-signed certificates
 

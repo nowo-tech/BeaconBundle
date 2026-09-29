@@ -1163,6 +1163,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     register_console_listener?: bool|Param, // When true, report uncaught console command errors (ConsoleEvents::ERROR). // Default: true
  *     register_messenger_listener?: bool|Param, // When true and symfony/messenger is installed, report WorkerMessageFailedEvent failures that will not retry. // Default: true
  *     register_fatal_handler?: bool|Param, // When true, register a shutdown function that reports fatal PHP errors (E_ERROR, E_PARSE, …). // Default: true
+ *     register_php_warning_handler?: bool|Param, // When true, capture PHP warnings/notices as Beacon issues without converting them to exceptions (request continues). // Default: true
+ *     php_warning_handler?: array{ // Options for register_php_warning_handler.
+ *         continue?: bool|Param, // When true (default), handled warnings are reported and not rethrown — the request keeps running even under Symfony debug ErrorHandler. // Default: true
+ *         capture_silenced?: bool|Param, // When true, also report @-silenced warnings/notices. // Default: false
+ *         levels?: list<scalar|Param|null>,
+ *     },
  *     include_scheduler_context?: bool|Param, // When true and a Messenger failure envelope carries Symfony Scheduler ScheduledStamp, attach extra.scheduler (name, recurring id, trigger, triggered_at). Never attaches the message body. // Default: true
  *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths). // Default: false
  *     before_send?: scalar|Param|null, // Optional service id of an invokable that receives the event/transaction payload array and returns the mutated array, or null to drop the send. // Default: null

@@ -3,6 +3,20 @@
 
 ## Unreleased
 
+## To 1.9.0
+
+From **1.8.3** — PHP warning interceptor (warnings/notices → Beacon issues without breaking the request).
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- **New default:** `register_php_warning_handler: true` reports PHP warnings/notices (e.g. undefined array key) as Beacon events and keeps the request running (`php_warning_handler.continue: true`).
+- **Opt out:** set `register_php_warning_handler: false` if you prefer Symfony’s ErrorHandler alone (or only Monolog → Beacon).
+- **Deprecations** are not captured by default; add them under `php_warning_handler.levels` when needed.
+- Disable in `when@test` if PHPUnit `failOnWarning` / handler stacking is noisy.
+
 ## To 1.8.3
 
 From **1.8.2** — REQ-CS-008 Igor FrankenPHP worker audit (igor-php require-dev, igor.json, make igor).
@@ -16,6 +30,7 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.9.0](#to-190)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 

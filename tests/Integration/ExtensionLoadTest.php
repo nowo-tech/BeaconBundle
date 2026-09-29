@@ -18,6 +18,7 @@ use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
@@ -32,6 +33,9 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
+
+use const E_USER_WARNING;
+use const E_WARNING;
 
 final class ExtensionLoadTest extends TestCase
 {
@@ -128,6 +132,45 @@ final class ExtensionLoadTest extends TestCase
         $fatal = $container->getDefinition(BeaconFatalErrorHandler::class);
         self::assertTrue($fatal->isPublic());
         self::assertFalse($fatal->hasMethodCall('register'));
+
+        $warning = $container->getDefinition(BeaconPhpWarningHandler::class);
+        self::assertTrue($warning->isPublic());
+        self::assertSame(BeaconPhpWarningHandler::DEFAULT_LEVELS, $warning->getArgument('$levels'));
+        self::assertTrue($warning->getArgument('$continue'));
+    }
+
+    public function testPhpWarningHandlerCanBeDisabled(): void
+    {
+        $container = $this->createContainer();
+
+        (new NowoBeaconExtension())->load([[
+            'enabled'                      => true,
+            'dsn'                          => 'https://pubkey:secret@beacon.example.com/5',
+            'register_php_warning_handler' => false,
+        ]], $container);
+
+        self::assertFalse($container->hasDefinition(BeaconPhpWarningHandler::class));
+    }
+
+    public function testPhpWarningHandlerCustomLevels(): void
+    {
+        $container = $this->createContainer();
+
+        (new NowoBeaconExtension())->load([[
+            'enabled'                      => true,
+            'dsn'                          => 'https://pubkey:secret@beacon.example.com/5',
+            'register_php_warning_handler' => true,
+            'php_warning_handler'          => [
+                'continue'         => false,
+                'capture_silenced' => true,
+                'levels'           => ['warning', 'user_warning'],
+            ],
+        ]], $container);
+
+        $warning = $container->getDefinition(BeaconPhpWarningHandler::class);
+        self::assertSame(E_WARNING | E_USER_WARNING, $warning->getArgument('$levels'));
+        self::assertFalse($warning->getArgument('$continue'));
+        self::assertTrue($warning->getArgument('$captureSilenced'));
     }
 
     public function testRegisterErrorListenerFalseRemovesListener(): void

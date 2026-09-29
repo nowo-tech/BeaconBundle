@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Tests\Unit;
 
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
+use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\NowoBeaconBundle;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -21,18 +22,23 @@ final class NowoBeaconBundleTest extends TestCase
         self::assertSame('NowoBeaconBundle', $bundle->getName());
     }
 
-    public function testBootRegistersFatalErrorHandler(): void
+    public function testBootRegistersFatalAndPhpWarningHandlers(): void
     {
-        $handler   = new BeaconFatalErrorHandler(new NullBeaconClient(), true);
+        $fatal     = new BeaconFatalErrorHandler(new NullBeaconClient(), true);
+        $warning   = new BeaconPhpWarningHandler(new NullBeaconClient(), true);
         $container = new Container();
-        $container->set(BeaconFatalErrorHandler::class, $handler);
+        $container->set(BeaconFatalErrorHandler::class, $fatal);
+        $container->set(BeaconPhpWarningHandler::class, $warning);
 
         $bundle = new NowoBeaconBundle();
         $bundle->setContainer($container);
         $bundle->boot();
         $bundle->boot();
 
-        self::assertTrue((new ReflectionProperty(BeaconFatalErrorHandler::class, 'registered'))->getValue($handler));
+        self::assertTrue((new ReflectionProperty(BeaconFatalErrorHandler::class, 'registered'))->getValue($fatal));
+        self::assertTrue((new ReflectionProperty(BeaconPhpWarningHandler::class, 'registered'))->getValue($warning));
+
+        $warning->unregister();
     }
 
     public function testBootIsNoopWithoutContainerOrHandler(): void
@@ -43,6 +49,7 @@ final class NowoBeaconBundleTest extends TestCase
 
         $container = new Container();
         $container->set(BeaconFatalErrorHandler::class, new stdClass());
+        $container->set(BeaconPhpWarningHandler::class, new stdClass());
         $bundle->setContainer($container);
         $bundle->boot();
 

@@ -117,7 +117,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "2419fb057d365672f4da4ec9d91ddc1fd66674f6"
+                "reference": "0d6c71267475e46e6796d9f561a7775e862fb22b"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -132,6 +132,7 @@
             "require-dev": {
                 "doctrine/dbal": "^3.8 || ^4.0",
                 "friendsofphp/php-cs-fixer": "^3.0",
+                "igor-php/igor-php": "^0.9.7",
                 "monolog/monolog": "^3.0",
                 "nowo-tech/phpstan-frankenphp": "^1.0",
                 "phpstan/extension-installer": "^1.4",
@@ -159,7 +160,7 @@
             "type": "symfony-bundle",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.8.x-dev"
+                    "dev-main": "1.9.x-dev"
                 }
             },
             "autoload": {
@@ -217,6 +218,9 @@
                     "@cs-check",
                     "@phpstan",
                     "@test"
+                ],
+                "igor": [
+                    "igor-php --no-agent ."
                 ]
             },
             "license": [

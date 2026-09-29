@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.9.0] - 2026-09-30](#190-2026-09-30)
+  - [Added](#added)
 - [[1.8.3] - 2026-09-27](#183-2026-09-27)
 - [[1.8.2] - 2026-09-24](#182-2026-09-24)
   - [Fixed](#fixed)
@@ -103,6 +105,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.9.0] - 2026-09-30
+
+### Added
+
+- **PHP warning interceptor:** `register_php_warning_handler` (default `true`) + `php_warning_handler` options capture PHP warnings/notices as Beacon events (`level: warning` / `info`) **without** converting them to exceptions, so the request keeps running (e.g. undefined array key). Opt out with `register_php_warning_handler: false`. Deprecations are off by default; enable via `php_warning_handler.levels`.
+
+[1.9.0]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.9.0
 
 ## [1.8.3] - 2026-09-27
 
