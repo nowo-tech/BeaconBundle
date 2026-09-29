@@ -3,6 +3,17 @@
 
 ## Unreleased
 
+## To 1.9.1
+
+From **1.9.0** — PHP 8.2 compatibility for the warning interceptor.
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- No config changes. Install **1.9.1+** if you run PHP 8.2 (typed `const int` in 1.9.0 caused a parse error).
+
 ## To 1.9.0
 
 From **1.8.3** — PHP warning interceptor (warnings/notices → Beacon issues without breaking the request).
@@ -30,6 +41,7 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.9.1](#to-191)
 - [To 1.9.0](#to-190)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)

@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.9.1] - 2026-09-30](#191-2026-09-30)
+  - [Fixed](#fixed)
 - [[1.9.0] - 2026-09-30](#190-2026-09-30)
   - [Added](#added)
 - [[1.8.3] - 2026-09-27](#183-2026-09-27)
@@ -106,13 +108,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-09-30
+
+### Fixed
+
+- **PHP 8.2 parse error:** drop typed class constant (`const int DEFAULT_LEVELS`) on `BeaconPhpWarningHandler` — typed constants require PHP 8.3+ and broke CI on PHP 8.2.
+
 ## [1.9.0] - 2026-09-30
 
 ### Added
 
 - **PHP warning interceptor:** `register_php_warning_handler` (default `true`) + `php_warning_handler` options capture PHP warnings/notices as Beacon events (`level: warning` / `info`) **without** converting them to exceptions, so the request keeps running (e.g. undefined array key). Opt out with `register_php_warning_handler: false`. Deprecations are off by default; enable via `php_warning_handler.levels`.
-
-[1.9.0]: https://github.com/nowo-tech/BeaconBundle/releases/tag/v1.9.0
 
 ## [1.8.3] - 2026-09-27
 
@@ -578,7 +584,9 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.2...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.1...HEAD
+[1.9.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.0...v1.9.1
+[1.9.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.3...v1.9.0
 [1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2
 [1.6.11]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.10...v1.6.11
 [1.6.10]: https://github.com/nowo-tech/BeaconBundle/compare/v1.6.9...v1.6.10

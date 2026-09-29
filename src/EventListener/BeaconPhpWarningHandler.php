@@ -30,8 +30,8 @@ use const E_WARNING;
  */
 final class BeaconPhpWarningHandler
 {
-    /** Default: warnings + notices (not deprecations). */
-    public const int DEFAULT_LEVELS = E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE
+    /** Default: warnings + notices (not deprecations). Untyped for PHP 8.2 (typed consts need 8.3+). */
+    public const DEFAULT_LEVELS = E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE
         | E_CORE_WARNING | E_COMPILE_WARNING;
 
     private bool $registered = false;
