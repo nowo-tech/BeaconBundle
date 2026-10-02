@@ -142,13 +142,14 @@ Each flag controls whether that category is attached to outbound events:
 | `send.environment` | `true` | `environment` |
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
-| `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). |
+| `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). Enable `send.stack_vars` for `vars` (call arguments). |
 | `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |
 | `send.framework` | `true` | `contexts.framework` (Symfony version when available) |
 | `send.os` | `true` | `contexts.os` |
 | `send.client` | `false` | On HTTP exception events, attach `extra.http.client` (`ip` / `user_agent`). **May include PII** — off by default. |
+| `send.stack_vars` | `false` | Attach function **argument** summaries as Sentry-compatible `frame.vars` (parameter names via reflection when possible). **May include PII** — off by default. Requires `send.stacktrace`. Values are size-capped and passed through sensitive-key redaction. Hosts with `zend.exception_ignore_args=1` omit exception-frame arguments (PHP default in some builds). |
 
 Timestamps (`timestamp` fractional Unix + `datetime` ISO-8601 UTC with microseconds) are always sent. Correlation ids (`extra.trace_id` / tag `trace_id`) are always attached when the client is enabled.
 

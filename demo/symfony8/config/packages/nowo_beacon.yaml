@@ -28,6 +28,7 @@ nowo_beacon:
         release: true
         server_name: true
         stacktrace: true
+        stack_vars: true
         request: true
         user: false
         runtime: true

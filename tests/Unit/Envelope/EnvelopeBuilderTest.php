@@ -11,6 +11,7 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PDOException;
 use PHPUnit\Framework\TestCase;
@@ -20,8 +21,12 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
+use Throwable;
+
+use function is_array;
 
 use const JSON_THROW_ON_ERROR;
+use const PASSWORD_DEFAULT;
 use const PHP_VERSION;
 
 final class EnvelopeBuilderTest extends TestCase
@@ -509,5 +514,95 @@ final class EnvelopeBuilderTest extends TestCase
             json_decode($lines[1], true, 512, JSON_THROW_ON_ERROR),
             json_decode($lines[2], true, 512, JSON_THROW_ON_ERROR),
         ];
+    }
+
+    public function testExceptionFramesIncludeStackVarsWhenEnabled(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $builder = new EnvelopeBuilder(
+            'test',
+            null,
+            'ci-host',
+            new SendOptions(stacktrace: true, stackVars: true),
+        );
+
+        try {
+            $this->throwWithNamedArgs('demo-label', ['nested' => true]);
+        } catch (Throwable $e) {
+            [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'vars', 'error', $e));
+        }
+
+        $frames   = $payload['exception']['values'][0]['stacktrace']['frames'];
+        $withVars = array_values(array_filter(
+            $frames,
+            static fn (array $frame): bool => isset($frame['vars']) && is_array($frame['vars']) && $frame['vars'] !== [],
+        ));
+        self::assertNotEmpty($withVars);
+
+        $found = false;
+        foreach ($withVars as $frame) {
+            $vars = $frame['vars'];
+            if (($vars['label'] ?? null) === 'demo-label' || ($vars['arg0'] ?? null) === 'demo-label') {
+                $found = true;
+                self::assertSame(['nested' => true], $vars['meta'] ?? $vars['arg1'] ?? null);
+                break;
+            }
+        }
+        self::assertTrue($found, 'Expected a frame vars entry carrying the thrown helper argument');
+    }
+
+    public function testExceptionFramesOmitStackVarsByDefault(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $builder = new EnvelopeBuilder('test', null, 'ci-host');
+
+        try {
+            $this->throwWithNamedArgs('hidden', []);
+        } catch (Throwable $e) {
+            [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'no-vars', 'error', $e));
+        }
+
+        foreach ($payload['exception']['values'][0]['stacktrace']['frames'] as $frame) {
+            self::assertArrayNotHasKey('vars', $frame);
+        }
+    }
+
+    public function testStackVarsRedactSensitiveArgumentNames(): void
+    {
+        $method = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+        $method->setAccessible(true);
+        $builder = new EnvelopeBuilder(
+            'test',
+            null,
+            'ci-host',
+            new SendOptions(stacktrace: true, stackVars: true),
+        );
+
+        /** @var array<string, mixed> $frame */
+        $frame = $method->invoke($builder, [
+            'file'     => __FILE__,
+            'line'     => __LINE__,
+            'function' => 'demo',
+            'args'     => ['super-secret'],
+        ]);
+
+        // Reflection fails for missing function → arg0; value kept (key is not sensitive).
+        self::assertSame('super-secret', $frame['vars']['arg0']);
+
+        $frame = $method->invoke($builder, [
+            'file'     => __FILE__,
+            'line'     => __LINE__,
+            'function' => 'password_hash',
+            'args'     => ['hunter2', PASSWORD_DEFAULT],
+        ]);
+        self::assertSame(SensitiveValueRedactor::FILTERED, $frame['vars']['password']);
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function throwWithNamedArgs(string $label, array $meta): never
+    {
+        throw new RuntimeException('frame-vars-demo: ' . $label . ' ' . json_encode($meta));
     }
 }

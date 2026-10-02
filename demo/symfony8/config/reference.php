@@ -1191,6 +1191,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         framework?: bool|Param, // Send Symfony version in contexts.framework when available. // Default: true
  *         os?: bool|Param, // Send OS family/version in contexts.os. // Default: true
  *         client?: bool|Param, // Attach client IP and User-Agent on HTTP events (PII). Disabled by default. // Default: false
+ *         stack_vars?: bool|Param, // Attach function argument summaries as frame vars (Sentry-compatible). May include PII; disabled by default. Requires send.stacktrace. // Default: false
  *     },
  * }
  * @psalm-type MonologConfig = array{

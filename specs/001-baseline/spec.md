@@ -73,7 +73,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-ENV-001 | Envelope is 3-line NDJSON: header (`event_id`, `dsn`, `sent_at`), item header, JSON payload |
 | FR-ENV-002 | Content-Type `application/x-beacon-envelope` |
 | FR-ENV-003 | Events include fractional `timestamp` and ISO-8601 `datetime` (microseconds, UTC) |
-| FR-ENV-004 | With `send.stacktrace`, exceptions include frames + `culprit`; message events may include a current PHP stacktrace (BeaconBundle frames filtered). Readable files may add `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines) |
+| FR-ENV-004 | With `send.stacktrace`, exceptions include frames + `culprit`; message events may include a current PHP stacktrace (BeaconBundle frames filtered). Readable files may add `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). With `send.stack_vars`, frames may include `vars` (call arguments; opt-in) |
 | FR-ENV-005 | With `send.request` and an active HTTP request: `request` + `contexts.request` (url, method, query, safe header allow-list) and `extra.request_*` |
 | FR-ENV-006 | `send.*` may attach environment, release, server_name, user, and `contexts` (runtime / framework / os) |
 | FR-TR-001 | Non-2xx and transport errors are logged; `send()` returns false; no exception to caller. HTTP uses configured `timeout` / `max_duration` |

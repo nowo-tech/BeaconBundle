@@ -11,6 +11,7 @@ use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Support\FrameVarsSerializer;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
@@ -341,8 +342,9 @@ final class EnvelopeBuilder
      */
     private function attachCurrentStacktrace(array &$payload): void
     {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-        $trace = array_values(array_filter(
+        $traceFlags = $this->sendOptions->stackVars ? 0 : DEBUG_BACKTRACE_IGNORE_ARGS;
+        $trace      = debug_backtrace($traceFlags);
+        $trace      = array_values(array_filter(
             $trace,
             fn (array $frame): bool => !$this->isBeaconBundleImplementationFrame($frame),
         ));
@@ -536,6 +538,13 @@ final class EnvelopeBuilder
 
         if ($this->sendOptions->stacktrace && $file !== null && $line > 0) {
             $normalized += $this->readSourceContext($file, $line);
+        }
+
+        if ($this->sendOptions->stacktrace && $this->sendOptions->stackVars) {
+            $vars = FrameVarsSerializer::fromPhpFrame($frame);
+            if ($vars !== []) {
+                $normalized['vars'] = $vars;
+            }
         }
 
         return $normalized;

@@ -200,6 +200,10 @@ final class Configuration implements ConfigurationInterface
                             ->info('Attach client IP and User-Agent on HTTP events (PII). Disabled by default.')
                             ->defaultFalse()
                         ->end()
+                        ->booleanNode('stack_vars')
+                            ->info('Attach function argument summaries as frame vars (Sentry-compatible). May include PII; disabled by default. Requires send.stacktrace.')
+                            ->defaultFalse()
+                        ->end()
                     ->end()
                 ->end()
             ->end();

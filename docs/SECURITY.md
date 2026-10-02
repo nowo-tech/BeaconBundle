@@ -50,6 +50,7 @@ Residual risk to remember:
 - The client can generate a local event id even if delivery later fails. Treat the Beacon UI or server logs as the source of truth for accepted events.
 - When `send.request` is true, events and transactions include the current HTTP URL/method/query and a small allow-list of headers (Host, User-Agent, … — not cookies or Authorization). Do not put secrets into URLs. Disable `send.request` if URLs are sensitive.
 - `send.user` is off by default. Enabling it may transmit personal data (user identifier / email) to your Beacon host; keep it aligned with your privacy policy and legal pages.
+- `send.stack_vars` is off by default. Enabling it attaches function arguments to stack frames (`vars`); treat that like other PII and keep redaction/`before_send` in mind.
 
 ## Supported Versions
 

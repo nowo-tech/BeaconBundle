@@ -7,7 +7,7 @@ namespace Nowo\BeaconBundle\Envelope;
 /**
  * Per-category switches for outbound event context.
  *
- * Defaults favour diagnostics; {@see $user} and {@see $client} stay opt-in (PII).
+ * Defaults favour diagnostics; {@see $user}, {@see $client}, and {@see $stackVars} stay opt-in (PII).
  */
 final readonly class SendOptions
 {
@@ -22,6 +22,7 @@ final readonly class SendOptions
         public bool $framework = true,
         public bool $os = true,
         public bool $client = false,
+        public bool $stackVars = false,
     ) {
     }
 
@@ -38,7 +39,8 @@ final readonly class SendOptions
      *     runtime?: bool,
      *     framework?: bool,
      *     os?: bool,
-     *     client?: bool
+     *     client?: bool,
+     *     stack_vars?: bool
      * } $config
      */
     public static function fromArray(array $config): self
@@ -54,6 +56,7 @@ final readonly class SendOptions
             framework: (bool) ($config['framework'] ?? true),
             os: (bool) ($config['os'] ?? true),
             client: (bool) ($config['client'] ?? false),
+            stackVars: (bool) ($config['stack_vars'] ?? false),
         );
     }
 }

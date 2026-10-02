@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.10.0] - 2026-10-02](#1100-2026-10-02)
+  - [Added](#added)
 - [[1.9.1] - 2026-09-30](#191-2026-09-30)
   - [Fixed](#fixed)
 - [[1.9.0] - 2026-09-30](#190-2026-09-30)
@@ -107,6 +109,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.10.0] - 2026-10-02
+
+### Added
+
+- **`send.stack_vars`**: opt-in Sentry-compatible `frame.vars` from PHP call arguments (reflection parameter names, size caps, `SensitiveValueRedactor`). Off by default (PII). Requires `send.stacktrace`.
+
 
 ## [1.9.1] - 2026-09-30
 

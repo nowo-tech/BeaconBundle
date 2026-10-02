@@ -3,6 +3,19 @@
 
 ## Unreleased
 
+## To 1.10.0
+
+From **1.9.1** — opt-in stack frame argument vars (`send.stack_vars`).
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- **New optional config:** `nowo_beacon.send.stack_vars` (default `false`). When `true` (and `send.stacktrace` is on), frames include Sentry-compatible `vars` from PHP call arguments (redacted / size-capped).
+- Pair with Symfony Beacon Issues UI that renders `frame.vars`.
+- If `zend.exception_ignore_args=1`, exception frames will not carry arguments.
+
 ## To 1.9.1
 
 From **1.9.0** — PHP 8.2 compatibility for the warning interceptor.

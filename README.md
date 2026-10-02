@@ -65,6 +65,7 @@ nowo_beacon:
         release: true
         server_name: true
         stacktrace: true
+        # stack_vars: true  # opt-in frame argument vars (PII)
         request: true
         user: false          # opt-in; may include PII
         runtime: true        # PHP version

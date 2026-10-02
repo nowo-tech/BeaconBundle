@@ -53,6 +53,7 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($config['send']['runtime']);
         self::assertTrue($config['send']['framework']);
         self::assertTrue($config['send']['os']);
+        self::assertFalse($config['send']['stack_vars']);
     }
 
     public function testCustomConfiguration(): void
