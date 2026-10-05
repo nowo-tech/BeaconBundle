@@ -44,7 +44,7 @@
     "require-dev": {
         "doctrine/dbal": "^3.8 || ^4.0",
         "friendsofphp/php-cs-fixer": "^3.0",
-        "igor-php/igor-php": "^0.9.7",
+        "igor-php/igor-php": "^0.10.0",
         "monolog/monolog": "^3.0",
         "nowo-tech/phpstan-frankenphp": "^1.0",
         "phpstan/extension-installer": "^1.4",
