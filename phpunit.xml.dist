@@ -36,5 +36,7 @@
     <php>
         <!-- REQ-SF-005: fail on direct Symfony deprecations from this package -->
         <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[direct]=0"/>
+        <!-- CI php.ini often enables this; stack_vars tests need exception args. -->
+        <ini name="zend.exception_ignore_args" value="0"/>
     </php>
 </phpunit>
