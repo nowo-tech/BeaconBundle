@@ -518,6 +518,8 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testExceptionFramesIncludeStackVarsWhenEnabled(): void
     {
+        ini_set('zend.exception_ignore_args', '0');
+
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
         $builder = new EnvelopeBuilder(
             'test',
