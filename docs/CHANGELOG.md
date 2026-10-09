@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.10.1] - 2026-10-09](#1101-2026-10-09)
+  - [Fixed](#fixed)
 - [[1.10.0] - 2026-10-02](#1100-2026-10-02)
   - [Added](#added)
 - [[1.9.1] - 2026-09-30](#191-2026-09-30)
@@ -109,6 +111,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.10.1] - 2026-10-09
+
+### Fixed
+
+- **CI:** PHPUnit config sets `zend.exception_ignore_args=0` (and the stack-vars test enforces it) so `send.stack_vars` tests pass on GitHub-hosted PHP where exception args are ignored by default.
+
+### Dependencies
+
+- `igor-php/igor-php` require-dev constraint bumped to `^0.10.0`; lock refreshed (Symfony 8.1.8 dev lock, PHPStan 2.3.1, phpstan-phpunit 2.1.1, phpstan-symfony 2.1.0, Rector 2.7.0, `nowo-tech/phpstan-frankenphp` 1.2.3).
+- Demo `symfony8`: Symfony 8.1.8, Twig 3.30.0, `symfony/monolog-bundle` 4.1.0, PHPUnit 13.4.1, `nowo-tech/password-toggle-bundle` 2.2.3, `nowo-tech/hot-reload-bundle` 1.5.4.
 
 ## [1.10.0] - 2026-10-02
 
@@ -593,7 +606,9 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.0...v1.10.1
+[1.10.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.8.3...v1.9.0
 [1.7.2]: https://github.com/nowo-tech/BeaconBundle/compare/v1.7.0...v1.7.2

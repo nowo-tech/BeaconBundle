@@ -3,6 +3,16 @@
 
 ## Unreleased
 
+## To 1.10.1
+
+From **1.10.0** — CI fix and dependency refresh.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. No application upgrade steps.
+
 ## To 1.10.0
 
 From **1.9.1** — opt-in stack frame argument vars (`send.stack_vars`).
@@ -54,6 +64,8 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.10.1](#to-1101)
+- [To 1.10.0](#to-1100)
 - [To 1.9.1](#to-191)
 - [To 1.9.0](#to-190)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
