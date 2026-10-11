@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+  - [Fixed](#fixed)
 - [[1.11.0] - 2026-10-11](#1110-2026-10-11)
   - [Added](#added)
   - [Changed](#changed)
@@ -115,6 +116,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+### Fixed
+
+- **Tests:** `EnvelopeBuilderTest::testHandlerFailedCulpritPointsAtRootCause` no longer relies on PHP 8.4+ closure frame names (`{closure:…}`), so it passes on PHP 8.2 / 8.3. No bundle code change.
 
 ## [1.11.0] - 2026-10-11
 

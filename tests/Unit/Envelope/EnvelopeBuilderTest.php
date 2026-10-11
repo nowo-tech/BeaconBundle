@@ -674,6 +674,6 @@ final class EnvelopeBuilderTest extends TestCase
 
     private function throwFromNamedMethod(): RuntimeException
     {
-        return (static fn (): RuntimeException => new RuntimeException('root cause'))();
+        return new RuntimeException('root cause');
     }
 }
