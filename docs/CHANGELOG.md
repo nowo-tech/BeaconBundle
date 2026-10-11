@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.11.0] - 2026-10-11](#1110-2026-10-11)
+  - [Added](#added)
+  - [Changed](#changed)
+  - [Fixed](#fixed)
 - [[1.10.1] - 2026-10-09](#1101-2026-10-09)
   - [Fixed](#fixed)
 - [[1.10.0] - 2026-10-02](#1100-2026-10-02)
@@ -111,6 +115,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+## [1.11.0] - 2026-10-11
+
+### Added
+
+- **Messenger transactions** (`messenger.transactions`, opt-in): one performance transaction per handled message (`extra.messenger.op = queue.process`, `status` `ok` / `failed` / `retry`, handler, transport, retry count) with the Doctrine / HttpClient spans recorded while handling. Optional `messenger.transaction_sample_rate`.
+- **Retry visibility** (`messenger.report_retries` / `messenger.report_recovered`, opt-in): `warning` event for failures Messenger will retry (`retry_state: will_retry`, own fingerprint) and `info` event when a message succeeds after retries (`retry_state: recovered`). Optional `messenger.retry_sample_rate`.
+- **Worker memory warning** (`messenger.worker_memory_warning_ratio`, opt-in): one `warning` per worker process when memory reaches the configured fraction of `memory_limit`.
+- **`nowo:beacon:messenger-report`**: sends a `queue_snapshot` Envelope item with the message count per Messenger transport and the failure transports (`messenger.failure_transports`, default `['failed']`; `--failure-transport`, `--dry-run`). New `QueueSnapshotCapableInterface` implemented by `BeaconClient` / `NullBeaconClient`.
+- **`nowo:beacon:deploy`**: sends a `deploy` Envelope item (release — defaults to `nowo_beacon.release` —, environment, `--commit`, `--url`, `--name`) so Symfony Beacon can show deploy markers and flag issues first seen right after a deploy. New `DeployCapableInterface` implemented by `BeaconClient` / `NullBeaconClient`.
+- Golden Envelope fixtures `transaction_messenger.ndjson`, `queue_snapshot.ndjson` and `deploy.ndjson`.
+- Specs `004-messenger-observability` and `005-deploy-markers`; baseline spec / code inventory re-audited against 1.11.0.
+
+### Changed
+
+- **Messenger final failures** add `extra.messenger.retry_state` (`exhausted` after retries, otherwise `failed`) and `handler_classes` when more than one handler failed.
+- **Culprit** for `HandlerFailedException` is taken from the root cause (application code) instead of Messenger middleware frames.
+
+### Fixed
+
+- **`transport.mode: async` in Messenger workers:** pending envelopes were only flushed on `kernel.terminate` / `console.terminate`, which a long-running `messenger:consume` never reaches until it stops — worker failures (and any event captured while handling a message) stayed queued until the worker restarted. `FlushPendingTransportsListener` now also flushes on `WorkerMessageHandledEvent`, `WorkerMessageFailedEvent` and `WorkerStoppedEvent` (after the Beacon listeners).
 
 ## [1.10.1] - 2026-10-09
 
@@ -606,7 +631,8 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.0...v1.9.1

@@ -1,7 +1,20 @@
 # Upgrading
 
 
-## Unreleased
+## To 1.11.0
+
+From **1.10.1** — opt-in Messenger observability and deploy markers.
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- No breaking changes. New options under `nowo_beacon.messenger.*` are all off by default (`failure_transports` defaults to `['failed']`).
+- **Fix for `transport.mode: async` in workers:** events captured while a Messenger worker handles a message are now sent right after that message (previously only when the worker stopped). Expect worker failures to show up immediately after upgrading.
+- Final Messenger failure events now carry `extra.messenger.retry_state` and, for `HandlerFailedException`, a culprit from the root cause. Symfony Beacon ≥ 1.50 groups Messenger failures per handler; older servers simply ignore the new keys.
+- Optional: call `php bin/console nowo:beacon:deploy` from your deploy pipeline (deploy markers; servers older than 1.50 ignore `deploy` items).
+- Optional: schedule `php bin/console nowo:beacon:messenger-report` (cron or Symfony Scheduler) to feed Beacon's client queue panel. Servers older than 1.50 accept and ignore `queue_snapshot` items.
 
 ## To 1.10.1
 
@@ -64,6 +77,7 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.11.0](#to-1110)
 - [To 1.10.1](#to-1101)
 - [To 1.10.0](#to-1100)
 - [To 1.9.1](#to-191)

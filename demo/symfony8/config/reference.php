@@ -1170,6 +1170,15 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         levels?: list<scalar|Param|null>,
  *     },
  *     include_scheduler_context?: bool|Param, // When true and a Messenger failure envelope carries Symfony Scheduler ScheduledStamp, attach extra.scheduler (name, recurring id, trigger, triggered_at). Never attaches the message body. // Default: true
+ *     messenger?: array{ // Opt-in Messenger worker observability (requires symfony/messenger). Final failures are always reported by register_messenger_listener.
+ *         transactions?: bool|Param, // Send one performance transaction per handled message (op queue.process, status ok/failed/retry, handler, transport). Doctrine/HttpClient spans are attached when instrumentation is enabled. // Default: false
+ *         transaction_sample_rate?: float|Param, // Fraction of messages that send a transaction (0.0–1.0). // Default: 1.0
+ *         report_retries?: bool|Param, // Send a warning event (retry_state will_retry) when a handler fails and Messenger will retry the message. // Default: false
+ *         report_recovered?: bool|Param, // Send an info event (retry_state recovered) when a message succeeds after at least one retry. // Default: false
+ *         retry_sample_rate?: float|Param, // Fraction of retry / recovered events that are sent (0.0–1.0). // Default: 1.0
+ *         worker_memory_warning_ratio?: float|Param, // When set (e.g. 0.8), warn once per worker process when memory usage reaches this fraction of PHP memory_limit. Null disables. // Default: null
+ *         failure_transports?: list<scalar|Param|null>,
+ *     },
  *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths). // Default: false
  *     before_send?: scalar|Param|null, // Optional service id of an invokable that receives the event/transaction payload array and returns the mutated array, or null to drop the send. // Default: null
  *     instrumentation?: array{ // Opt-in automatic spans / breadcrumbs for Doctrine SQL and HttpClient requests.
