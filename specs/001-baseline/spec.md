@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
 **Last audited:** 2026-10-11  
-**Aligned with:** public API / config through **v1.11.0** (Messenger observability, deploy markers)
+**Aligned with:** public API / config through **v1.11.1** (Messenger observability, deploy markers; 1.11.1 is test-only)
 
 ## Summary
 

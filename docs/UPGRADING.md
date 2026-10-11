@@ -1,6 +1,16 @@
 # Upgrading
 
 
+## To 1.11.1
+
+From **1.11.0** — test-only fix (PHP 8.2 / 8.3 compatibility of the test suite).
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. No application upgrade steps; bundle code is unchanged.
+
 ## To 1.11.0
 
 From **1.10.1** — opt-in Messenger observability and deploy markers.

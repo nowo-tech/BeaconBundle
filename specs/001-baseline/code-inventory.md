@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
 **Last audited:** 2026-10-11  
-**Aligned with:** **v1.11.0** (Messenger observability `specs/004`, deploy markers `specs/005`)
+**Aligned with:** **v1.11.1** (no `src/` changes since 1.11.0; Messenger observability `specs/004`, deploy markers `specs/005`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 

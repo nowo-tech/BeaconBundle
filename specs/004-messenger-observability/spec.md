@@ -50,7 +50,7 @@ As an operator, I set `messenger.worker_memory_warning_ratio: 0.8` and get one w
 ## Functional Requirements
 
 - **FR-MQ-001**: `messenger.transactions` (+ `transaction_sample_rate`) sends one transaction per handled message (`extra.messenger.op = queue.process`, status `ok` / `failed` / `retry`, handler, transport, retry count) with the Doctrine / HttpClient spans recorded while handling; listener runs at priority -1024 so failure events are sent first.
-- **FR-MQ-002**: `messenger.report_retries` / `report_recovered` (+ `retry_sample_rate`) send `will_retry` warnings and `recovered` info events; final failures carry `retry_state` (`exhausted` / `failed`) and `handler_classes`; `HandlerFailedException` culprit is taken from the root cause.
+- **FR-MQ-002**: `messenger.report_retries` / `report_recovered` (+ `retry_sample_rate`) send `will_retry` warnings and `recovered` info events; final failures carry `retry_state` (`exhausted` / `failed`) and `handler_classes`; `HandlerFailedException` culprit is taken from the root cause (covered by `EnvelopeBuilderTest`, PHP-version independent since 1.11.1).
 - **FR-MQ-003**: Message bodies are never read or sent; only class names, handler names, transport names, counters and timings (`MessengerContext`).
 - **FR-MQ-004**: `messenger.worker_memory_warning_ratio` warns once per worker process (the memory listener keeps per-process state on purpose; other listeners hold no request state — Igor: 0 KO).
 - **FR-MQ-005**: `nowo:beacon:messenger-report` sends a new Envelope item `queue_snapshot` (golden fixture `queue_snapshot.ndjson`; `before_send` not applied) via `QueueSnapshotCapableInterface`, which keeps `BeaconClientInterface` unchanged (no BC break for custom clients).
