@@ -6,26 +6,19 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use DateTimeInterface;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
-use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
+use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
-use Symfony\Component\Messenger\Exception\HandlerFailedException;
-use Symfony\Component\Messenger\Stamp\BusNameStamp;
-use Symfony\Component\Messenger\Stamp\ReceivedStamp;
-use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
-use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
-use Throwable;
 
-use function array_key_first;
 use function class_exists;
-use function is_int;
-use function is_numeric;
-use function is_string;
 
 /**
  * Reports Messenger worker failures that will not be retried.
+ *
+ * `extra.messenger.retry_state` is `exhausted` after at least one retry, otherwise `failed`.
+ * When several handlers fail, `handler_classes` lists all of them (`handler_class` stays the first).
  *
  * When `symfony/scheduler` is installed and the envelope carries a
  * {@see ScheduledStamp}, optional `extra.scheduler` context is attached.
@@ -57,48 +50,20 @@ final class BeaconMessengerFailedListener
         }
 
         $throwable = $event->getThrowable();
-        if ($this->shouldIgnore($throwable)) {
+        if (MessengerContext::isIgnored($throwable, $this->ignoreExceptions)) {
             return;
         }
 
         $envelope = $event->getEnvelope();
-        $this->restoreTrace($envelope);
+        MessengerContext::restoreTrace($envelope, $this->traceIdProvider);
 
-        $message = $envelope->getMessage();
-
-        $messenger = [
-            'message_class' => $message::class,
-            'receiver_name' => $event->getReceiverName(),
-            'retry_count'   => RedeliveryStamp::getRetryCountFromEnvelope($envelope),
-        ];
-
-        $busStamp = $envelope->last(BusNameStamp::class);
-        if ($busStamp instanceof BusNameStamp) {
-            $messenger['bus'] = $busStamp->getBusName();
-        }
-
-        $transportId = $envelope->last(TransportMessageIdStamp::class);
-        if ($transportId instanceof TransportMessageIdStamp) {
-            $id = $transportId->getId();
-            if (is_string($id) || is_int($id)) {
-                $messenger['transport_message_id'] = $id;
-            }
-        }
-
-        $received = $envelope->last(ReceivedStamp::class);
-        if ($received instanceof ReceivedStamp) {
-            $messenger['transport'] = $received->getTransportName();
-        }
-
-        $handlerClass = $this->handlerClass($throwable);
-        if ($handlerClass !== null) {
-            $messenger['handler_class'] = $handlerClass;
-        }
-
-        $firstFailure = $this->firstFailureAt($envelope);
-        if ($firstFailure !== null) {
-            $messenger['first_failure_at'] = $firstFailure;
-        }
+        $messenger = MessengerContext::withHandlers(
+            MessengerContext::fromEnvelope($envelope, $event->getReceiverName()),
+            MessengerContext::failedHandlers($throwable),
+        );
+        $messenger['retry_state'] = ((int) $messenger['retry_count']) > 0
+            ? MessengerContext::RETRY_STATE_EXHAUSTED
+            : MessengerContext::RETRY_STATE_FAILED;
 
         $extra = [
             'messenger' => $messenger,
@@ -110,47 +75,6 @@ final class BeaconMessengerFailedListener
         }
 
         $this->client->captureException($throwable, $extra);
-    }
-
-    private function restoreTrace(Envelope $envelope): void
-    {
-        if (!$this->traceIdProvider instanceof TraceIdProvider) {
-            return;
-        }
-
-        $stamp = $envelope->last(BeaconTraceStamp::class);
-        if ($stamp instanceof BeaconTraceStamp) {
-            // @igor-ignore - Not shared worker service state.
-            $this->traceIdProvider->set($stamp->traceId);
-        }
-    }
-
-    private function handlerClass(Throwable $throwable): ?string
-    {
-        if ($throwable instanceof HandlerFailedException) {
-            foreach ($throwable->getWrappedExceptions() as $handler => $_nested) {
-                if (is_string($handler) && $handler !== '' && !is_numeric($handler)) {
-                    return $handler;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function firstFailureAt(Envelope $envelope): ?string
-    {
-        $stamps = $envelope->all(RedeliveryStamp::class);
-        if ($stamps === []) {
-            return null;
-        }
-
-        $first = $stamps[array_key_first($stamps)] ?? null;
-        if (!$first instanceof RedeliveryStamp) { // @codeCoverageIgnore
-            return null; // @codeCoverageIgnore
-        }
-
-        return $first->getRedeliveredAt()->format(DateTimeInterface::ATOM);
     }
 
     /**
@@ -175,22 +99,5 @@ final class BeaconMessengerFailedListener
             'triggered_at'  => $context->triggeredAt->format(DateTimeInterface::ATOM),
             'trigger'       => (string) $context->trigger,
         ];
-    }
-
-    /**
-     * Whether `$throwable` matches any configured ignore class.
-     */
-    private function shouldIgnore(Throwable $throwable): bool
-    {
-        foreach ($this->ignoreExceptions as $class) {
-            if (!is_string($class) || $class === '') {
-                continue;
-            }
-            if ($throwable instanceof $class) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

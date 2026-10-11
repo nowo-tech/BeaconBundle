@@ -18,9 +18,12 @@ use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use ReflectionProperty;
 use RuntimeException;
+use stdClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Throwable;
 
 use function is_array;
@@ -75,6 +78,67 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('outer boom', $payload['exception']['values'][1]['value']);
         self::assertIsString($payload['culprit']);
         self::assertArrayNotHasKey('user', $payload);
+    }
+
+    public function testHandlerFailedCulpritPointsAtRootCause(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $builder = new EnvelopeBuilder('test', '1.0.0', 'ci-host');
+        $root    = $this->throwFromNamedMethod();
+        $wrapped = new HandlerFailedException(new Envelope(new stdClass()), ['App\\Handler::__invoke' => $root]);
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'boom', 'error', $wrapped));
+
+        self::assertStringContainsString('throwFromNamedMethod', $payload['culprit']);
+    }
+
+    public function testBuildsDeployEnvelope(): void
+    {
+        $dsn = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+
+        [$header, $item, $payload] = $this->decodeEnvelope((new EnvelopeBuilder('prod', '1.0.0', 'h'))->buildDeployEnvelope($dsn, [
+            'release' => '1.2.3',
+            'commit'  => 'abc',
+            'url'     => '',
+        ]));
+
+        self::assertSame('deploy', $item['type']);
+        self::assertSame($header['event_id'], $payload['event_id']);
+        self::assertSame('1.2.3', $payload['release']);
+        self::assertSame('prod', $payload['environment']);
+        self::assertSame('abc', $payload['commit']);
+        self::assertArrayNotHasKey('url', $payload);
+        self::assertIsFloat($payload['deployed_at']);
+
+        [, , $bare] = $this->decodeEnvelope((new EnvelopeBuilder('prod', null, 'h', new SendOptions(environment: false)))
+            ->buildDeployEnvelope($dsn, ['release' => '1', 'deployed_at' => 10.5, 'environment' => null]));
+        self::assertArrayNotHasKey('environment', $bare);
+        self::assertSame(10.5, $bare['deployed_at']);
+    }
+
+    public function testBuildsQueueSnapshotEnvelope(): void
+    {
+        $dsn        = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $transports = [['name' => 'failed', 'count' => 3, 'failure' => true]];
+
+        [$header, $item, $payload] = $this->decodeEnvelope(
+            (new EnvelopeBuilder('prod', '1.0.0', 'worker-1'))->buildQueueSnapshotEnvelope($dsn, $transports),
+        );
+
+        self::assertSame('queue_snapshot', $item['type']);
+        self::assertSame($header['event_id'], $payload['event_id']);
+        self::assertSame('queue_snapshot', $payload['type']);
+        self::assertSame($transports, $payload['transports']);
+        self::assertSame('prod', $payload['environment']);
+        self::assertSame('worker-1', $payload['server_name']);
+        self::assertIsFloat($payload['timestamp']);
+
+        [, , $bare] = $this->decodeEnvelope(
+            (new EnvelopeBuilder('prod', null, 'h', new SendOptions(environment: false, serverName: false)))
+                ->buildQueueSnapshotEnvelope($dsn, []),
+        );
+        self::assertArrayNotHasKey('environment', $bare);
+        self::assertArrayNotHasKey('server_name', $bare);
     }
 
     public function testAttachesContextsDbForDatabaseException(): void
@@ -606,5 +670,10 @@ final class EnvelopeBuilderTest extends TestCase
     private function throwWithNamedArgs(string $label, array $meta): never
     {
         throw new RuntimeException('frame-vars-demo: ' . $label . ' ' . json_encode($meta));
+    }
+
+    private function throwFromNamedMethod(): RuntimeException
+    {
+        return (static fn (): RuntimeException => new RuntimeException('root cause'))();
     }
 }

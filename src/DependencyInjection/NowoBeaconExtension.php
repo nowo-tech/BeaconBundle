@@ -10,6 +10,8 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
+use Nowo\BeaconBundle\Command\DeployCommand;
+use Nowo\BeaconBundle\Command\MessengerReportCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\Context\SecurityUserContextProvider;
@@ -22,9 +24,12 @@ use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerRetryListener;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
+use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
@@ -140,6 +145,18 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             is_string($config['release'] ?? null) ? $config['release'] : null,
             $serverName,
         );
+
+        $this->registerMessengerReportCommand($container, $config['messenger']['failure_transports'] ?? ['failed']);
+
+        $deploy = new Definition(DeployCommand::class, [
+            '$client'             => new Reference(BeaconClientInterface::class),
+            '$defaultRelease'     => $config['release'],
+            '$defaultEnvironment' => $config['environment'],
+        ]);
+        $deploy->setAutowired(false);
+        $deploy->setPublic(false);
+        $deploy->addTag('console.command');
+        $container->setDefinition(DeployCommand::class, $deploy);
 
         $userProvider = new Definition(SecurityUserContextProvider::class, [
             '$tokenStorage' => new Reference(
@@ -310,6 +327,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $container->setDefinition(BeaconMessengerFailedListener::class, $messenger);
         }
 
+        $this->registerMessengerObservability($container, $config);
+
         if (interface_exists(MessageBusInterface::class)) {
             $traceMiddleware = new Definition(BeaconTraceMiddleware::class, [
                 '$traceIdProvider' => new Reference(TraceIdProvider::class),
@@ -379,6 +398,82 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             ]);
             $container->setDefinition(TraceableBeaconHttpClient::class, $http);
         }
+    }
+
+    /**
+     * Registers opt-in Messenger transactions, retry visibility and worker memory warnings.
+     *
+     * @param array<string, mixed> $config
+     */
+    private function registerMessengerObservability(ContainerBuilder $container, array $config): void
+    {
+        if (!class_exists(WorkerMessageFailedEvent::class)) {
+            return; // @codeCoverageIgnore
+        }
+
+        $messenger = $config['messenger'] ?? [];
+
+        if ((bool) ($messenger['transactions'] ?? false)) {
+            $tx = new Definition(BeaconMessengerTransactionListener::class, [
+                '$client'          => new Reference(BeaconClientInterface::class),
+                '$spanBuffer'      => new Reference(SpanBuffer::class),
+                '$sampleRate'      => (float) ($messenger['transaction_sample_rate'] ?? 1.0),
+                '$traceIdProvider' => new Reference(TraceIdProvider::class),
+            ]);
+            $tx->addTag('kernel.event_subscriber');
+            $tx->addTag('kernel.reset', ['method' => 'reset']);
+            $tx->setPublic(false);
+            $container->setDefinition(BeaconMessengerTransactionListener::class, $tx);
+        }
+
+        $reportRetries   = (bool) ($messenger['report_retries'] ?? false);
+        $reportRecovered = (bool) ($messenger['report_recovered'] ?? false);
+        if ($reportRetries || $reportRecovered) {
+            $retry = new Definition(BeaconMessengerRetryListener::class, [
+                '$client'           => new Reference(BeaconClientInterface::class),
+                '$reportRetries'    => $reportRetries,
+                '$reportRecovered'  => $reportRecovered,
+                '$sampleRate'       => (float) ($messenger['retry_sample_rate'] ?? 1.0),
+                '$ignoreExceptions' => $config['ignore_exceptions'],
+                '$traceIdProvider'  => new Reference(TraceIdProvider::class),
+            ]);
+            $retry->addTag('kernel.event_subscriber');
+            $retry->setPublic(false);
+            $container->setDefinition(BeaconMessengerRetryListener::class, $retry);
+        }
+
+        $ratio = $messenger['worker_memory_warning_ratio'] ?? null;
+        if ($ratio !== null) {
+            $memory = new Definition(BeaconWorkerMemoryListener::class, [
+                '$client' => new Reference(BeaconClientInterface::class),
+                '$ratio'  => (float) $ratio,
+            ]);
+            $memory->addTag('kernel.event_subscriber');
+            $memory->setPublic(false);
+            $container->setDefinition(BeaconWorkerMemoryListener::class, $memory);
+        }
+    }
+
+    /**
+     * Registers `nowo:beacon:messenger-report` (also in NullBeaconClient mode, where it explains why nothing is sent).
+     *
+     * @param list<string> $failureTransports
+     */
+    private function registerMessengerReportCommand(ContainerBuilder $container, array $failureTransports): void
+    {
+        if (!interface_exists(MessageBusInterface::class)) {
+            return; // @codeCoverageIgnore
+        }
+
+        $command = new Definition(MessengerReportCommand::class, [
+            '$client'            => new Reference(BeaconClientInterface::class),
+            '$receiverLocator'   => new Reference('messenger.receiver_locator', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$failureTransports' => $failureTransports,
+        ]);
+        $command->setAutowired(false);
+        $command->setPublic(false);
+        $command->addTag('console.command');
+        $container->setDefinition(MessengerReportCommand::class, $command);
     }
 
     /**

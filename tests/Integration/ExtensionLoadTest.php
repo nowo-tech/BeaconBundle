@@ -8,6 +8,8 @@ use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
+use Nowo\BeaconBundle\Command\DeployCommand;
+use Nowo\BeaconBundle\Command\MessengerReportCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\DependencyInjection\Configuration;
@@ -18,9 +20,12 @@ use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerRetryListener;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
+use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
@@ -334,6 +339,63 @@ final class ExtensionLoadTest extends TestCase
         self::assertFalse($container->hasDefinition(BeaconMessengerFailedListener::class));
         self::assertFalse($container->hasDefinition(BeaconRequestTransactionListener::class));
         self::assertSame(NullBeaconClient::class, (string) $container->getAlias(BeaconClientInterface::class));
+    }
+
+    public function testMessengerObservabilityIsOptIn(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => 'https://pub:secret@beacon.example.com/1']], $container);
+
+        self::assertFalse($container->hasDefinition(BeaconMessengerTransactionListener::class));
+        self::assertFalse($container->hasDefinition(BeaconMessengerRetryListener::class));
+        self::assertFalse($container->hasDefinition(BeaconWorkerMemoryListener::class));
+        self::assertTrue($container->hasDefinition(MessengerReportCommand::class));
+        self::assertSame(['failed'], $container->getDefinition(MessengerReportCommand::class)->getArgument('$failureTransports'));
+        self::assertTrue($container->hasDefinition(DeployCommand::class));
+    }
+
+    public function testMessengerObservabilityWiresListenersWhenEnabled(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pub:secret@beacon.example.com/1',
+            'messenger' => [
+                'transactions'                => true,
+                'transaction_sample_rate'     => 0.25,
+                'report_recovered'            => true,
+                'retry_sample_rate'           => 0.5,
+                'worker_memory_warning_ratio' => 0.9,
+                'failure_transports'          => ['failed', 'failed_high'],
+            ],
+        ]], $container);
+
+        $tx = $container->getDefinition(BeaconMessengerTransactionListener::class);
+        self::assertSame(0.25, $tx->getArgument('$sampleRate'));
+        self::assertTrue($tx->hasTag('kernel.reset'));
+
+        $retry = $container->getDefinition(BeaconMessengerRetryListener::class);
+        self::assertFalse($retry->getArgument('$reportRetries'));
+        self::assertTrue($retry->getArgument('$reportRecovered'));
+        self::assertSame(0.5, $retry->getArgument('$sampleRate'));
+
+        self::assertSame(0.9, $container->getDefinition(BeaconWorkerMemoryListener::class)->getArgument('$ratio'));
+        self::assertSame(
+            ['failed', 'failed_high'],
+            $container->getDefinition(MessengerReportCommand::class)->getArgument('$failureTransports'),
+        );
+    }
+
+    public function testMessengerReportCommandIsRegisteredWithNullClient(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => '',
+            'messenger' => ['transactions' => true, 'report_retries' => true],
+        ]], $container);
+
+        self::assertTrue($container->hasDefinition(MessengerReportCommand::class));
+        self::assertFalse($container->hasDefinition(BeaconMessengerTransactionListener::class));
+        self::assertFalse($container->hasDefinition(BeaconMessengerRetryListener::class));
     }
 
     private function createContainer(): ContainerBuilder

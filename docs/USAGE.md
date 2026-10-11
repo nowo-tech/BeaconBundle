@@ -14,6 +14,11 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
 - [Performance transactions](#performance-transactions)
 - [Console errors](#console-errors)
 - [Messenger failures](#messenger-failures)
+  - [Retries and recoveries (opt-in)](#retries-and-recoveries-opt-in)
+  - [Message handling transactions (opt-in)](#message-handling-transactions-opt-in)
+  - [Worker memory warning (opt-in)](#worker-memory-warning-opt-in)
+  - [Queue snapshot command](#queue-snapshot-command)
+- [Deploy markers](#deploy-markers)
 - [HTTP extras](#http-extras)
 - [Trace correlation](#trace-correlation)
 - [Fatal PHP errors](#fatal-php-errors)
@@ -207,14 +212,82 @@ With `register_messenger_listener: true` (default) and `symfony/messenger` insta
 | `bus` | Bus name when a `BusNameStamp` is present |
 | `transport_message_id` | Transport id when a `TransportMessageIdStamp` is present |
 | `transport` | Transport name from `ReceivedStamp` when present |
-| `handler_class` | Failing handler FQCN when recoverable from `HandlerFailedException` |
+| `handler_class` | First failing handler (`Class::method`) when recoverable from `HandlerFailedException` |
+| `handler_classes` | All failing handlers, only when more than one failed |
 | `first_failure_at` | ISO-8601 time of the first `RedeliveryStamp` when present |
+| `retry_state` | `exhausted` (failed after at least one retry) or `failed` (first attempt) |
+
+The event culprit is taken from the root cause behind `HandlerFailedException` (application code), not from Messenger middleware frames.
 
 Message bodies are never attached. When the envelope carries a `BeaconTraceStamp`, the listener restores that id into `TraceIdProvider` before capture (see [Trace correlation](#trace-correlation)).
 
 ### Scheduled tasks (Symfony Scheduler)
 
 When `include_scheduler_context: true` (default) and the failing envelope carries a `ScheduledStamp`, the same event also includes `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`). Reporting stays on the Messenger listener only (no duplicate `FailureEvent` capture; retries are still skipped via `willRetry()`). Message bodies are never attached.
+
+### Retries and recoveries (opt-in)
+
+```yaml
+nowo_beacon:
+    messenger:
+        report_retries: true     # warning event per retried failure (retry_state: will_retry)
+        report_recovered: true   # info event when a retried message finally succeeds
+        retry_sample_rate: 0.25  # optional sampling for busy queues
+```
+
+Retry events use their own fingerprint (`beacon.messenger.retry` + message class + handler + root exception type), so they never mix with the final-failure issue. `extra.messenger.attempt` is the attempt that just failed.
+
+### Message handling transactions (opt-in)
+
+```yaml
+nowo_beacon:
+    messenger:
+        transactions: true
+        transaction_sample_rate: 1.0
+    instrumentation:
+        doctrine: true      # SQL spans + N+1 detection inside workers
+        http_client: true
+```
+
+Each handled message sends a `transaction` named after the message class with `extra.messenger.op = queue.process` and `status` (`ok`, `failed`, `retry`). Spans buffered before the message was received are dropped, so idle-time queries never leak into the next message.
+
+### Worker memory warning (opt-in)
+
+```yaml
+nowo_beacon:
+    messenger:
+        worker_memory_warning_ratio: 0.8
+```
+
+Once per worker process, when `memory_get_usage(true)` reaches 80% of `memory_limit`, a `warning` event with `extra.messenger_worker` (transports, usage, limit) is sent — before a fatal out-of-memory kills the worker. Transport connection errors that stop `messenger:consume` are already reported by the console error listener.
+
+### Queue snapshot command
+
+```bash
+php bin/console nowo:beacon:messenger-report            # send counts
+php bin/console nowo:beacon:messenger-report --dry-run  # print only
+php bin/console nowo:beacon:messenger-report --failure-transport=failed --failure-transport=failed_high
+```
+
+Sends a `queue_snapshot` Envelope item with the message count of every Messenger transport (`null` when the transport cannot count) and which ones are failure transports — numbers only, no message data. Symfony Beacon keeps the latest count per transport (Project → Settings → Alerts → Client Messenger queues) and opens an issue when a failure transport reaches the project threshold. Run it every few minutes, for example with cron:
+
+```cron
+*/5 * * * * php /app/bin/console nowo:beacon:messenger-report --no-interaction --quiet
+```
+
+or with Symfony Scheduler (`RecurringMessage::every('5 minutes', new RunCommandMessage('nowo:beacon:messenger-report'))`).
+
+## Deploy markers
+
+Run after each deploy (CI/CD step, deploy hook):
+
+```bash
+php bin/console nowo:beacon:deploy                     # release = nowo_beacon.release, environment = nowo_beacon.environment
+php bin/console nowo:beacon:deploy --release=1.4.0 --environment=prod --commit="$GIT_SHA" \
+    --url="$CI_PIPELINE_URL" --name="Deploy #$CI_PIPELINE_ID"
+```
+
+Sends a `deploy` Envelope item (release metadata only; `before_send` is not applied). Symfony Beacon lists it under **Releases → Recent deploys**, adds it to the Analytics table, and marks issues first seen within 24 h after a deploy of their first release as **Suspect deploy**. With an empty DSN the command exits 0 and sends nothing.
 
 ## HTTP extras
 

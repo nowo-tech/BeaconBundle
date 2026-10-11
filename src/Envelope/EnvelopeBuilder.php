@@ -10,6 +10,7 @@ use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Support\FrameVarsSerializer;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
@@ -19,6 +20,7 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Throwable;
 
 use function array_key_exists;
@@ -227,6 +229,90 @@ final class EnvelopeBuilder
         $this->attachBreadcrumbs($payload);
 
         $itemHeader = ['type' => 'transaction', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Build a 3-line envelope with a `queue_snapshot` item: Messenger message counts per transport.
+     *
+     * Numbers only — no message bodies, ids or payloads. Beacon stores the latest snapshot per
+     * transport and can open an issue when a failure transport crosses the project threshold.
+     *
+     * @param list<array{name: string, count: int|null, failure: bool}> $transports `count` is null when the
+     *                                                                              transport cannot count messages
+     */
+    public function buildQueueSnapshotEnvelope(BeaconDsn $dsn, array $transports): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'   => $eventId,
+            'type'       => 'queue_snapshot',
+            'timestamp'  => (float) $now->format('U.u'),
+            'platform'   => 'php',
+            'transports' => $transports,
+        ];
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+        if ($this->sendOptions->serverName) {
+            $payload['server_name'] = $this->serverName;
+        }
+
+        $itemHeader = ['type' => 'queue_snapshot', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Build a 3-line envelope with a `deploy` item (release marker for Beacon analytics / suspect release).
+     *
+     * @param array{release: string, environment?: string|null, commit?: string|null, url?: string|null, name?: string|null, deployed_at?: float|null} $deploy
+     */
+    public function buildDeployEnvelope(BeaconDsn $dsn, array $deploy): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'    => $eventId,
+            'type'        => 'deploy',
+            'release'     => $deploy['release'],
+            'environment' => $deploy['environment'] ?? ($this->sendOptions->environment ? $this->environment : null),
+            'deployed_at' => $deploy['deployed_at'] ?? (float) $now->format('U.u'),
+            'platform'    => 'php',
+        ];
+        foreach (['commit', 'url', 'name'] as $key) {
+            $value = $deploy[$key] ?? null;
+            if (is_string($value) && $value !== '') {
+                $payload[$key] = $value;
+            }
+        }
+        if ($payload['environment'] === null) {
+            unset($payload['environment']);
+        }
+
+        $itemHeader = ['type' => 'deploy', 'content_type' => 'application/json'];
 
         return $this->encode($envelopeHeader) . "\n"
             . $this->encode($itemHeader) . "\n"
@@ -666,9 +752,16 @@ final class EnvelopeBuilder
 
     /**
      * Best-effort culprit from the top exception frame.
+     *
+     * Messenger {@see HandlerFailedException} is thrown from Messenger middleware; its root cause
+     * points at application code, so the culprit is taken from the deepest previous exception.
      */
     private function guessCulprit(Throwable $throwable): string
     {
+        if ($throwable instanceof HandlerFailedException) {
+            $throwable = MessengerContext::rootCause($throwable);
+        }
+
         return $this->formatCulprit($throwable->getTrace(), $throwable->getFile(), $throwable->getLine());
     }
 

@@ -9,7 +9,7 @@ use Throwable;
 /**
  * No-op client used when Beacon is disabled or DSN is empty.
  */
-final class NullBeaconClient implements BeaconClientInterface
+final class NullBeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface
 {
     /**
      * {@inheritdoc}
@@ -90,5 +90,21 @@ final class NullBeaconClient implements BeaconClientInterface
      */
     public function clearTags(): void
     {
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function captureQueueSnapshot(array $transports): ?string
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function captureDeploy(array $deploy): ?string
+    {
+        return null;
     }
 }

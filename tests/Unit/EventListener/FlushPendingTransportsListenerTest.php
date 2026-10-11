@@ -8,6 +8,7 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\AsyncEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use PHPUnit\Framework\TestCase;
@@ -23,6 +24,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
+use Symfony\Component\Messenger\Event\WorkerStoppedEvent;
 
 final class FlushPendingTransportsListenerTest extends TestCase
 {
@@ -68,5 +72,40 @@ final class FlushPendingTransportsListenerTest extends TestCase
         ));
 
         self::assertSame($dsn, $async->getDsn());
+    }
+
+    public function testWorkerEventsFlushAfterMessengerListeners(): void
+    {
+        $events = FlushPendingTransportsListener::getSubscribedEvents();
+
+        self::assertSame(['flush', -2048], $events[WorkerMessageHandledEvent::class]);
+        self::assertSame(['flush', -2048], $events[WorkerMessageFailedEvent::class]);
+        self::assertSame(['flush', -2048], $events[WorkerStoppedEvent::class]);
+        self::assertLessThan(
+            BeaconMessengerTransactionListener::getSubscribedEvents()[WorkerMessageFailedEvent::class][1],
+            $events[WorkerMessageFailedEvent::class][1],
+        );
+
+        $requests = 0;
+        $dsn      = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $async    = new AsyncEnvelopeTransport(new EnvelopeTransport(
+            new MockHttpClient(static function () use (&$requests): MockResponse {
+                ++$requests;
+
+                return new MockResponse('', ['http_code' => 202]);
+            }),
+            $dsn,
+            true,
+            5.0,
+            null,
+            'beacon-bundle/test',
+        ));
+        $registry = new PendingTransportRegistry();
+        $registry->register($async);
+        $async->send('body');
+
+        (new FlushPendingTransportsListener($registry))->flush();
+
+        self::assertSame(1, $requests);
     }
 }

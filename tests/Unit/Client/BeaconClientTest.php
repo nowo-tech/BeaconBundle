@@ -32,11 +32,44 @@ final class BeaconClientTest extends TestCase
         self::assertNull($client->captureMessage('x'));
         self::assertNull($client->captureException(new RuntimeException('x')));
         self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
+        self::assertNull($client->captureQueueSnapshot([['name' => 'failed', 'count' => 1, 'failure' => true]]));
+        self::assertNull($client->captureDeploy(['release' => '1.0.0']));
         $client->addBreadcrumb('noop');
         $client->setTag('k', 'v');
         $client->setTags(['a' => 'b']);
         self::assertSame([], $client->getTags());
         $client->clearTags();
+    }
+
+    public function testCaptureQueueSnapshotPostsQueueSnapshotItem(): void
+    {
+        $bodies = [];
+        $http   = new MockHttpClient(static function (string $method, string $url, array $options) use (&$bodies): MockResponse {
+            $bodies[] = (string) ($options['body'] ?? '');
+
+            return new MockResponse('', ['http_code' => 200]);
+        });
+
+        $dsn       = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
+        $transport = new EnvelopeTransport($http, $dsn, true, 2.0);
+        $dropAll   = static fn (array $payload): ?array => null;
+        $client    = new BeaconClient($transport, new EnvelopeBuilder('test'), true, null, null, null, $dropAll);
+
+        $eventId = $client->captureQueueSnapshot([['name' => 'failed', 'count' => 4, 'failure' => true]]);
+
+        self::assertNotNull($eventId);
+        self::assertCount(1, $bodies, 'before_send does not apply to snapshots');
+        self::assertStringContainsString('"type":"queue_snapshot"', $bodies[0]);
+        self::assertStringContainsString('"count":4', $bodies[0]);
+
+        self::assertNotNull($client->captureDeploy(['release' => '1.2.3']));
+        self::assertCount(2, $bodies);
+        self::assertStringContainsString('"type":"deploy"', $bodies[1]);
+
+        $disabled = new BeaconClient($transport, new EnvelopeBuilder('test'), false);
+        self::assertNull($disabled->captureQueueSnapshot([]));
+        self::assertNull($disabled->captureDeploy(['release' => '1']));
+        self::assertCount(2, $bodies);
     }
 
     public function testCaptureMessagePostsEnvelope(): void

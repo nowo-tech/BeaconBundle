@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-09-24  
-**Aligned with:** public API / config through **v1.8.2** (FrankenPHP worker scenario B)
+**Last audited:** 2026-10-11  
+**Aligned with:** public API / config through **v1.11.0** (Messenger observability, deploy markers)
 
 ## Summary
 
@@ -21,6 +21,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Optional Monolog forwarding (`monolog_handler`) wired through MonologBundle `handlers`
 - Path-based ignore list for HTTP exception reporting and auto HTTP transactions (`ignore_paths`)
 - Safe operation under FrankenPHP worker mode when the kernel is **not** reset between requests (scenario B)
+- Opt-in Messenger worker observability (transactions, retries, memory, queue snapshots) and deploy markers (`specs/004`, `specs/005`)
 
 ## Non-goals
 
@@ -46,6 +47,8 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-09 | As a developer, I control outbound PII/context | `send.*` switches; `send.user` opt-in |
 | US-10 | As a developer, Monolog errors can forward to Beacon | `monolog_handler.enabled` prepends `type: service` handler |
 | US-11 | As a developer, I run FrankenPHP worker without kernel reset between requests | Breadcrumbs, spans, tags, trace id, auto HTTP transaction Request, and async pending POSTs do not leak across requests |
+| US-12 | As an operator, I observe Messenger workers (slow handlers, retries, backlog, memory) | `nowo_beacon.messenger.*` opt-ins + `nowo:beacon:messenger-report` (`specs/004-messenger-observability`) |
+| US-13 | As a developer, I mark deploys from CI | `nowo:beacon:deploy` sends a `deploy` item (`specs/005-deploy-markers`) |
 
 ## Functional requirements
 
@@ -79,18 +82,23 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-TR-001 | Non-2xx and transport errors are logged; `send()` returns false; no exception to caller. HTTP uses configured `timeout` / `max_duration` |
 | FR-TR-002 | `transport.mode` `sync` \| `async` \| `messenger`; async/messenger finalize via flush listener or Messenger handler |
 | FR-INS-001 | Opt-in `instrumentation.*` records Doctrine SQL and HttpClient spans/breadcrumbs |
+| FR-ENV-007 | Database exceptions in the throwable chain add `contexts.db` (SQLSTATE / driver code, best-effort SQL) |
+| FR-ENV-008 | Envelope item types: `event`, `transaction`, `queue_snapshot`, `deploy`; `before_send` applies to events only; shapes pinned by golden fixtures in `tests/Contract/fixtures/envelope/` |
 
 ### DI / Listeners / Monolog
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, include_scheduler_context, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, before_send |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, include_scheduler_context, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, messenger.*, before_send |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
 | FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`); nested `extra.console` with `command`, `exit_code`, `php_sapi`; MUST NOT attach argv/input arguments |
 | FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`); when `include_scheduler_context` and envelope has `ScheduledStamp`, attach `extra.scheduler` (no message body); do not also capture `FailureEvent` (avoids duplicates / retries) |
 | FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths` |
 | FR-LI-005 | `ignore_paths` defaults MUST include `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, and `/.well-known/appspecific/com.chrome.devtools.json` (aligned with typical Symfony Beacon host infra exclusions); trailing slashes are normalized; empty list disables path filtering; applies to HTTP exception listener and auto HTTP transactions only (not console/Messenger) |
+| FR-PW-001 | Optional PHP warning interceptor reports warnings / notices as events without converting them into exceptions |
+| FR-MQ-001..008 | Messenger observability — see [`specs/004-messenger-observability`](../004-messenger-observability/spec.md) (transactions, retries, `retry_state`, memory warning, `queue_snapshot`, flush after each worker message) |
+| FR-DEP-001..003 | Deploy markers — see [`specs/005-deploy-markers`](../005-deploy-markers/spec.md) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
 | FR-WK-001 | On every **main** `kernel.request`, reset `BreadcrumbBuffer`, `SpanBuffer`, `Scope`, and `TraceIdProvider` (in addition to `kernel.reset` tags) so FrankenPHP workers without `services_resetter` do not leak per-request data |
 | FR-WK-002 | `BeaconRequestTransactionListener` MUST clear stored Request/timing at the start of every main request (before ignore-path early returns) |

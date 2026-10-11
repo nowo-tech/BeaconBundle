@@ -25,7 +25,7 @@ use const JSON_UNESCAPED_UNICODE;
 /**
  * Default Beacon client: builds Envelope NDJSON and POSTs via {@see EnvelopeTransportInterface}.
  */
-final class BeaconClient implements BeaconClientInterface
+final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface
 {
     /**
      * @param callable(array<string, mixed>): (?array<string, mixed>)|null $beforeSend
@@ -152,6 +152,40 @@ final class BeaconClient implements BeaconClientInterface
             return null;
         }
 
+        $this->transport->send($body);
+
+        return $this->extractEventId($body);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Deploy markers carry only release metadata, so `before_send` is not applied.
+     */
+    public function captureDeploy(array $deploy): ?string
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $body = $this->envelopeBuilder->buildDeployEnvelope($this->transport->getDsn(), $deploy);
+        $this->transport->send($body);
+
+        return $this->extractEventId($body);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Snapshots carry only transport names and counts, so `before_send` is not applied.
+     */
+    public function captureQueueSnapshot(array $transports): ?string
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $body = $this->envelopeBuilder->buildQueueSnapshotEnvelope($this->transport->getDsn(), $transports);
         $this->transport->send($body);
 
         return $this->extractEventId($body);

@@ -66,6 +66,14 @@ nowo_beacon:
         capture_silenced: false
         # levels: []  # empty = warning+notice (no deprecations)
     include_scheduler_context: true
+    messenger:
+        transactions: false
+        transaction_sample_rate: 1.0
+        report_retries: false
+        report_recovered: false
+        retry_sample_rate: 1.0
+        worker_memory_warning_ratio: null   # e.g. 0.8
+        failure_transports: ['failed']
     auto_http_transaction: false
     before_send: null
     instrumentation:
@@ -114,6 +122,13 @@ nowo_beacon:
 | `php_warning_handler.capture_silenced` | `false` | When true, also report `@`-silenced warnings/notices. |
 | `php_warning_handler.levels` | `[]` | Named kinds to capture (`warning`, `user_warning`, `notice`, …). Empty = default warnings+notices (no deprecations). |
 | `include_scheduler_context` | `true` | When a failing envelope carries Symfony Scheduler `ScheduledStamp`, attach `extra.scheduler` (name, recurring id, trigger, triggered_at). Never attaches the message body. No-op without `symfony/scheduler`. |
+| `messenger.transactions` | `false` | Send one performance transaction per handled Messenger message (name = message class; `extra.messenger.op = queue.process`, `status` `ok` / `failed` / `retry`, handler, transport, retry count). Doctrine / HttpClient spans recorded while handling are attached. |
+| `messenger.transaction_sample_rate` | `1.0` | Fraction of messages that send a transaction (0.0–1.0). |
+| `messenger.report_retries` | `false` | Send a `warning` event (`extra.messenger.retry_state = will_retry`) when a handler fails and Messenger will retry. Grouped per message class + handler + root exception type. |
+| `messenger.report_recovered` | `false` | Send an `info` event (`retry_state = recovered`) when a message succeeds after at least one retry. |
+| `messenger.retry_sample_rate` | `1.0` | Fraction of retry / recovered events sent (0.0–1.0). |
+| `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
+| `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |

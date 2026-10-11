@@ -18,7 +18,7 @@ normalize_golden() {
 }
 
 failed=0
-for name in event_happy.ndjson event_exception.ndjson transaction_with_spans.ndjson; do
+for name in event_happy.ndjson event_exception.ndjson transaction_with_spans.ndjson transaction_messenger.ndjson queue_snapshot.ndjson deploy.ndjson; do
   if ! cmp -s "$BUNDLE_FIXTURES/$name" "$BEACON_FIXTURES/$name"; then
     if [ "$(normalize_golden "$BUNDLE_FIXTURES/$name")" = "$(normalize_golden "$BEACON_FIXTURES/$name")" ]; then
       echo "WARN: $name differs only by DSN host port — rewrite both to __HTTPS_PORT__"

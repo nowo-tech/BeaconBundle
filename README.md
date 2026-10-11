@@ -28,6 +28,8 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
 - Database exceptions attach `contexts.db` (SQLSTATE / SQL) without requiring Doctrine instrumentation
 - Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler
+- Opt-in Messenger observability: per-message transactions (`queue.process`), retry / recovered events, worker memory warning, and `nowo:beacon:messenger-report` queue snapshots
+- `nowo:beacon:deploy` deploy markers (release / environment / commit) for Beacon's suspect-deploy hints
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)

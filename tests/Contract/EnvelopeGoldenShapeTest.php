@@ -13,6 +13,7 @@ use function count;
 use function explode;
 use function file_get_contents;
 use function is_array;
+use function is_int;
 use function is_string;
 use function json_decode;
 use function rtrim;
@@ -37,6 +38,9 @@ final class EnvelopeGoldenShapeTest extends TestCase
         yield 'event_happy' => ['event_happy.ndjson', 'event'];
         yield 'event_exception' => ['event_exception.ndjson', 'event'];
         yield 'transaction_with_spans' => ['transaction_with_spans.ndjson', 'transaction'];
+        yield 'transaction_messenger' => ['transaction_messenger.ndjson', 'transaction'];
+        yield 'queue_snapshot' => ['queue_snapshot.ndjson', 'queue_snapshot'];
+        yield 'deploy' => ['deploy.ndjson', 'deploy'];
     }
 
     #[DataProvider('fixtureProvider')]
@@ -83,6 +87,24 @@ final class EnvelopeGoldenShapeTest extends TestCase
             if (isset($payload['exception'])) {
                 self::assertIsArray($payload['exception']['values'] ?? null);
                 self::assertGreaterThan(0, count($payload['exception']['values']));
+            }
+        }
+
+        if ($expectedType === 'deploy') {
+            self::assertSame('deploy', $payload['type']);
+            self::assertIsString($payload['release']);
+            self::assertIsNumeric($payload['deployed_at']);
+        }
+
+        if ($expectedType === 'queue_snapshot') {
+            self::assertSame('queue_snapshot', $payload['type']);
+            self::assertIsNumeric($payload['timestamp']);
+            self::assertIsArray($payload['transports']);
+            foreach ($payload['transports'] as $transport) {
+                self::assertIsArray($transport);
+                self::assertIsString($transport['name'] ?? null);
+                self::assertTrue($transport['count'] === null || is_int($transport['count']));
+                self::assertIsBool($transport['failure'] ?? null);
             }
         }
 
