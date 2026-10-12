@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+  - [Added](#added)
+  - [Changed](#changed)
 - [[1.11.1] - 2026-10-11](#1111-2026-10-11)
   - [Fixed](#fixed)
 - [[1.11.0] - 2026-10-11](#1110-2026-10-11)
@@ -117,6 +119,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - [Added](#added)
 
 ## [Unreleased]
+
+### Added
+
+- **`nowo:beacon:self-test`**: produces real failures captured by the bundle's own listeners (no hand-built Envelopes) — `uncaught-exception`, `php-error` (uncaught `DivisionByZeroError`), `php-warning`, `captured-exception`, `captured-message`, `messenger-failure`, or `all` returning kinds (`--type` alias, `--run` token). Validates enabled flag / DSN / client first; flushes async transports at the end. Events are tagged `beacon_selftest` / `beacon_selftest_kind`.
+- **`Nowo\BeaconBundle\SelfTest\BeaconSelfTest`** public service (`status()`, `assertReady()`, `run()`, `flush()`, kind constants) with `SelfTestResult`, `SelfTestUnavailableException` and `BeaconSelfTestException`.
+- **`BeaconSelfTestFailMessage`** + handler (registered only with `symfony/messenger`): route it to an async transport so a worker exercises the Messenger failure listener; synchronous dispatches are captured inline.
+- **Optional JSON self-test endpoint** (`self_test.http.enabled`, default `false`; `path` `/_beacon/self-test`; `roles` `['ROLE_ADMIN']`): `GET` status + CSRF token, `POST {path}/{kind}` with CSRF; routes `nowo_beacon_self_test` / `nowo_beacon_self_test_trigger` via the new `nowo_beacon` route loader.
+- Spec `006-self-test`.
+
+### Changed
+
+- Dev dependency `symfony/security-csrf`; PHP warning handler tests cover every level label and the fail-soft path.
 
 ## [1.11.1] - 2026-10-11
 

@@ -9,6 +9,8 @@ use Nowo\BeaconBundle\Client\DeployCapableInterface;
 use Nowo\BeaconBundle\Client\QueueSnapshotCapableInterface;
 use Throwable;
 
+use function is_scalar;
+
 /**
  * In-memory client that records every capture call (tests only).
  */
@@ -28,6 +30,9 @@ final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapsho
 
     /** @var list<array<string, mixed>> */
     public array $deploys = [];
+
+    /** @var array<string, string> */
+    public array $tags = [];
 
     public function __construct(
         private readonly bool $enabled = true,
@@ -81,11 +86,14 @@ final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapsho
 
     public function setTags(array $tags): void
     {
+        foreach ($tags as $key => $value) {
+            $this->tags[$key] = is_scalar($value) ? (string) $value : '';
+        }
     }
 
     public function getTags(): array
     {
-        return [];
+        return $this->tags;
     }
 
     public function clearTags(): void

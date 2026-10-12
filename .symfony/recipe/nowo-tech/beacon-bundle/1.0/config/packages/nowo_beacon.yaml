@@ -39,6 +39,13 @@ nowo_beacon:
         runtime: true
         framework: true
         os: true
+    # Real-failure self-test: php bin/console nowo:beacon:self-test <kind>
+    # Optional JSON endpoint (import routes: { resource: ., type: nowo_beacon }):
+    # self_test:
+    #     http:
+    #         enabled: false
+    #         path: /_beacon/self-test
+    #         roles: [ROLE_ADMIN]
     # monolog_handler:
     #     enabled: true
     #     level: error

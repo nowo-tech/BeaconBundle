@@ -12,10 +12,12 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
+use Nowo\BeaconBundle\Command\SelfTestCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\Context\SecurityUserContextProvider;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
+use Nowo\BeaconBundle\Controller\SelfTestController;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
@@ -36,7 +38,11 @@ use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
+use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
+use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
+use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Config\FileLocator;
@@ -49,6 +55,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+use function array_values;
 use function class_exists;
 use function interface_exists;
 use function is_string;
@@ -147,6 +154,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         );
 
         $this->registerMessengerReportCommand($container, $config['messenger']['failure_transports'] ?? ['failed']);
+
+        $this->registerSelfTest($container, $config, $enabledFlag && $dsn !== '');
 
         $deploy = new Definition(DeployCommand::class, [
             '$client'             => new Reference(BeaconClientInterface::class),
@@ -474,6 +483,77 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $command->setPublic(false);
         $command->addTag('console.command');
         $container->setDefinition(MessengerReportCommand::class, $command);
+    }
+
+    /**
+     * Registers the self-test service, console command, Messenger fail handler, optional HTTP
+     * controller and the `nowo_beacon` route loader (also in NullBeaconClient mode, where the
+     * command explains why nothing can be sent).
+     *
+     * @param array<string, mixed> $config
+     */
+    private function registerSelfTest(ContainerBuilder $container, array $config, bool $reportingEnabled): void
+    {
+        $hasMessenger = interface_exists(MessageBusInterface::class);
+
+        $service = new Definition(BeaconSelfTest::class, [
+            '$client'            => new Reference(BeaconClientInterface::class),
+            '$parser'            => new Reference(BeaconDsnParser::class),
+            '$dsn'               => $config['dsn'] ?? '',
+            '$reportingEnabled'  => $reportingEnabled,
+            '$bus'               => $hasMessenger ? new Reference('messenger.default_bus', ContainerBuilder::NULL_ON_INVALID_REFERENCE) : null,
+            '$pendingTransports' => new Reference(PendingTransportRegistry::class),
+            '$exceptionListener' => (bool) $config['register_error_listener'],
+            '$consoleListener'   => (bool) $config['register_console_listener'],
+            '$phpWarningHandler' => (bool) $config['register_php_warning_handler'],
+            '$messengerListener' => (bool) $config['register_messenger_listener'],
+        ]);
+        $service->setAutowired(false);
+        $service->setPublic(false);
+        $container->setDefinition(BeaconSelfTest::class, $service);
+
+        $command = new Definition(SelfTestCommand::class, [
+            '$selfTest' => new Reference(BeaconSelfTest::class),
+        ]);
+        $command->setAutowired(false);
+        $command->setPublic(false);
+        $command->addTag('console.command');
+        $container->setDefinition(SelfTestCommand::class, $command);
+
+        if ($hasMessenger) {
+            $handler = new Definition(BeaconSelfTestFailHandler::class);
+            $handler->addTag('messenger.message_handler', ['handles' => BeaconSelfTestFailMessage::class]);
+            $handler->setPublic(false);
+            $container->setDefinition(BeaconSelfTestFailHandler::class, $handler);
+        }
+
+        $http    = $config['self_test']['http'] ?? [];
+        $enabled = (bool) ($http['enabled'] ?? false);
+        $path    = (string) ($http['path'] ?? '/_beacon/self-test');
+
+        $loader = new Definition(BeaconRouteLoader::class, [
+            '$selfTestEnabled' => $enabled,
+            '$selfTestPath'    => $path,
+        ]);
+        $loader->setAutowired(false);
+        $loader->setPublic(false);
+        $loader->addTag('routing.loader');
+        $container->setDefinition(BeaconRouteLoader::class, $loader);
+
+        if (!$enabled) {
+            return;
+        }
+
+        $controller = new Definition(SelfTestController::class, [
+            '$selfTest'             => new Reference(BeaconSelfTest::class),
+            '$roles'                => array_values($http['roles'] ?? ['ROLE_ADMIN']),
+            '$csrfTokenManager'     => new Reference('security.csrf.token_manager', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$authorizationChecker' => new Reference('security.authorization_checker', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $controller->setAutowired(false);
+        $controller->setPublic(true);
+        $controller->addTag('controller.service_arguments');
+        $container->setDefinition(SelfTestController::class, $controller);
     }
 
     /**

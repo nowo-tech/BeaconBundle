@@ -8,9 +8,14 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use RuntimeException;
 
 use const E_ALL;
+use const E_COMPILE_WARNING;
+use const E_CORE_WARNING;
+use const E_DEPRECATED;
 use const E_NOTICE;
+use const E_USER_DEPRECATED;
 use const E_USER_NOTICE;
 use const E_USER_WARNING;
 use const E_WARNING;
@@ -189,5 +194,45 @@ final class BeaconPhpWarningHandlerTest extends TestCase
         );
 
         (new BeaconPhpWarningHandler($client))->capture(E_USER_NOTICE, 'n', __FILE__, 1);
+    }
+
+    public function testLevelNamesForEveryKind(): void
+    {
+        $labels = [];
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('captureMessage')->willReturnCallback(static function (string $message) use (&$labels): string {
+            $labels[] = $message;
+
+            return 'id';
+        });
+
+        $handler = new BeaconPhpWarningHandler($client);
+        foreach ([E_USER_DEPRECATED, E_DEPRECATED, E_CORE_WARNING, E_COMPILE_WARNING, 0] as $type) {
+            $handler->capture($type, 'm', __FILE__, 1);
+        }
+
+        self::assertSame(['User Deprecated: m', 'Deprecated: m', 'Core Warning: m', 'Compile Warning: m', 'Warning: m'], $labels);
+    }
+
+    public function testReportingFailureNeverBreaksFlowAndUnregisterIsNoopWhenNotRegistered(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->method('captureMessage')->willThrowException(new RuntimeException('transport down'));
+
+        $handler = new BeaconPhpWarningHandler($client);
+        // @phpstan-ignore frankenphp.worker.noErrorReportingMutation
+        $previousReporting = error_reporting(E_ALL);
+        try {
+            self::assertTrue($handler->handle(E_USER_WARNING, 'boom', __FILE__, __LINE__));
+        } finally {
+            // @phpstan-ignore frankenphp.worker.noErrorReportingMutation
+            error_reporting($previousReporting);
+        }
+
+        $handler->unregister();
+        self::assertFalse(
+            (new ReflectionProperty(BeaconPhpWarningHandler::class, 'registered'))->getValue($handler),
+        );
     }
 }

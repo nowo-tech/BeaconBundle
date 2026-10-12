@@ -8,6 +8,9 @@ use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
+use function is_string;
+use function str_starts_with;
+
 /**
  * Defines the configuration tree for `nowo_beacon`.
  *
@@ -194,6 +197,36 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('level')
                             ->info('Minimum Monolog level to forward (e.g. error, warning).')
                             ->defaultValue('error')
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('self_test')
+                    ->info('Self-test producing real failures (console: nowo:beacon:self-test, always available).')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('http')
+                            ->info('Optional JSON endpoint (import routes with type nowo_beacon). Disabled by default.')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->booleanNode('enabled')
+                                    ->info('Register the self-test controller and routes (GET status, POST {path}/{kind} with CSRF).')
+                                    ->defaultFalse()
+                                ->end()
+                                ->scalarNode('path')
+                                    ->info('Route path of the self-test endpoint.')
+                                    ->defaultValue('/_beacon/self-test')
+                                    ->cannotBeEmpty()
+                                    ->validate()
+                                        ->ifTrue(static fn (mixed $path): bool => !is_string($path) || !str_starts_with($path, '/'))
+                                        ->thenInvalid('nowo_beacon.self_test.http.path must start with "/" (got %s).')
+                                    ->end()
+                                ->end()
+                                ->arrayNode('roles')
+                                    ->info('Roles allowed to use the endpoint (any of them). Empty = no role check (protect the path with your firewall).')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue(['ROLE_ADMIN'])
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

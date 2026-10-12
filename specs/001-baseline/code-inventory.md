@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-10-11  
-**Aligned with:** **v1.11.1** (no `src/` changes since 1.11.0; Messenger observability `specs/004`, deploy markers `specs/005`)
+**Last audited:** 2026-10-12  
+**Aligned with:** **v1.12.0** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
@@ -11,6 +11,15 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Command/TestConnectionCommand.php` | Console `nowo:beacon:test` | FR-CMD-001..007 (`specs/003-connection-test-command`) |
 | `src/Command/MessengerReportCommand.php` | Console `nowo:beacon:messenger-report` (`queue_snapshot`) | FR-MQ-005 (`specs/004-messenger-observability`) |
 | `src/Command/DeployCommand.php` | Console `nowo:beacon:deploy` (`deploy` item) | FR-DEP-001 (`specs/005-deploy-markers`) |
+| `src/Command/SelfTestCommand.php` | Console `nowo:beacon:self-test` (real failures) | FR-ST-001..003 (`specs/006-self-test`) |
+| `src/SelfTest/BeaconSelfTest.php` | Public self-test service (`status`, `assertReady`, `run`, `flush`) | FR-ST-001..004 |
+| `src/SelfTest/SelfTestResult.php` | Returning-kind result VO | FR-ST-001 |
+| `src/SelfTest/SelfTestUnavailableException.php` | Not configured / prerequisite missing | FR-ST-003 |
+| `src/SelfTest/BeaconSelfTestException.php` | Deliberate failure | FR-ST-004 |
+| `src/SelfTest/Message/BeaconSelfTestFailMessage.php` | Messenger message whose handler fails | FR-ST-001 |
+| `src/SelfTest/Message/BeaconSelfTestFailHandler.php` | Always-failing handler (messenger only) | FR-ST-001, FR-ST-005 |
+| `src/Controller/SelfTestController.php` | Optional JSON endpoint (roles + CSRF) | FR-ST-006, FR-ST-007 |
+| `src/Routing/BeaconRouteLoader.php` | `type: nowo_beacon` route loader | FR-ST-006 |
 | `src/Connection/BeaconConnectionTester.php` | DSN parse + sync probe | FR-CMD-002..007 |
 | `src/Connection/ConnectionTestResult.php` | Probe result VO | FR-CMD-* |
 | `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
@@ -69,4 +78,4 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 60 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 69 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

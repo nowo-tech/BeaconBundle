@@ -5,4 +5,7 @@
 
   Empty BEACON_DSN disables reporting.
 
+  Verify end to end with real failures:
+    php bin/console nowo:beacon:self-test captured-exception
+
   Docs: https://github.com/nowo-tech/BeaconBundle

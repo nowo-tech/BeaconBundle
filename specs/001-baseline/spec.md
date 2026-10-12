@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-10-11  
-**Aligned with:** public API / config through **v1.11.1** (Messenger observability, deploy markers; 1.11.1 is test-only)
+**Last audited:** 2026-10-12  
+**Aligned with:** public API / config through **v1.12.0** (Messenger observability, deploy markers, self-test)
 
 ## Summary
 
@@ -22,6 +22,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Path-based ignore list for HTTP exception reporting and auto HTTP transactions (`ignore_paths`)
 - Safe operation under FrankenPHP worker mode when the kernel is **not** reset between requests (scenario B)
 - Opt-in Messenger worker observability (transactions, retries, memory, queue snapshots) and deploy markers (`specs/004`, `specs/005`)
+- Real-failure self-test command, public service and optional JSON endpoint (`specs/006`)
 
 ## Non-goals
 
@@ -49,6 +50,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-11 | As a developer, I run FrankenPHP worker without kernel reset between requests | Breadcrumbs, spans, tags, trace id, auto HTTP transaction Request, and async pending POSTs do not leak across requests |
 | US-12 | As an operator, I observe Messenger workers (slow handlers, retries, backlog, memory) | `nowo_beacon.messenger.*` opt-ins + `nowo:beacon:messenger-report` (`specs/004-messenger-observability`) |
 | US-13 | As a developer, I mark deploys from CI | `nowo:beacon:deploy` sends a `deploy` item (`specs/005-deploy-markers`) |
+| US-14 | As a developer, I prove the whole wiring with real failures | `nowo:beacon:self-test`, `BeaconSelfTest` service, optional `self_test.http` endpoint (`specs/006-self-test`) |
 
 ## Functional requirements
 
@@ -99,6 +101,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-PW-001 | Optional PHP warning interceptor reports warnings / notices as events without converting them into exceptions |
 | FR-MQ-001..008 | Messenger observability — see [`specs/004-messenger-observability`](../004-messenger-observability/spec.md) (transactions, retries, `retry_state`, memory warning, `queue_snapshot`, flush after each worker message) |
 | FR-DEP-001..003 | Deploy markers — see [`specs/005-deploy-markers`](../005-deploy-markers/spec.md) |
+| FR-ST-001..008 | Self-test — see [`specs/006-self-test`](../006-self-test/spec.md) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
 | FR-WK-001 | On every **main** `kernel.request`, reset `BreadcrumbBuffer`, `SpanBuffer`, `Scope`, and `TraceIdProvider` (in addition to `kernel.reset` tags) so FrankenPHP workers without `services_resetter` do not leak per-request data |
 | FR-WK-002 | `BeaconRequestTransactionListener` MUST clear stored Request/timing at the start of every main request (before ignore-path early returns) |

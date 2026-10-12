@@ -58,6 +58,7 @@
         "symfony/messenger": "^7.0 || ^8.0",
         "symfony/scheduler": "^7.0 || ^8.0",
         "symfony/security-core": "^7.0 || ^8.0",
+        "symfony/security-csrf": "^7.0 || ^8.0",
         "symfony/yaml": "^7.0 || ^8.0"
     },
     "autoload": {
@@ -133,7 +134,8 @@
         "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
         "symfony/console": "Required to run the nowo:beacon:test connection probe command",
         "monolog/monolog": "Enable nowo_beacon.monolog_handler to forward log records to Beacon",
-        "symfony/security-bundle": "Enable send.user authenticated context via the security token storage",
+        "symfony/security-bundle": "Enable send.user authenticated context via the security token storage, and role checks for the optional self-test endpoint",
+        "symfony/security-csrf": "Required by the optional self-test JSON endpoint (nowo_beacon.self_test.http) for CSRF protection",
         "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
         "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context).",
         "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware)."

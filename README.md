@@ -32,6 +32,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - `nowo:beacon:deploy` deploy markers (release / environment / commit) for Beacon's suspect-deploy hints
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)
+- `nowo:beacon:self-test` producing **real** failures (uncaught exception / PHP error, PHP warning, captured exception / message, Messenger handler failure) reported by the bundle's own listeners, plus an optional, disabled-by-default JSON endpoint (`self_test.http`) and a public `BeaconSelfTest` service for admin pages
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)
 - Local FrankenPHP demo covering messages, exceptions, full context, fingerprints, breadcrumbs, user, transactions / N+1, auto HTTP tx, Monolog, Messenger failures, and console errors
 

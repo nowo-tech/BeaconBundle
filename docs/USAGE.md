@@ -19,6 +19,9 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
   - [Worker memory warning (opt-in)](#worker-memory-warning-opt-in)
   - [Queue snapshot command](#queue-snapshot-command)
 - [Deploy markers](#deploy-markers)
+- [Self-test](#self-test)
+  - [HTTP endpoint (optional, disabled by default)](#http-endpoint-optional-disabled-by-default)
+  - [Service API (custom admin pages)](#service-api-custom-admin-pages)
 - [HTTP extras](#http-extras)
 - [Trace correlation](#trace-correlation)
 - [Fatal PHP errors](#fatal-php-errors)
@@ -288,6 +291,83 @@ php bin/console nowo:beacon:deploy --release=1.4.0 --environment=prod --commit="
 ```
 
 Sends a `deploy` Envelope item (release metadata only; `before_send` is not applied). Symfony Beacon lists it under **Releases → Recent deploys**, adds it to the Analytics table, and marks issues first seen within 24 h after a deploy of their first release as **Suspect deploy**. With an empty DSN the command exits 0 and sends nothing.
+
+## Self-test
+
+`nowo:beacon:test` proves the DSN and the network path with a hand-built Envelope. `nowo:beacon:self-test` goes further: it produces **real** failures inside your application so the bundle's own listeners (console error listener, PHP warning handler, Messenger failure listener, `kernel.exception` listener for the HTTP endpoint) capture and ship them — exactly as production errors would be.
+
+```bash
+php bin/console nowo:beacon:self-test                       # list the kinds
+php bin/console nowo:beacon:self-test captured-exception    # or --type=captured-exception
+php bin/console nowo:beacon:self-test all                   # every returning kind
+php bin/console nowo:beacon:self-test uncaught-exception    # exits 1 by design
+php bin/console nowo:beacon:self-test php-error --run=ci42  # custom run token
+```
+
+| Kind | What happens | Reported by |
+|------|--------------|-------------|
+| `uncaught-exception` | Throws `Nowo\BeaconBundle\SelfTest\BeaconSelfTestException` | Console error listener (CLI) / `kernel.exception` listener (HTTP) |
+| `php-error` | Uncaught engine `\Error` (`DivisionByZeroError`) | Same as above |
+| `php-warning` | `trigger_error(E_USER_WARNING)`; execution continues | PHP warning handler (`register_php_warning_handler`) |
+| `captured-exception` | `captureException()` of a handled `BeaconSelfTestException` | Client (returns the event id) |
+| `captured-message` | `captureMessage()` at `warning` level | Client (returns the event id) |
+| `messenger-failure` | Dispatches `Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage`; its handler throws `UnrecoverableMessageHandlingException` (no retry) | Messenger failure listener (async) / captured inline (sync) |
+| `all` (CLI only) | Every returning kind; `messenger-failure` is skipped without a bus | — |
+
+Every event of a run is tagged `beacon_selftest=<run token>` and `beacon_selftest_kind=<kind>`; filter Issues with `beacon_selftest:<run>`. The command first validates the configuration (enabled flag, non-empty and parseable DSN, live client) and fails with a clear message otherwise. Async transports are flushed at the end of the command.
+
+**Messenger:** the kind needs `symfony/messenger` with a configured bus. To exercise the worker path, route the message to an async transport and run a worker:
+
+```yaml
+# config/packages/messenger.yaml
+framework:
+    messenger:
+        routing:
+            Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage: async
+```
+
+```bash
+php bin/console messenger:consume async --limit=1
+```
+
+Unrouted (synchronous) messages fail during `dispatch()`; no worker event fires, so the self-test captures the real `HandlerFailedException` inline (`delivery: inline`).
+
+### HTTP endpoint (optional, disabled by default)
+
+```yaml
+nowo_beacon:
+    self_test:
+        http:
+            enabled: true
+            path: /admin/beacon/self-test   # default /_beacon/self-test
+            roles: [ROLE_ADMIN]             # any of them; [] = rely on your firewall
+```
+
+```yaml
+# config/routes/nowo_beacon.yaml (safe to keep when disabled: the loader returns no routes)
+nowo_beacon:
+    resource: .
+    type: nowo_beacon
+```
+
+| Route | Method | Response |
+|-------|--------|----------|
+| `nowo_beacon_self_test` → `{path}` | `GET` | JSON `status` (origin, project, listeners), `kinds.uncaught` / `kinds.returning`, `csrf_token_id`, `csrf_token` |
+| `nowo_beacon_self_test_trigger` → `{path}/{kind}` | `POST` | Returning kinds: JSON `{kind, run, event_id, delivery, tag}`. Uncaught kinds throw (HTTP 500 by design; reported by the `kernel.exception` listener). |
+
+Send the CSRF token (id `nowo_beacon_self_test`) as the `_token` form field or the `X-CSRF-Token` header. Errors are JSON `{"error": …}`: `403` (role or CSRF), `404` (unknown kind), `409` (not configured / kind unavailable), `500` (CSRF protection unavailable — requires `symfony/security-csrf` and `framework.csrf_protection`). Role checks use `security.authorization_checker`; when roles are configured but SecurityBundle is missing, every call is refused. The endpoint is JSON-only (no Twig / translations); build your own admin UI on top of it or of the service below.
+
+### Service API (custom admin pages)
+
+Inject `Nowo\BeaconBundle\SelfTest\BeaconSelfTest` (autowirable by class):
+
+```php
+$status = $selfTest->status();              // enabled, origin, project_id, error, listeners{…}, messenger_bus
+$selfTest->assertReady();                   // throws SelfTestUnavailableException with a clear message
+$result = $selfTest->run($kind);            // uncaught kinds throw — let them propagate
+$result->runToken; $result->eventId; $result->delivery; // sent | warning_handler | queued | inline
+BeaconSelfTest::UNCAUGHT_KINDS; BeaconSelfTest::RETURNING_KINDS; BeaconSelfTest::TAG;
+```
 
 ## HTTP extras
 

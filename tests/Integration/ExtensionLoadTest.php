@@ -10,8 +10,10 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
+use Nowo\BeaconBundle\Command\SelfTestCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
+use Nowo\BeaconBundle\Controller\SelfTestController;
 use Nowo\BeaconBundle\DependencyInjection\Configuration;
 use Nowo\BeaconBundle\DependencyInjection\NowoBeaconExtension;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
@@ -31,6 +33,10 @@ use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
+use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
+use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
+use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
+use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
@@ -396,6 +402,54 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($container->hasDefinition(MessengerReportCommand::class));
         self::assertFalse($container->hasDefinition(BeaconMessengerTransactionListener::class));
         self::assertFalse($container->hasDefinition(BeaconMessengerRetryListener::class));
+    }
+
+    public function testSelfTestServicesAreRegisteredWithNullClient(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => '']], $container);
+
+        $service = $container->getDefinition(BeaconSelfTest::class);
+        self::assertFalse($service->getArgument('$reportingEnabled'));
+        self::assertEquals(new Reference(BeaconClientInterface::class), $service->getArgument('$client'));
+        self::assertEquals(new Reference('messenger.default_bus', ContainerBuilder::NULL_ON_INVALID_REFERENCE), $service->getArgument('$bus'));
+        self::assertTrue($container->getDefinition(SelfTestCommand::class)->hasTag('console.command'));
+        self::assertSame(
+            [['handles' => BeaconSelfTestFailMessage::class]],
+            $container->getDefinition(BeaconSelfTestFailHandler::class)->getTag('messenger.message_handler'),
+        );
+
+        $loader = $container->getDefinition(BeaconRouteLoader::class);
+        self::assertTrue($loader->hasTag('routing.loader'));
+        self::assertFalse($loader->getArgument('$selfTestEnabled'));
+        self::assertFalse($container->hasDefinition(SelfTestController::class));
+    }
+
+    public function testSelfTestHttpControllerWhenEnabled(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'                          => 'https://pubkey:secret@beacon.example.com/5',
+            'register_console_listener'    => false,
+            'register_php_warning_handler' => false,
+            'self_test'                    => ['http' => ['enabled' => true, 'path' => '/admin/beacon-selftest', 'roles' => ['ROLE_OPS']]],
+        ]], $container);
+
+        $service = $container->getDefinition(BeaconSelfTest::class);
+        self::assertTrue($service->getArgument('$reportingEnabled'));
+        self::assertFalse($service->getArgument('$consoleListener'));
+        self::assertFalse($service->getArgument('$phpWarningHandler'));
+        self::assertTrue($service->getArgument('$exceptionListener'));
+
+        $loader = $container->getDefinition(BeaconRouteLoader::class);
+        self::assertTrue($loader->getArgument('$selfTestEnabled'));
+        self::assertSame('/admin/beacon-selftest', $loader->getArgument('$selfTestPath'));
+
+        $controller = $container->getDefinition(SelfTestController::class);
+        self::assertTrue($controller->isPublic());
+        self::assertTrue($controller->hasTag('controller.service_arguments'));
+        self::assertSame(['ROLE_OPS'], $controller->getArgument('$roles'));
+        self::assertEquals(new Reference('security.csrf.token_manager', ContainerBuilder::NULL_ON_INVALID_REFERENCE), $controller->getArgument('$csrfTokenManager'));
     }
 
     private function createContainer(): ContainerBuilder

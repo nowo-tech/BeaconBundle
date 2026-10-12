@@ -1,0 +1,5 @@
+# Optional BeaconBundle routes (self-test JSON endpoint).
+# Returns no routes unless nowo_beacon.self_test.http.enabled is true.
+nowo_beacon:
+    resource: .
+    type: nowo_beacon

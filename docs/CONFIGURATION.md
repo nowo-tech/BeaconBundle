@@ -129,6 +129,9 @@ nowo_beacon:
 | `messenger.retry_sample_rate` | `1.0` | Fraction of retry / recovered events sent (0.0–1.0). |
 | `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
 | `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`. |
+| `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
+| `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |
+| `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). `[]` disables the role check (protect the path with your firewall). Without SecurityBundle and a non-empty list, access is refused. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |

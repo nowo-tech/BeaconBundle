@@ -119,4 +119,20 @@ final class ConfigurationTest extends TestCase
             'timeout' => 0.05,
         ]]);
     }
+
+    public function testSelfTestHttpDefaultsAndPathValidation(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        self::assertSame(['enabled' => false, 'path' => '/_beacon/self-test', 'roles' => ['ROLE_ADMIN']], $config['self_test']['http']);
+
+        $custom = (new Processor())->processConfiguration(new Configuration(), [[
+            'self_test' => ['http' => ['enabled' => true, 'path' => '/admin/beacon', 'roles' => []]],
+        ]]);
+        self::assertSame(['enabled' => true, 'path' => '/admin/beacon', 'roles' => []], $custom['self_test']['http']);
+
+        $this->expectException(InvalidConfigurationException::class);
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'self_test' => ['http' => ['path' => 'admin/beacon']],
+        ]]);
+    }
 }
