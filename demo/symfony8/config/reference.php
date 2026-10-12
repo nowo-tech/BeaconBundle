@@ -1189,6 +1189,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         enabled?: bool|Param, // Default: false
  *         level?: scalar|Param|null, // Minimum Monolog level to forward (e.g. error, warning). // Default: "error"
  *     },
+ *     self_test?: array{ // Self-test producing real failures (console: nowo:beacon:self-test, always available).
+ *         http?: array{ // Optional JSON endpoint (import routes with type nowo_beacon). Disabled by default.
+ *             enabled?: bool|Param, // Register the self-test controller and routes (GET status, POST {path}/{kind} with CSRF). // Default: false
+ *             path?: scalar|Param|null, // Route path of the self-test endpoint. // Default: "/_beacon/self-test"
+ *             roles?: list<scalar|Param|null>,
+ *         },
+ *     },
  *     send?: array{ // Opt-in/out switches for categories of context attached to outbound events.
  *         environment?: bool|Param, // Send environment tag. // Default: true
  *         release?: bool|Param, // Send release / code version when configured. // Default: true

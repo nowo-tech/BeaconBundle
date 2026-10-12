@@ -1,6 +1,21 @@
 # Upgrading
 
 
+## To 1.12.0
+
+From **1.11.1** — real-failure self-test (command, service, optional JSON endpoint).
+
+```bash
+composer update nowo-tech/beacon-bundle
+php bin/console cache:clear
+```
+
+- No breaking changes, no required config. The HTTP endpoint is off by default (`nowo_beacon.self_test.http.enabled: false`).
+- New command: `php bin/console nowo:beacon:self-test <kind>` (`uncaught-exception`, `php-error`, `php-warning`, `captured-exception`, `captured-message`, `messenger-failure`, `all`). Uncaught kinds exit 1 by design.
+- Optional: route `Nowo\BeaconBundle\SelfTest\BeaconSelfTestFailMessage` to an async transport to exercise the worker failure listener (`messenger:consume`).
+- Optional endpoint: set `self_test.http.enabled: true` (`path`, `roles`), import routes (`config/routes/nowo_beacon.yaml`: `{ resource: ., type: nowo_beacon }`) and make sure `symfony/security-csrf` + `framework.csrf_protection` are available.
+- Apps with their own self-test page can inject `Nowo\BeaconBundle\SelfTest\BeaconSelfTest` and call `run($kind)` instead of maintaining their own failure code. Kind rename vs. Symfony Beacon's former page: `uncaught-error` → `php-error`.
+
 ## To 1.11.1
 
 From **1.11.0** — test-only fix (PHP 8.2 / 8.3 compatibility of the test suite).
@@ -87,6 +102,8 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.12.0](#to-1120)
+- [To 1.11.1](#to-1111)
 - [To 1.11.0](#to-1110)
 - [To 1.10.1](#to-1101)
 - [To 1.10.0](#to-1100)

@@ -117,7 +117,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "841fedf711ab40473d927098f50b606428cb1701"
+                "reference": "9716f38fc8f2e767f36b8476bb5288878e7b317f"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -146,6 +146,7 @@
                 "symfony/messenger": "^7.0 || ^8.0",
                 "symfony/scheduler": "^7.0 || ^8.0",
                 "symfony/security-core": "^7.0 || ^8.0",
+                "symfony/security-csrf": "^7.0 || ^8.0",
                 "symfony/yaml": "^7.0 || ^8.0"
             },
             "suggest": {
@@ -155,7 +156,8 @@
                 "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
                 "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
                 "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context).",
-                "symfony/security-bundle": "Enable send.user authenticated context via the security token storage"
+                "symfony/security-bundle": "Enable send.user authenticated context via the security token storage, and role checks for the optional self-test endpoint",
+                "symfony/security-csrf": "Required by the optional self-test JSON endpoint (nowo_beacon.self_test.http) for CSRF protection"
             },
             "type": "symfony-bundle",
             "extra": {
