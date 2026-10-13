@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.13.1](#to-1131)
 - [To 1.13.0](#to-1130)
 - [To 1.12.0](#to-1120)
 - [To 1.11.1](#to-1111)
@@ -74,6 +75,16 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.13.1
+
+From **1.13.0** — security - login-link hash, signatures and OAuth code redacted from request URLs.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. No application upgrade steps.
 
 ## To 1.13.0
 
