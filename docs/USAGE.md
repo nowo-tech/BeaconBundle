@@ -381,7 +381,7 @@ With `register_error_listener: true` and `send.request: true` (defaults), automa
 | `query_keys` | Query parameter **names** only (no values) |
 | `client` | Optional `{ip, user_agent}` when `send.client: true` (default **false**; may be PII) |
 
-`extra.request_uri` / `extra.request_method` are still attached under the same `send.request` gate.
+`extra.request_uri` / `extra.request_method` are still attached under the same `send.request` gate. URLs (and the Referer header) have secret-like query parameters (`token`, `password`, `api_key`, …) replaced with `[Filtered]`.
 
 ## Trace correlation
 

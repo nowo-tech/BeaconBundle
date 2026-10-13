@@ -7,6 +7,7 @@ namespace Nowo\BeaconBundle\EventListener;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -61,7 +62,7 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         if ($this->sendRequest) {
             $request = $event->getRequest();
             $extra   = [
-                'request_uri'    => $request->getUri(),
+                'request_uri'    => SensitiveValueRedactor::redactUrl($request->getUri()),
                 'request_method' => $request->getMethod(),
             ];
             $http = HttpRequestSnapshot::fromRequest($request, $throwable, $this->sendClient);

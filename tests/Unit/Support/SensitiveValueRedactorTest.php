@@ -31,4 +31,34 @@ final class SensitiveValueRedactorTest extends TestCase
         self::assertSame(1, $out['nested']['ok']);
         self::assertSame(stdClass::class, $out['object']);
     }
+
+    public function testRedactQueryStringFiltersSecretKeysAndKeepsOthers(): void
+    {
+        self::assertSame('', SensitiveValueRedactor::redactQueryString(''));
+        self::assertSame(
+            'page=2&token=[Filtered]&api_key=[Filtered]&user%5Bpassword%5D=[Filtered]&flag&q=hello%20world',
+            SensitiveValueRedactor::redactQueryString('page=2&token=abc123&api_key=k&user%5Bpassword%5D=pw&flag&q=hello%20world'),
+        );
+        self::assertSame(
+            'next=' . rawurlencode('https://[Filtered]@db.test/x'),
+            SensitiveValueRedactor::redactQueryString('next=' . rawurlencode('https://admin:pw@db.test/x')),
+        );
+        self::assertSame(
+            'pem=[Filtered]',
+            SensitiveValueRedactor::redactQueryString('pem=' . rawurlencode('-----BEGIN PRIVATE KEY-----')),
+        );
+    }
+
+    public function testRedactUrlFiltersQueryAndUserinfoAndKeepsFragment(): void
+    {
+        self::assertSame('https://demo.test/path', SensitiveValueRedactor::redactUrl('https://demo.test/path'));
+        self::assertSame(
+            'https://demo.test/reset?token=[Filtered]&x=1#frag',
+            SensitiveValueRedactor::redactUrl('https://demo.test/reset?token=s3cr3t&x=1#frag'),
+        );
+        self::assertSame(
+            'https://[Filtered]@demo.test/?access_token=[Filtered]',
+            SensitiveValueRedactor::redactUrl('https://user:pw@demo.test/?access_token=abc'),
+        );
+    }
 }

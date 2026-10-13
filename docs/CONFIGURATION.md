@@ -134,7 +134,7 @@ nowo_beacon:
 | `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). `[]` disables the role check (protect the path with your firewall). Without SecurityBundle and a non-empty list, access is refused. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
-| `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (SQL literals scrubbed / truncated). |
+| `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (string, double-quoted and numeric literals scrubbed to `?`; truncated). |
 | `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest URLs are skipped. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
 | `ignore_paths` | `IgnoredRequestPath::DEFAULTS` | HTTP path prefixes skipped by the exception listener and auto HTTP transactions (trailing slashes ignored). Defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools Appspecific probe — aligned with Symfony Beacon security/PWA/site-backup/setup exclusions. Replacing the list removes defaults; use `[]` to report every path. |
@@ -161,7 +161,7 @@ Each flag controls whether that category is attached to outbound events:
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
 | `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). Enable `send.stack_vars` for `vars` (call arguments). |
-| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
+| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent; secret-like query parameters such as `token` / `password` / `api_key` are sent as `[Filtered]`) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |
 | `send.framework` | `true` | `contexts.framework` (Symfony version when available) |

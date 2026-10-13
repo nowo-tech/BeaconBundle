@@ -121,6 +121,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- `send.request`: `request.url`, `request.query_string`, the `Referer` header and `extra.request_uri` now redact secret-like query parameters (`token`, `password`, `api_key`, `secret`, `auth`, … — same rules as `SensitiveValueRedactor::redactMap()`) to `[Filtered]`, plus `user:pass@` userinfo. Previously reset/magic-link tokens in URLs reached the Beacon server verbatim.
+- SQL descriptions (`instrumentation.doctrine` spans/breadcrumbs, `contexts.db`): `SqlNormalizer` now also scrubs numeric literals (`= 123456` → `= ?`, hex included) and double-quoted strings (`"…"` → `"?"`), not only single-quoted strings. Placeholders (`?`, `$1`) and digits inside identifiers are kept.
+
+### Added
+
+- `SensitiveValueRedactor::redactQueryString()` and `SensitiveValueRedactor::redactUrl()`.
+
 ## [1.12.0] - 2026-10-12
 
 ### Added

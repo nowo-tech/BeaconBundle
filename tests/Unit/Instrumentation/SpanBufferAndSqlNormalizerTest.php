@@ -54,7 +54,20 @@ final class SpanBufferAndSqlNormalizerTest extends TestCase
         self::assertStringContainsString("'?'", $out);
         self::assertStringNotContainsString('secret@example.com', $out);
 
+        self::assertStringNotContainsString('= 1', $out);
+
         $long = str_repeat('a', SqlNormalizer::MAX_SQL_LENGTH + 50);
         self::assertSame(SqlNormalizer::MAX_SQL_LENGTH, mb_strlen(SqlNormalizer::normalize($long)));
+    }
+
+    public function testSqlNormalizerScrubsNumbersAndDoubleQuotedStrings(): void
+    {
+        self::assertSame(
+            'SELECT t0_.id AS id_0 FROM users t0_ WHERE t0_.pin = ? AND t0_.balance > ? AND t0_.ratio < ? AND t0_.flags = ? AND t0_.note = "?" AND t0_.name = \'?\' AND t0_.uid = $1 LIMIT ? OFFSET ?',
+            SqlNormalizer::normalize(
+                "SELECT t0_.id AS id_0 FROM users t0_\n WHERE t0_.pin = 123456 AND t0_.balance > 99.95 AND t0_.ratio < 1.5e3 AND t0_.flags = 0x1F AND t0_.note = \"4111 1111 1111 1111\" AND t0_.name = 'o\\'neil' AND t0_.uid = $1 LIMIT 10 OFFSET 20",
+            ),
+        );
+        self::assertSame('SELECT * FROM t WHERE a = ? AND b IN (?, ?)', SqlNormalizer::normalize('SELECT * FROM t WHERE a = ? AND b IN (?, ?)'));
     }
 }

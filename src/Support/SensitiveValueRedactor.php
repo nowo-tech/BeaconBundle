@@ -6,6 +6,8 @@ namespace Nowo\BeaconBundle\Support;
 
 use Stringable;
 
+use function explode;
+use function implode;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -13,8 +15,12 @@ use function is_int;
 use function is_object;
 use function is_string;
 use function preg_match;
+use function rawurlencode;
 use function str_contains;
+use function strpos;
 use function strtolower;
+use function substr;
+use function urldecode;
 
 /**
  * Redacts secret-like keys and credential-shaped values for safe Beacon extras.
@@ -54,6 +60,59 @@ final class SensitiveValueRedactor
         }
 
         return $out;
+    }
+
+    /**
+     * Redact a raw query string pair by pair (`token=abc&page=2` → `token=[Filtered]&page=2`).
+     *
+     * Each decoded key/value goes through the same rules as {@see redactMap()}; pairs that do not
+     * need redaction are kept byte for byte (order, encoding and array syntax preserved).
+     */
+    public static function redactQueryString(string $queryString): string
+    {
+        if ($queryString === '') {
+            return $queryString;
+        }
+
+        $pairs = explode('&', $queryString);
+        foreach ($pairs as $index => $pair) {
+            $separator = strpos($pair, '=');
+            if ($separator === false) {
+                continue;
+            }
+
+            $key   = urldecode(substr($pair, 0, $separator));
+            $value = urldecode(substr($pair, $separator + 1));
+
+            $redacted = self::redactMap([$key => $value])[$key];
+            if ($redacted !== $value) {
+                $pairs[$index] = substr($pair, 0, $separator + 1) . (is_string($redacted) && $redacted !== self::FILTERED ? rawurlencode($redacted) : self::FILTERED);
+            }
+        }
+
+        return implode('&', $pairs);
+    }
+
+    /**
+     * Redact credentials in a URL: userinfo (`user:pass@`) and secret-like query parameters.
+     */
+    public static function redactUrl(string $url): string
+    {
+        $url = self::redactString($url);
+
+        $queryStart = strpos($url, '?');
+        if ($queryStart === false) {
+            return $url;
+        }
+
+        $fragment      = '';
+        $fragmentStart = strpos($url, '#', $queryStart);
+        if ($fragmentStart !== false) {
+            $fragment = substr($url, $fragmentStart);
+            $url      = substr($url, 0, $fragmentStart);
+        }
+
+        return substr($url, 0, $queryStart + 1) . self::redactQueryString(substr($url, $queryStart + 1)) . $fragment;
     }
 
     /**

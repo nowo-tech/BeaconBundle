@@ -49,6 +49,28 @@ final class BeaconExceptionListenerTest extends TestCase
         $listener->onKernelException($event);
     }
 
+    public function testRedactsSecretQueryParametersInRequestUri(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client
+            ->expects(self::once())
+            ->method('captureException')
+            ->with(
+                self::isInstanceOf(RuntimeException::class),
+                self::callback(static fn (array $extra): bool => str_ends_with($extra['request_uri'], '/boom?foo=1&token=[Filtered]')),
+            );
+
+        $listener = new BeaconExceptionListener($client, true, []);
+        $event    = new ExceptionEvent(
+            $this->createMock(HttpKernelInterface::class),
+            Request::create('/boom?token=s3cr3t&foo=1'),
+            HttpKernelInterface::MAIN_REQUEST,
+            new RuntimeException('boom'),
+        );
+        $listener->onKernelException($event);
+    }
+
     public function testIgnoresConfiguredExceptions(): void
     {
         $client = $this->createMock(BeaconClientInterface::class);

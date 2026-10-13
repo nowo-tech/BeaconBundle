@@ -304,6 +304,26 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('demo.test', $payload['request']['headers']['host']);
     }
 
+    public function testRedactsSecretQueryParametersInRequestUrlQueryStringAndReferer(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $request = Request::create('https://demo.test/reset?token=s3cr3t&page=2&api_key=k3y', 'GET');
+        $request->headers->set('Referer', 'https://demo.test/login?password=hunter2&next=%2Fhome');
+        $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, new RequestStack([$request]));
+
+        $body          = $builder->buildEventEnvelope($dsn, 'with secrets');
+        [, , $payload] = $this->decodeEnvelope($body);
+
+        foreach (['s3cr3t', 'k3y', 'hunter2'] as $secret) {
+            self::assertStringNotContainsString($secret, $body);
+        }
+        self::assertSame('https://demo.test/reset?api_key=[Filtered]&page=2&token=[Filtered]', $payload['request']['url']);
+        self::assertSame('api_key=[Filtered]&page=2&token=[Filtered]', $payload['request']['query_string']);
+        self::assertSame('https://demo.test/login?password=[Filtered]&next=%2Fhome', $payload['request']['headers']['referer']);
+        self::assertSame($payload['request']['url'], $payload['extra']['request_uri']);
+        self::assertSame($payload['request'], $payload['contexts']['request']);
+    }
+
     public function testPreservesProvidedLevelValues(): void
     {
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');

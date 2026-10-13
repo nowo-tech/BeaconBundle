@@ -14,6 +14,7 @@ use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Support\FrameVarsSerializer;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use RuntimeException;
@@ -365,10 +366,11 @@ final class EnvelopeBuilder
             return;
         }
 
+        // Secret-like query parameters (token, api_key, …) and URL userinfo are redacted.
         $requestContext = [
-            'url'          => $request->getUri(),
+            'url'          => SensitiveValueRedactor::redactUrl($request->getUri()),
             'method'       => $request->getMethod(),
-            'query_string' => $request->getQueryString() ?? '',
+            'query_string' => SensitiveValueRedactor::redactQueryString($request->getQueryString() ?? ''),
         ];
 
         $http = HttpRequestSnapshot::fromRequest($request, null, $this->sendOptions->client);
@@ -394,7 +396,8 @@ final class EnvelopeBuilder
             'x-requested-with',
         ] as $headerName) {
             if ($request->headers->has($headerName)) {
-                $headers[$headerName] = (string) $request->headers->get($headerName);
+                $value                = (string) $request->headers->get($headerName);
+                $headers[$headerName] = $headerName === 'referer' ? SensitiveValueRedactor::redactUrl($value) : $value;
             }
         }
         if ($headers !== []) {
