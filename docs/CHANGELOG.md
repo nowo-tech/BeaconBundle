@@ -605,7 +605,10 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.12.0...v1.13.0
+[1.12.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.1...v1.12.0
+[1.11.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.9.1...v1.10.0
