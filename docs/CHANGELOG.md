@@ -60,11 +60,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- `send.request`: URL credential parameters are now also redacted in `request.url`, `request.query_string`, the `Referer` header and `extra.request_uri`: `hash` (Symfony login links `?user=…&expires=…&hash=…`), `_hash`, `signature` (incl. `X-Amz-Signature`), `sig` and `code` (OAuth/OIDC authorization callbacks), in addition to the `token`/`password`/`api_key`/… rules. 1.13.0 did not match these names, so login-link hashes and OAuth codes were still sent verbatim. The extra names apply to URLs only; Monolog context, console input and stack vars keep the existing key rules.
+
 ## [1.13.0] - 2026-10-13
 
 ### Security
 
-- `send.request`: `request.url`, `request.query_string`, the `Referer` header and `extra.request_uri` now redact secret-like query parameters (`token`, `password`, `api_key`, `secret`, `auth`, … — same rules as `SensitiveValueRedactor::redactMap()`) to `[Filtered]`, plus `user:pass@` userinfo. Previously reset/magic-link tokens in URLs reached the Beacon server verbatim.
+- `send.request`: `request.url`, `request.query_string`, the `Referer` header and `extra.request_uri` now redact secret-like query parameters (`token`, `password`, `api_key`, `secret`, `auth`, … — same rules as `SensitiveValueRedactor::redactMap()`) to `[Filtered]`, plus `user:pass@` userinfo. Previously reset/magic-link tokens passed as `?token=` reached the Beacon server verbatim (Symfony login-link `hash` and OAuth `code` parameters were not covered; fixed in Unreleased).
 - SQL descriptions (`instrumentation.doctrine` spans/breadcrumbs, `contexts.db`): `SqlNormalizer` now also scrubs numeric literals (`= 123456` → `= ?`, hex included) and double-quoted strings (`"…"` → `"?"`), not only single-quoted strings. Placeholders (`?`, `$1`) and digits inside identifiers are kept.
 
 ### Added

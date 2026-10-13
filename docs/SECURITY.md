@@ -48,7 +48,7 @@ The bundle already includes several defensive defaults:
 Residual risk to remember:
 
 - The client can generate a local event id even if delivery later fails. Treat the Beacon UI or server logs as the source of truth for accepted events.
-- When `send.request` is true, events and transactions include the current HTTP URL/method/query and a small allow-list of headers (Host, User-Agent, … — not cookies or Authorization). Query parameters with secret-like names (`token`, `password`, `api_key`, `secret`, `auth`, …) and URL userinfo are replaced with `[Filtered]` in the URL, query string, Referer and `extra.request_uri`; other values (e.g. `?code=`, `?email=`) are sent as-is, so still avoid secrets in URLs or disable `send.request` if URLs are sensitive.
+- When `send.request` is true, events and transactions include the current HTTP URL/method/query and a small allow-list of headers (Host, User-Agent, … — not cookies or Authorization). Query parameters with secret-like names (`token`, `password`, `api_key`, `secret`, `auth`, …), URL credential parameters (`hash` from Symfony login links, `_hash`, `signature`, `sig`, OAuth `code`) and URL userinfo are replaced with `[Filtered]` in the URL, query string, Referer and `extra.request_uri`; other values (e.g. `?email=`, `?state=`) are sent as-is, so still avoid secrets in URLs or disable `send.request` if URLs are sensitive.
 - `send.user` is off by default. Enabling it may transmit personal data (user identifier / email) to your Beacon host; keep it aligned with your privacy policy and legal pages.
 - `send.stack_vars` is off by default. Enabling it attaches function arguments to stack frames (`vars`); treat that like other PII and keep redaction/`before_send` in mind.
 

@@ -324,6 +324,24 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame($payload['request'], $payload['contexts']['request']);
     }
 
+    public function testRedactsLoginLinkAndOAuthCallbackCredentials(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $request = Request::create('https://demo.test/login_check?user=jane&expires=1760000000&hash=LoginLinkHash123', 'GET');
+        $request->headers->set('Referer', 'https://demo.test/connect/google/check?code=OAuthCode456&state=st8');
+        $builder = new EnvelopeBuilder('test', '1.2.3', 'ci', new SendOptions(stacktrace: false), null, null, new RequestStack([$request]));
+
+        $body          = $builder->buildEventEnvelope($dsn, 'login link');
+        [, , $payload] = $this->decodeEnvelope($body);
+
+        self::assertStringNotContainsString('LoginLinkHash123', $body);
+        self::assertStringNotContainsString('OAuthCode456', $body);
+        self::assertSame('https://demo.test/login_check?expires=1760000000&hash=[Filtered]&user=jane', $payload['request']['url']);
+        self::assertSame('expires=1760000000&hash=[Filtered]&user=jane', $payload['request']['query_string']);
+        self::assertSame('https://demo.test/connect/google/check?code=[Filtered]&state=st8', $payload['request']['headers']['referer']);
+        self::assertSame($payload['request']['url'], $payload['extra']['request_uri']);
+    }
+
     public function testPreservesProvidedLevelValues(): void
     {
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');

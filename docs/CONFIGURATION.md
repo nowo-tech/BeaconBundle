@@ -161,7 +161,7 @@ Each flag controls whether that category is attached to outbound events:
 | `send.release` | `true` | `release` (if configured) |
 | `send.server_name` | `true` | `server_name` |
 | `send.stacktrace` | `true` | Exception frames + `culprit`; for `captureMessage()` also a current PHP stacktrace (BeaconBundle frames filtered out). When files are readable, frames include `abs_path` and source context (`pre_context` / `context_line` / `post_context`, ≈5 lines). Enable `send.stack_vars` for `vars` (call arguments). |
-| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent; secret-like query parameters such as `token` / `password` / `api_key` are sent as `[Filtered]`) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
+| `send.request` | `true` | `request` + `contexts.request` (url, method, query, safe headers such as Host/User-Agent; secret-like query parameters such as `token` / `password` / `api_key` and URL credentials such as login-link `hash`, `signature` / `sig` and OAuth `code` are sent as `[Filtered]`) and `extra.request_*` when an HTTP request is available. Automatic HTTP exceptions also get nested `extra.http` (`route`, `controller`, `status_code`, `query_keys`). |
 | `send.user` | `false` | Authenticated user summary (`id` / `username` / `email` when available). **May include PII** — keep off unless your privacy policy allows it. |
 | `send.runtime` | `true` | `contexts.runtime` (PHP version) |
 | `send.framework` | `true` | `contexts.framework` (Symfony version when available) |

@@ -15,11 +15,13 @@ use function is_int;
 use function is_object;
 use function is_string;
 use function preg_match;
+use function preg_replace;
 use function rawurlencode;
 use function str_contains;
 use function strpos;
 use function strtolower;
 use function substr;
+use function trim;
 use function urldecode;
 
 /**
@@ -30,6 +32,14 @@ final class SensitiveValueRedactor
     public const FILTERED = '[Filtered]';
 
     private const SENSITIVE_KEY = '/(?:password|passwd|secret|token|api[_-]?key|private[_-]?key|access[_-]?key|auth|credential|bearer|dsn|connection[_-]?string|salt|nonce)/i';
+
+    /**
+     * Extra query parameter names that carry one-time credentials in URLs only: Symfony login links
+     * (`hash`), signed URLs (`_hash`, `signature`, `X-Amz-Signature`, `sig`) and OAuth callbacks (`code`).
+     * Not part of {@see SENSITIVE_KEY}: a `code` or `hash` key in Monolog context or console input is
+     * usually not a secret.
+     */
+    private const SENSITIVE_URL_PARAMETER = '/^(?:_?hash|sig|code)$|signature|token/i';
 
     /**
      * Whether `$key` looks sensitive (password, token, DSN, …).
@@ -65,7 +75,8 @@ final class SensitiveValueRedactor
     /**
      * Redact a raw query string pair by pair (`token=abc&page=2` → `token=[Filtered]&page=2`).
      *
-     * Each decoded key/value goes through the same rules as {@see redactMap()}; pairs that do not
+     * URL credential parameters (`hash`, `_hash`, `signature`, `sig`, `code`, `token`) are filtered; every
+     * other decoded key/value goes through the same rules as {@see redactMap()}; pairs that do not
      * need redaction are kept byte for byte (order, encoding and array syntax preserved).
      */
     public static function redactQueryString(string $queryString): string
@@ -84,6 +95,12 @@ final class SensitiveValueRedactor
             $key   = urldecode(substr($pair, 0, $separator));
             $value = urldecode(substr($pair, $separator + 1));
 
+            if ($value !== '' && self::isSensitiveUrlParameter($key)) {
+                $pairs[$index] = substr($pair, 0, $separator + 1) . self::FILTERED;
+
+                continue;
+            }
+
             $redacted = self::redactMap([$key => $value])[$key];
             if ($redacted !== $value) {
                 $pairs[$index] = substr($pair, 0, $separator + 1) . (is_string($redacted) && $redacted !== self::FILTERED ? rawurlencode($redacted) : self::FILTERED);
@@ -91,6 +108,14 @@ final class SensitiveValueRedactor
         }
 
         return implode('&', $pairs);
+    }
+
+    /**
+     * Whether a query parameter name (array syntax `name[...]` reduced to `name`) carries a URL credential.
+     */
+    private static function isSensitiveUrlParameter(string $key): bool
+    {
+        return preg_match(self::SENSITIVE_URL_PARAMETER, (string) preg_replace('/\[.*$/s', '', trim($key))) === 1;
     }
 
     /**

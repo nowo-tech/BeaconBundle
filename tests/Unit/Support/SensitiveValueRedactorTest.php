@@ -61,4 +61,33 @@ final class SensitiveValueRedactorTest extends TestCase
             SensitiveValueRedactor::redactUrl('https://user:pw@demo.test/?access_token=abc'),
         );
     }
+
+    public function testRedactUrlFiltersLoginLinkAndSignedUrlParameters(): void
+    {
+        self::assertSame(
+            'https://demo.test/login_check?user=jane%40example.com&expires=1760000000&hash=[Filtered]',
+            SensitiveValueRedactor::redactUrl('https://demo.test/login_check?user=jane%40example.com&expires=1760000000&hash=Jm9hB2p0dE5kbz0~abc'),
+        );
+        self::assertSame(
+            'https://demo.test/verify?id=7&_hash=[Filtered]&signature=[Filtered]&sig=[Filtered]&X-Amz-Signature=[Filtered]&expires=9',
+            SensitiveValueRedactor::redactUrl('https://demo.test/verify?id=7&_hash=h1&signature=s1&sig=s2&X-Amz-Signature=s3&expires=9'),
+        );
+    }
+
+    public function testRedactUrlFiltersOAuthCallbackCode(): void
+    {
+        self::assertSame(
+            'https://demo.test/connect/check?code=[Filtered]&state=xyz&country_code=ES&zip_code=28001',
+            SensitiveValueRedactor::redactUrl('https://demo.test/connect/check?code=4%2F0AfJohXk-secret&state=xyz&country_code=ES&zip_code=28001'),
+        );
+        self::assertSame('code=&page=1', SensitiveValueRedactor::redactQueryString('code=&page=1'));
+        self::assertSame('code%5B0%5D=[Filtered]', SensitiveValueRedactor::redactQueryString('code%5B0%5D=x'));
+    }
+
+    public function testUrlOnlyParameterNamesAreNotFilteredInMaps(): void
+    {
+        $out = SensitiveValueRedactor::redactMap(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'signature' => 'Jane']);
+
+        self::assertSame(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'signature' => 'Jane'], $out);
+    }
 }
