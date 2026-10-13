@@ -1,5 +1,15 @@
 # Upgrading
 
+## To 1.13.0
+
+From **1.12.0** — security - secret query params redacted in request payloads, SQL literals scrubbed.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- With `send.request` enabled, query parameters with secret-like names arrive as `[Filtered]` in the request URL, query string, Referer and `extra.request_uri`.
+- SQL span/breadcrumb descriptions now show `?` for numbers and double-quoted strings (including PostgreSQL quoted identifiers); dashboards grouping on those literals will change.
 
 ## To 1.12.0
 
@@ -102,6 +112,7 @@ php bin/console cache:clear
 
 ## Table of contents
 
+- [To 1.13.0](#to-1130)
 - [To 1.12.0](#to-1120)
 - [To 1.11.1](#to-1111)
 - [To 1.11.0](#to-1110)
@@ -585,7 +596,6 @@ nowo_beacon:
 ### Compatibility
 
 - Existing capture APIs unchanged. Disable fatals with `register_fatal_handler: false` if you already handle them.
-
 
 ## Upgrading from 1.6.11 to 1.7.0
 

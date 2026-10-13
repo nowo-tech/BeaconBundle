@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.13.0] - 2026-10-13](#1130-2026-10-13)
 - [[1.12.0] - 2026-10-12](#1120-2026-10-12)
   - [Added](#added)
   - [Changed](#changed)
@@ -121,6 +122,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-10-13
+
 ### Security
 
 - `send.request`: `request.url`, `request.query_string`, the `Referer` header and `extra.request_uri` now redact secret-like query parameters (`token`, `password`, `api_key`, `secret`, `auth`, … — same rules as `SensitiveValueRedactor::redactMap()`) to `[Filtered]`, plus `user:pass@` userinfo. Previously reset/magic-link tokens in URLs reached the Beacon server verbatim.
@@ -187,7 +190,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **`send.stack_vars`**: opt-in Sentry-compatible `frame.vars` from PHP call arguments (reflection parameter names, size caps, `SensitiveValueRedactor`). Off by default (PII). Requires `send.stacktrace`.
-
 
 ## [1.9.1] - 2026-09-30
 
