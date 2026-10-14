@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.14.0] - 2026-10-14](#1140---2026-10-14)
 - [[1.13.1] - 2026-10-13](#1131---2026-10-13)
 - [[1.13.0] - 2026-10-13](#1130---2026-10-13)
 - [[1.12.0] - 2026-10-12](#1120---2026-10-12)
@@ -60,6 +61,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.14.0] - 2026-10-14
+
+### Fixed
+
+- Messenger listeners (final failure, retry / recovered, `messenger.transactions`) no longer report on Beacon's own `SendBeaconEnvelopeMessage`. With `transport.mode: messenger` and `messenger.transactions: true`, each handled send produced a transaction that queued another send, an endless loop; a failed send under `report_retries` did the same. Found in Symfony Beacon (audit SCALE-SELF-INGEST-LOOP), which had to drop these events with a `before_send` hook.
+
+### Added
+
+- `messenger.ignore_message_classes`: message FQCNs (subclasses / interfaces match) the Messenger listeners never report.
+- `PERFORMANCE.md`: routing recipe for `transport.mode: messenger` (own transport, `max_retries: 0`, consumed last, `sync://` in tests).
 
 ## [1.13.1] - 2026-10-13
 

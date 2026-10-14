@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.14.0](#to-1140)
 - [To 1.13.1](#to-1131)
 - [To 1.13.0](#to-1130)
 - [To 1.12.0](#to-1120)
@@ -75,6 +76,18 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.14.0
+
+From **1.13.1** — Messenger listeners skip Beacon's own queued send; new `messenger.ignore_message_classes`.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. New constructor arguments are optional and last.
+- With `transport.mode: messenger`, a `before_send` hook that drops events whose `extra.messenger.message_class` is `Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage` can be removed.
+- Optional: route the send to its own no-retry transport ([PERFORMANCE.md](PERFORMANCE.md#messenger-mode-routing)).
 
 ## To 1.13.1
 
