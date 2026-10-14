@@ -24,4 +24,5 @@ echo "FrankenPHP mode: $MODE"
 
 mkdir -p /app/var/cache /app/var/log
 chmod -R 777 /app/var
+if [ ! -f /app/vendor/autoload_runtime.php ]; then composer install --no-interaction; fi
 exec frankenphp run --config /etc/frankenphp/Caddyfile --adapter caddyfile
