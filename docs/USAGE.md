@@ -254,6 +254,19 @@ nowo_beacon:
 
 Each handled message sends a `transaction` named after the message class with `extra.messenger.op = queue.process` and `status` (`ok`, `failed`, `retry`). Spans buffered before the message was received are dropped, so idle-time queries never leak into the next message.
 
+### Skipped messages
+
+The failure, retry and transaction listeners never report Beacon's own queued send (`SendBeaconEnvelopeMessage`, `transport.mode: messenger`): a report about it would queue another send, an endless loop when ingest is slow or down. Add host messages that should stay silent (health pings, heartbeat jobs) with:
+
+```yaml
+nowo_beacon:
+    messenger:
+        ignore_message_classes:
+            - App\Message\HeartbeatMessage
+```
+
+Subclasses and interfaces match. Use `ignore_exceptions` to skip by exception instead.
+
 ### Worker memory warning (opt-in)
 
 ```yaml

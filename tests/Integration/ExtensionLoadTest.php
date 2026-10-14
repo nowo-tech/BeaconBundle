@@ -372,17 +372,24 @@ final class ExtensionLoadTest extends TestCase
                 'retry_sample_rate'           => 0.5,
                 'worker_memory_warning_ratio' => 0.9,
                 'failure_transports'          => ['failed', 'failed_high'],
+                'ignore_message_classes'      => ['App\\Message\\PingMessage'],
             ],
         ]], $container);
 
         $tx = $container->getDefinition(BeaconMessengerTransactionListener::class);
         self::assertSame(0.25, $tx->getArgument('$sampleRate'));
+        self::assertSame(['App\\Message\\PingMessage'], $tx->getArgument('$ignoreMessageClasses'));
         self::assertTrue($tx->hasTag('kernel.reset'));
 
         $retry = $container->getDefinition(BeaconMessengerRetryListener::class);
         self::assertFalse($retry->getArgument('$reportRetries'));
         self::assertTrue($retry->getArgument('$reportRecovered'));
         self::assertSame(0.5, $retry->getArgument('$sampleRate'));
+        self::assertSame(['App\\Message\\PingMessage'], $retry->getArgument('$ignoreMessageClasses'));
+        self::assertSame(
+            ['App\\Message\\PingMessage'],
+            $container->getDefinition(BeaconMessengerFailedListener::class)->getArgument('$ignoreMessageClasses'),
+        );
 
         self::assertSame(0.9, $container->getDefinition(BeaconWorkerMemoryListener::class)->getArgument('$ratio'));
         self::assertSame(

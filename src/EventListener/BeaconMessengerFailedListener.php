@@ -22,7 +22,8 @@ use function class_exists;
  *
  * When `symfony/scheduler` is installed and the envelope carries a
  * {@see ScheduledStamp}, optional `extra.scheduler` context is attached.
- * Message bodies are never attached (PII / secrets risk).
+ * Message bodies are never attached (PII / secrets risk). Beacon's own Envelope send and
+ * `messenger.ignore_message_classes` are skipped ({@see MessengerContext::isIgnoredMessage()}).
  */
 final class BeaconMessengerFailedListener
 {
@@ -33,6 +34,8 @@ final class BeaconMessengerFailedListener
         private readonly array $ignoreExceptions = [],
         private readonly bool $includeSchedulerContext = true,
         private readonly ?TraceIdProvider $traceIdProvider = null,
+        /** @var list<class-string> */
+        private readonly array $ignoreMessageClasses = [],
     ) {
     }
 
@@ -45,7 +48,7 @@ final class BeaconMessengerFailedListener
             return;
         }
 
-        if ($event->willRetry()) {
+        if ($event->willRetry() || MessengerContext::isIgnoredMessage($event->getEnvelope(), $this->ignoreMessageClasses)) {
             return;
         }
 

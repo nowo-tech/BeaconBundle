@@ -27,6 +27,7 @@ use function sprintf;
  *   `retry_state = recovered`, grouped per message class + handler.
  *
  * Final failures stay with {@see BeaconMessengerFailedListener}. Message bodies are never attached.
+ * Beacon's own Envelope send and `messenger.ignore_message_classes` are skipped.
  */
 final class BeaconMessengerRetryListener implements EventSubscriberInterface
 {
@@ -38,6 +39,7 @@ final class BeaconMessengerRetryListener implements EventSubscriberInterface
     /**
      * @param list<class-string> $ignoreExceptions
      * @param (Closure(): float)|null $random Returns a float in [0, 1); injectable for tests
+     * @param list<class-string> $ignoreMessageClasses
      */
     public function __construct(
         private readonly BeaconClientInterface $client,
@@ -47,6 +49,7 @@ final class BeaconMessengerRetryListener implements EventSubscriberInterface
         private readonly array $ignoreExceptions = [],
         private readonly ?TraceIdProvider $traceIdProvider = null,
         ?Closure $random = null,
+        private readonly array $ignoreMessageClasses = [],
     ) {
         $this->sampleRate = max(0.0, min(1.0, $sampleRate));
         $this->random     = $random ?? static fn (): float => mt_rand() / (mt_getrandmax() + 1);
@@ -73,11 +76,14 @@ final class BeaconMessengerRetryListener implements EventSubscriberInterface
         }
 
         $throwable = $event->getThrowable();
-        if (MessengerContext::isIgnored($throwable, $this->ignoreExceptions) || !$this->sampled()) {
+        $envelope  = $event->getEnvelope();
+        if (MessengerContext::isIgnored($throwable, $this->ignoreExceptions)
+            || MessengerContext::isIgnoredMessage($envelope, $this->ignoreMessageClasses)
+            || !$this->sampled()
+        ) {
             return;
         }
 
-        $envelope = $event->getEnvelope();
         MessengerContext::restoreTrace($envelope, $this->traceIdProvider);
 
         $handlers  = MessengerContext::failedHandlers($throwable);
@@ -115,7 +121,11 @@ final class BeaconMessengerRetryListener implements EventSubscriberInterface
             return;
         }
 
-        $envelope  = $event->getEnvelope();
+        $envelope = $event->getEnvelope();
+        if (MessengerContext::isIgnoredMessage($envelope, $this->ignoreMessageClasses)) {
+            return;
+        }
+
         $messenger = MessengerContext::fromEnvelope($envelope, $event->getReceiverName());
         if (((int) $messenger['retry_count']) < 1 || !$this->sampled()) {
             return;

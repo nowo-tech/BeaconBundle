@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Tests\Unit\Messenger;
 
 use DateTimeImmutable;
 use LogicException;
+use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
@@ -110,5 +111,16 @@ final class MessengerContextTest extends TestCase
         self::assertTrue(MessengerContext::isIgnored($e, [RuntimeException::class]));
         self::assertFalse(MessengerContext::isIgnored($e, [LogicException::class, '', 42]));
         self::assertFalse(MessengerContext::isIgnored($e, []));
+    }
+
+    public function testIsIgnoredMessage(): void
+    {
+        $own = new Envelope(new SendBeaconEnvelopeMessage('{}'));
+        $app = new Envelope(new stdClass());
+
+        self::assertTrue(MessengerContext::isIgnoredMessage($own), 'Beacon\'s own send is always skipped');
+        self::assertFalse(MessengerContext::isIgnoredMessage($app));
+        self::assertFalse(MessengerContext::isIgnoredMessage($app, ['', 42, LogicException::class]));
+        self::assertTrue(MessengerContext::isIgnoredMessage($app, [stdClass::class]));
     }
 }

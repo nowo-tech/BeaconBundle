@@ -1180,6 +1180,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         report_recovered?: bool|Param, // Send an info event (retry_state recovered) when a message succeeds after at least one retry. // Default: false
  *         retry_sample_rate?: float|Param, // Fraction of retry / recovered events that are sent (0.0–1.0). // Default: 1.0
  *         worker_memory_warning_ratio?: float|Param, // When set (e.g. 0.8), warn once per worker process when memory usage reaches this fraction of PHP memory_limit. Null disables. // Default: null
+ *         ignore_message_classes?: list<scalar|Param|null>,
  *         failure_transports?: list<scalar|Param|null>,
  *     },
  *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths). // Default: false

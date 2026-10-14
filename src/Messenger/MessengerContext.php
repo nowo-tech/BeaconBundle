@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Messenger;
 
 use DateTimeInterface;
+use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
@@ -183,6 +184,35 @@ final class MessengerContext
                 continue;
             }
             if ($throwable instanceof $class) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether listeners must not report anything about this envelope.
+     *
+     * Beacon's own queued Envelope send ({@see SendBeaconEnvelopeMessage}) is always skipped: a
+     * transaction, retry or failure report about it would queue another send, an endless loop
+     * under `transport.mode: messenger`. `$ignoreMessageClasses` adds host message classes
+     * (`messenger.ignore_message_classes`; subclasses and interfaces match).
+     *
+     * @param list<mixed> $ignoreMessageClasses
+     */
+    public static function isIgnoredMessage(Envelope $envelope, array $ignoreMessageClasses = []): bool
+    {
+        $message = $envelope->getMessage();
+        if ($message instanceof SendBeaconEnvelopeMessage) {
+            return true;
+        }
+
+        foreach ($ignoreMessageClasses as $class) {
+            if (!is_string($class) || $class === '') {
+                continue;
+            }
+            if ($message instanceof $class) {
                 return true;
             }
         }

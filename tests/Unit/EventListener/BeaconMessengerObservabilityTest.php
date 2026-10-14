@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
 use LogicException;
+use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerRetryListener;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
@@ -194,6 +195,43 @@ final class BeaconMessengerObservabilityTest extends TestCase
         self::assertCount(1, $client->transactions);
 
         self::assertSame(['onMessageFailed', -1024], BeaconMessengerTransactionListener::getSubscribedEvents()[WorkerMessageFailedEvent::class]);
+    }
+
+    /**
+     * Reporting on Beacon's own queued send would queue another send (endless loop under
+     * `transport.mode: messenger`); configured host classes are skipped the same way.
+     */
+    public function testListenersSkipOwnEnvelopeSendAndIgnoredMessageClasses(): void
+    {
+        foreach ([new Envelope(new SendBeaconEnvelopeMessage('{}'), [new RedeliveryStamp(1)]), new Envelope(new stdClass(), [new RedeliveryStamp(1)])] as $envelope) {
+            $client  = new RecordingBeaconClient();
+            $ignored = [stdClass::class];
+
+            $tx = new BeaconMessengerTransactionListener($client, null, 1.0, null, null, $ignored);
+            $tx->onMessageReceived(new WorkerMessageReceivedEvent($envelope, 'beacon_self'));
+            $tx->onMessageHandled(new WorkerMessageHandledEvent($envelope, 'beacon_self'));
+
+            $retry    = new BeaconMessengerRetryListener($client, true, true, 1.0, [], null, null, $ignored);
+            $retrying = new WorkerMessageFailedEvent($envelope, 'beacon_self', new RuntimeException('ingest down'));
+            $retrying->setForRetry();
+            $retry->onMessageFailed($retrying);
+            $retry->onMessageHandled(new WorkerMessageHandledEvent($envelope, 'beacon_self'));
+
+            (new BeaconMessengerFailedListener($client, true, [], true, null, $ignored))(
+                new WorkerMessageFailedEvent($envelope, 'beacon_self', new RuntimeException('ingest down')),
+            );
+
+            self::assertSame([], $client->transactions);
+            self::assertSame([], $client->messages);
+            self::assertSame([], $client->exceptions);
+        }
+
+        // Without the host list, Beacon's own send is still skipped by the failure listener.
+        $client = new RecordingBeaconClient();
+        (new BeaconMessengerFailedListener($client))(
+            new WorkerMessageFailedEvent(new Envelope(new SendBeaconEnvelopeMessage('{}')), 'beacon_self', new RuntimeException('x')),
+        );
+        self::assertSame([], $client->exceptions);
     }
 
     public function testWorkerMemoryListenerWarnsOncePerWorker(): void

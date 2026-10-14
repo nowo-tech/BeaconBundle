@@ -32,6 +32,9 @@ use function mt_rand;
  *
  * The span buffer is cleared when a message is received so spans from a previous message (or from
  * worker idle time) never leak into the next transaction.
+ *
+ * Beacon's own Envelope send is never timed: its transaction would queue another send (endless loop
+ * under `transport.mode: messenger`). `messenger.ignore_message_classes` skips host messages too.
  */
 final class BeaconMessengerTransactionListener implements EventSubscriberInterface, ResetInterface
 {
@@ -46,6 +49,7 @@ final class BeaconMessengerTransactionListener implements EventSubscriberInterfa
 
     /**
      * @param (Closure(): float)|null $random Returns a float in [0, 1); injectable for tests
+     * @param list<class-string> $ignoreMessageClasses
      */
     public function __construct(
         private readonly BeaconClientInterface $client,
@@ -53,6 +57,7 @@ final class BeaconMessengerTransactionListener implements EventSubscriberInterfa
         float $sampleRate = 1.0,
         private readonly ?TraceIdProvider $traceIdProvider = null,
         ?Closure $random = null,
+        private readonly array $ignoreMessageClasses = [],
     ) {
         $this->sampleRate = max(0.0, min(1.0, $sampleRate));
         $this->random     = $random ?? static fn (): float => mt_rand() / (mt_getrandmax() + 1);
@@ -81,7 +86,11 @@ final class BeaconMessengerTransactionListener implements EventSubscriberInterfa
         $this->reset();
         $this->spanBuffer?->drain();
 
-        if (!$event->shouldHandle() || !$this->client->isEnabled() || !$this->sampled()) {
+        if (!$event->shouldHandle()
+            || !$this->client->isEnabled()
+            || MessengerContext::isIgnoredMessage($event->getEnvelope(), $this->ignoreMessageClasses)
+            || !$this->sampled()
+        ) {
             return;
         }
 

@@ -128,6 +128,7 @@ nowo_beacon:
 | `messenger.report_recovered` | `false` | Send an `info` event (`retry_state = recovered`) when a message succeeds after at least one retry. |
 | `messenger.retry_sample_rate` | `1.0` | Fraction of retry / recovered events sent (0.0–1.0). |
 | `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
+| `messenger.ignore_message_classes` | `[]` | Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon's own `SendBeaconEnvelopeMessage` is always skipped, so `transport.mode: messenger` cannot loop on its own telemetry. |
 | `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`. |
 | `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
 | `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |

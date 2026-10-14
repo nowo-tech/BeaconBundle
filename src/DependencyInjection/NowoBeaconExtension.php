@@ -328,6 +328,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$ignoreExceptions'        => $config['ignore_exceptions'],
                 '$includeSchedulerContext' => (bool) ($config['include_scheduler_context'] ?? true),
                 '$traceIdProvider'         => new Reference(TraceIdProvider::class),
+                '$ignoreMessageClasses'    => $config['messenger']['ignore_message_classes'] ?? [],
             ]);
             $messenger->addTag('kernel.event_listener', [
                 'event' => WorkerMessageFailedEvent::class,
@@ -424,10 +425,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
 
         if ((bool) ($messenger['transactions'] ?? false)) {
             $tx = new Definition(BeaconMessengerTransactionListener::class, [
-                '$client'          => new Reference(BeaconClientInterface::class),
-                '$spanBuffer'      => new Reference(SpanBuffer::class),
-                '$sampleRate'      => (float) ($messenger['transaction_sample_rate'] ?? 1.0),
-                '$traceIdProvider' => new Reference(TraceIdProvider::class),
+                '$client'               => new Reference(BeaconClientInterface::class),
+                '$spanBuffer'           => new Reference(SpanBuffer::class),
+                '$sampleRate'           => (float) ($messenger['transaction_sample_rate'] ?? 1.0),
+                '$traceIdProvider'      => new Reference(TraceIdProvider::class),
+                '$ignoreMessageClasses' => $messenger['ignore_message_classes'] ?? [],
             ]);
             $tx->addTag('kernel.event_subscriber');
             $tx->addTag('kernel.reset', ['method' => 'reset']);
@@ -439,12 +441,13 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $reportRecovered = (bool) ($messenger['report_recovered'] ?? false);
         if ($reportRetries || $reportRecovered) {
             $retry = new Definition(BeaconMessengerRetryListener::class, [
-                '$client'           => new Reference(BeaconClientInterface::class),
-                '$reportRetries'    => $reportRetries,
-                '$reportRecovered'  => $reportRecovered,
-                '$sampleRate'       => (float) ($messenger['retry_sample_rate'] ?? 1.0),
-                '$ignoreExceptions' => $config['ignore_exceptions'],
-                '$traceIdProvider'  => new Reference(TraceIdProvider::class),
+                '$client'               => new Reference(BeaconClientInterface::class),
+                '$reportRetries'        => $reportRetries,
+                '$reportRecovered'      => $reportRecovered,
+                '$sampleRate'           => (float) ($messenger['retry_sample_rate'] ?? 1.0),
+                '$ignoreExceptions'     => $config['ignore_exceptions'],
+                '$traceIdProvider'      => new Reference(TraceIdProvider::class),
+                '$ignoreMessageClasses' => $messenger['ignore_message_classes'] ?? [],
             ]);
             $retry->addTag('kernel.event_subscriber');
             $retry->setPublic(false);
