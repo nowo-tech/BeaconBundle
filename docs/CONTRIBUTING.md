@@ -111,3 +111,7 @@ Before opening a PR:
 - update `docs/CHANGELOG.md` and `docs/UPGRADING.md` when release notes or upgrade guidance changed
 
 Questions and support requests are welcome through the [issue tracker](https://github.com/nowo-tech/BeaconBundle/issues).
+
+## AI co-author trailers
+
+Do **not** add AI co-author trailers to commit messages: neither `Co-authored-by: Cursor` / `cursoragent@cursor.com` nor `Co-Authored-By: Claude …` / `noreply@anthropic.com` (REQ-GIT-001). Run `make setup-hooks` so the `commit-msg` hook strips them.
