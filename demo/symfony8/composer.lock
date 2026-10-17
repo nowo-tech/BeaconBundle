@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1134e55dda8d068bf2f08df2e4dffdd6",
+    "content-hash": "cc326d43600ee520e9fe65606993aed6",
     "packages": [
         {
             "name": "dragonmantank/cron-expression",
@@ -181,7 +181,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "d71e485d4042d711d67a5b4e534929a849d4253a"
+                "reference": "6997da31b642e9281f0d82e6b9d0ad34d87e480b"
             },
             "require": {
                 "php": ">=8.2 <8.6",
@@ -220,7 +220,7 @@
                 "symfony/console": "Required to run the nowo:beacon:test connection probe command",
                 "symfony/flex": "For automatic Flex recipe installation of config/packages/nowo_beacon.yaml",
                 "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
-                "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context).",
+                "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context), and required by scheduler.check_ins (Scheduler check-ins).",
                 "symfony/security-bundle": "Enable send.user authenticated context via the security token storage, and role checks for the optional self-test endpoint",
                 "symfony/security-csrf": "Required by the optional self-test JSON endpoint (nowo_beacon.self_test.http) for CSRF protection"
             },

@@ -88,7 +88,8 @@
             "type": "path",
             "url": "/var/beacon-bundle",
             "options": {
-                "symlink": true
+                "symlink": true,
+                "reference": "config"
             }
         }
     ],
