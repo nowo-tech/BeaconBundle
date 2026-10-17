@@ -29,6 +29,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Database exceptions attach `contexts.db` (SQLSTATE / SQL) without requiring Doctrine instrumentation
 - Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler
 - Opt-in Messenger observability: per-message transactions (`queue.process`), retry / recovered events, worker memory warning, and `nowo:beacon:messenger-report` queue snapshots
+- Opt-in Symfony Scheduler check-ins (`scheduler.check_ins`): schedule catalog on worker start and one check-in per run (`in_progress` / `ok` / `error`), `#[BeaconCheckIn(maxRuntime: …)]`, `nowo:beacon:scheduler-catalog` — Beacon alerts on missed, too long and repeatedly failing tasks (requires a Beacon with check-in support)
 - `nowo:beacon:deploy` deploy markers (release / environment / commit) for Beacon's suspect-deploy hints
 - Optional automatic HTTP request transactions (`auto_http_transaction`)
 - Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)

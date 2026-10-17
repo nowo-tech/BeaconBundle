@@ -1,16 +1,17 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-10-12  
-**Aligned with:** **v1.12.0** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`)
+**Last audited:** 2026-10-18  
+**Aligned with:** **v1.15.0** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process) | FR-WK-005, FR-PW-001 |
+| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process; registers `ScheduleProviderLocatorPass`) | FR-WK-005, FR-PW-001, FR-SCI-003 |
 | `src/Command/TestConnectionCommand.php` | Console `nowo:beacon:test` | FR-CMD-001..007 (`specs/003-connection-test-command`) |
 | `src/Command/MessengerReportCommand.php` | Console `nowo:beacon:messenger-report` (`queue_snapshot`) | FR-MQ-005 (`specs/004-messenger-observability`) |
 | `src/Command/DeployCommand.php` | Console `nowo:beacon:deploy` (`deploy` item) | FR-DEP-001 (`specs/005-deploy-markers`) |
+| `src/Command/SchedulerCatalogCommand.php` | Console `nowo:beacon:scheduler-catalog` (`schedule_catalog`) | FR-SCI-005 (`specs/007-scheduler-check-ins`) |
 | `src/Command/SelfTestCommand.php` | Console `nowo:beacon:self-test` (real failures) | FR-ST-001..003 (`specs/006-self-test`) |
 | `src/SelfTest/BeaconSelfTest.php` | Public self-test service (`status`, `assertReady`, `run`, `flush`) | FR-ST-001..004 |
 | `src/SelfTest/SelfTestResult.php` | Returning-kind result VO | FR-ST-001 |
@@ -24,6 +25,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Connection/ConnectionTestResult.php` | Probe result VO | FR-CMD-* |
 | `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
 | `src/DependencyInjection/Configuration.php` | Config tree `nowo_beacon` | FR-DI-001 |
+| `src/DependencyInjection/Compiler/ScheduleProviderLocatorPass.php` | Schedule providers locator for the catalog builder | FR-SCI-003 |
 | `src/DependencyInjection/NowoBeaconExtension.php` | DI wiring, Monolog prepend, enable/disable, transports, instrumentation, connection test command | FR-DI-001/002, FR-CL-004, FR-MO-001, FR-LI-*, FR-TR-002, FR-INS-001, FR-CMD-001 |
 | `src/Resources/config/services.yaml` | Shared service defaults | — |
 | `src/Dsn/BeaconDsn.php` | DSN value object | FR-DSN-003 |
@@ -35,6 +37,12 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Client/NullBeaconClient.php` | Disabled client | FR-CL-004 |
 | `src/Client/QueueSnapshotCapableInterface.php` | Optional `captureQueueSnapshot()` capability | FR-MQ-005 |
 | `src/Client/DeployCapableInterface.php` | Optional `captureDeploy()` capability | FR-DEP-001 |
+| `src/Client/CheckInCapableInterface.php` | Optional `captureScheduleCatalog()` / `captureCheckIn()` capability | FR-SCI-006 |
+| `src/Attribute/BeaconCheckIn.php` | `#[BeaconCheckIn(maxRuntime:, enabled:)]` on scheduled message classes | FR-SCI-002 |
+| `src/Scheduler/CheckInPolicy.php` | Max runtime / opt-out resolution (attribute > config), class + command name only | FR-SCI-002 |
+| `src/Scheduler/ScheduleCatalogBuilder.php` | Schedules → `schedule_catalog` entries (static providers only, trigger kinds, next run) | FR-SCI-003 |
+| `src/Scheduler/ScheduledRun.php` | Deterministic run id + UTC ATOM dates | FR-SCI-004 |
+| `src/Scheduler/SchedulerRunRegistry.php` | Bounded per-process run map (`kernel.reset`) | FR-SCI-007 |
 | `src/Client/ClientUserAgent.php` | Versioned `User-Agent` | FR-TR-001 |
 | `src/Breadcrumb/BreadcrumbBuffer.php` | Request-scoped breadcrumb trail | FR-CL-005 |
 | `src/Scope/Scope.php` | Mutable tags / context / extras | FR-SCOPE-001, FR-CL-007 |
@@ -42,7 +50,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Context/SecurityUserContextProvider.php` | Security token → user summary | FR-ENV-006 (`send.user`) |
 | `src/Context/DatabaseExceptionContext.php` | SQL / SQLSTATE facts → `contexts.db` | FR-ENV-007 |
 | `src/Envelope/SendOptions.php` | `send.*` value object | FR-ENV-004..006 |
-| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events, transactions, `queue_snapshot`, `deploy`) | FR-ENV-001..007, FR-WK-004, FR-MQ-005, FR-DEP-001 |
+| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events, transactions, `queue_snapshot`, `deploy`, `schedule_catalog`, `check_in`) | FR-ENV-001..007, FR-WK-004, FR-MQ-005, FR-DEP-001, FR-SCI-006 |
 | `src/Envelope/EnvelopeTransportInterface.php` | Transport contract | FR-TR-001 |
 | `src/Envelope/FlushableEnvelopeTransportInterface.php` | Async flush contract | FR-TR-002 |
 | `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest | FR-TR-001, FR-ENV-002 |
@@ -53,7 +61,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/SendBeaconEnvelopeMessageHandler.php` | Messenger handler | FR-TR-002 |
 | `src/EventListener/BeaconExceptionListener.php` | `kernel.exception` | FR-LI-001, FR-LI-005 |
 | `src/EventListener/BeaconConsoleErrorListener.php` | `ConsoleEvents::ERROR` | FR-LI-002 |
-| `src/EventListener/BeaconMessengerFailedListener.php` | Messenger final failures (+ `retry_state`, root-cause culprit) | FR-LI-003, FR-MQ-002 |
+| `src/EventListener/BeaconMessengerFailedListener.php` | Messenger final failures (+ `retry_state`, root-cause culprit, `extra.scheduler.run_id`) | FR-LI-003, FR-MQ-002, FR-SCI-004 |
+| `src/EventListener/BeaconSchedulerCheckInListener.php` | Opt-in Scheduler catalog + per-run check-ins | FR-SCI-004, FR-SCI-007 |
 | `src/EventListener/BeaconMessengerRetryListener.php` | Opt-in retry / recovered events | FR-MQ-002 |
 | `src/EventListener/BeaconMessengerTransactionListener.php` | Opt-in per-message transactions | FR-MQ-001 |
 | `src/EventListener/BeaconWorkerMemoryListener.php` | Opt-in worker memory warning | FR-MQ-004 |

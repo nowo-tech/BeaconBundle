@@ -11,4 +11,7 @@ Canonical NDJSON bodies for the Bundle ↔ Beacon ingest contract.
   - 3 lines: envelope header, item header (`type` + `content_type`), JSON payload
   - Auth header (HTTP, not in these files): `Beacon beacon_key=…, beacon_secret=…`
 
+- Scheduler check-ins (1.15.0): `schedule_catalog.ndjson`, `check_in_ok.ndjson`, `check_in_error.ndjson`
+  (Beacon spec `153`). `make check-envelope-goldens` reports them as `PENDING` until Beacon mirrors them.
+
 When changing the wire format, update both copies and the contract tests.

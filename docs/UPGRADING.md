@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.15.0](#to-1150)
 - [To 1.14.0](#to-1140)
 - [To 1.13.1](#to-1131)
 - [To 1.13.0](#to-1130)
@@ -76,6 +77,18 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.15.0
+
+From **1.14.0** — opt-in Symfony Scheduler check-ins.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes; nothing new is sent until you enable it. New constructor arguments are optional and last; `BeaconClientInterface` is unchanged (new optional `CheckInCapableInterface`).
+- Messenger failure events of scheduled messages gain `extra.scheduler.run_id`.
+- To enable check-ins: upgrade Symfony Beacon to a release with Scheduler check-ins first (older Beacons ignore the items but count them toward the event quota), make sure `symfony/scheduler` is installed, set `nowo_beacon.scheduler.check_ins.enabled: true`, optionally add `#[BeaconCheckIn(maxRuntime: …)]` or `scheduler.check_ins.max_runtime`, then **restart the Scheduler workers** so they send the catalog ([Usage → Scheduler check-ins](USAGE.md#scheduler-check-ins)).
 
 ## To 1.14.0
 

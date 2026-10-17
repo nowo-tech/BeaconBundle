@@ -1,4 +1,4 @@
-.PHONY: help up down build install shell logs logs-tail test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon composer-install
+.PHONY: help up down build install shell logs logs-tail test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon composer-install scheduler
 
 # Sibling checkout: repositories/other/symfony-beacon (override with BEACON_REPO=...)
 # demo/symfony8 → demo → BeaconBundle → bundles → repositories → other/symfony-beacon
@@ -25,6 +25,7 @@ help:
 	@echo "  make test           Run tests"
 	@echo "  make test-coverage  Run tests with coverage"
 	@echo "  make update-bundle  Update nowo-tech/beacon-bundle and clear cache"
+	@echo "  make scheduler      Run the Scheduler worker (Beacon check-ins demo, Ctrl+C to stop)"
 	@echo ""
 	@echo "  BEACON_REPO=$(BEACON_REPO)"
 
@@ -117,6 +118,9 @@ logs:
 
 logs-tail:
 	$(DC) logs --tail=100 php
+
+scheduler: ensure-up
+	$(DC) exec php php bin/console messenger:consume scheduler_default -vv
 
 test: ensure-up
 	$(DC) exec -T -e APP_ENV=test php php bin/phpunit

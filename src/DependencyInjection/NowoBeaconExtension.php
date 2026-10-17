@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\DependencyInjection;
 
 use Doctrine\DBAL\Driver\Middleware;
+use LogicException;
 use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
@@ -12,6 +13,7 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
+use Nowo\BeaconBundle\Command\SchedulerCatalogCommand;
 use Nowo\BeaconBundle\Command\SelfTestCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
@@ -30,6 +32,7 @@ use Nowo\BeaconBundle\EventListener\BeaconMessengerRetryListener;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
+use Nowo\BeaconBundle\EventListener\BeaconSchedulerCheckInListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
@@ -39,6 +42,9 @@ use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
+use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
+use Nowo\BeaconBundle\Scheduler\ScheduleCatalogBuilder;
+use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
@@ -53,7 +59,9 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Event\WorkerStartedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 
 use function array_values;
 use function class_exists;
@@ -156,6 +164,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $this->registerMessengerReportCommand($container, $config['messenger']['failure_transports'] ?? ['failed']);
 
         $this->registerSelfTest($container, $config, $enabledFlag && $dsn !== '');
+
+        $checkInsEnabled = $this->registerSchedulerCheckIns($container, $config, $enabledFlag && $dsn !== '');
 
         $deploy = new Definition(DeployCommand::class, [
             '$client'             => new Reference(BeaconClientInterface::class),
@@ -329,6 +339,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$includeSchedulerContext' => (bool) ($config['include_scheduler_context'] ?? true),
                 '$traceIdProvider'         => new Reference(TraceIdProvider::class),
                 '$ignoreMessageClasses'    => $config['messenger']['ignore_message_classes'] ?? [],
+                '$checkInRuns'             => $checkInsEnabled ? new Reference(SchedulerRunRegistry::class) : null,
             ]);
             $messenger->addTag('kernel.event_listener', [
                 'event' => WorkerMessageFailedEvent::class,
@@ -464,6 +475,82 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $memory->setPublic(false);
             $container->setDefinition(BeaconWorkerMemoryListener::class, $memory);
         }
+    }
+
+    /**
+     * Registers Scheduler check-in services: the catalog builder and `nowo:beacon:scheduler-catalog`
+     * whenever symfony/scheduler is installed, and the worker listener when check-ins are enabled and
+     * reporting is configured. Enabling check-ins without symfony/scheduler fails compilation.
+     *
+     * @param array<string, mixed> $config
+     *
+     * @return bool Whether the check-in listener is registered
+     */
+    private function registerSchedulerCheckIns(ContainerBuilder $container, array $config, bool $reportingEnabled): bool
+    {
+        $checkIns = $config['scheduler']['check_ins'] ?? [];
+        $enabled  = (bool) ($checkIns['enabled'] ?? false);
+
+        if (!class_exists(ScheduledStamp::class) || !class_exists(WorkerStartedEvent::class)) {
+            // @codeCoverageIgnoreStart
+            if ($enabled) {
+                throw new LogicException('nowo_beacon.scheduler.check_ins.enabled requires symfony/scheduler and symfony/messenger. Run "composer require symfony/scheduler" or set it to false.');
+            }
+
+            return false;
+            // @codeCoverageIgnoreEnd
+        }
+
+        $policy = new Definition(CheckInPolicy::class, [
+            '$maxRuntime' => $checkIns['max_runtime'] ?? [],
+            '$ignore'     => array_values($checkIns['ignore'] ?? []),
+        ]);
+        $policy->setPublic(false);
+        $container->setDefinition(CheckInPolicy::class, $policy);
+
+        $builder = new Definition(ScheduleCatalogBuilder::class, [
+            '$policy'    => new Reference(CheckInPolicy::class),
+            '$providers' => null, // set by ScheduleProviderLocatorPass
+            '$clock'     => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'    => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $builder->setPublic(false);
+        $container->setDefinition(ScheduleCatalogBuilder::class, $builder);
+
+        $command = new Definition(SchedulerCatalogCommand::class, [
+            '$client'          => new Reference(BeaconClientInterface::class),
+            '$catalogBuilder'  => new Reference(ScheduleCatalogBuilder::class),
+            '$checkInsEnabled' => $enabled,
+        ]);
+        $command->setAutowired(false);
+        $command->setPublic(false);
+        $command->addTag('console.command');
+        $container->setDefinition(SchedulerCatalogCommand::class, $command);
+
+        if (!$enabled || !$reportingEnabled) {
+            return false;
+        }
+
+        $runs = new Definition(SchedulerRunRegistry::class);
+        $runs->addTag('kernel.reset', ['method' => 'reset']);
+        $runs->setPublic(false);
+        $container->setDefinition(SchedulerRunRegistry::class, $runs);
+
+        $listener = new Definition(BeaconSchedulerCheckInListener::class, [
+            '$client'              => new Reference(BeaconClientInterface::class),
+            '$catalogBuilder'      => new Reference(ScheduleCatalogBuilder::class),
+            '$policy'              => new Reference(CheckInPolicy::class),
+            '$runs'                => new Reference(SchedulerRunRegistry::class),
+            '$catalogRefreshHours' => (int) ($checkIns['catalog_refresh_hours'] ?? 24),
+            '$pendingTransports'   => new Reference(PendingTransportRegistry::class),
+            '$clock'               => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'              => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $listener->addTag('kernel.event_subscriber');
+        $listener->setPublic(false);
+        $container->setDefinition(BeaconSchedulerCheckInListener::class, $listener);
+
+        return true;
     }
 
     /**

@@ -74,6 +74,12 @@ nowo_beacon:
         retry_sample_rate: 1.0
         worker_memory_warning_ratio: null   # e.g. 0.8
         failure_transports: ['failed']
+    scheduler:
+        check_ins:
+            enabled: false                 # Scheduler check-ins (1.15+), needs symfony/scheduler
+            max_runtime: {}                # e.g. { 'app:reports:nightly': 1800, App\Message\SyncCatalog: 600 }
+            ignore: []                     # message FQCNs or command names
+            catalog_refresh_hours: 24
     auto_http_transaction: false
     before_send: null
     instrumentation:
@@ -130,6 +136,10 @@ nowo_beacon:
 | `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
 | `messenger.ignore_message_classes` | `[]` | Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon's own `SendBeaconEnvelopeMessage` is always skipped, so `transport.mode: messenger` cannot loop on its own telemetry. |
 | `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`. |
+| `scheduler.check_ins.enabled` | `false` | Send a `schedule_catalog` when a Scheduler worker (`messenger:consume scheduler_<name>`) starts and one `check_in` per run (`in_progress` / `ok` / `error`), each in its own Envelope. Requires `symfony/scheduler` (compile error otherwise). Enable only with a Symfony Beacon that supports check-ins. See [Usage → Scheduler check-ins](USAGE.md#scheduler-check-ins). |
+| `scheduler.check_ins.max_runtime` | `{}` | Seconds (1 … 604 800) per message FQCN (subclasses / interfaces match) or command name (`RunCommandMessage`). `#[BeaconCheckIn(maxRuntime: …)]` on the message class wins. Keys are kept as written (dashes are not normalized). |
+| `scheduler.check_ins.ignore` | `[]` | Message FQCNs (subclasses / interfaces match) or command names never checked in nor listed in the catalog. `#[BeaconCheckIn(enabled: …)]` wins. |
+| `scheduler.check_ins.catalog_refresh_hours` | `24` | Re-send the catalog from a running Scheduler worker every N hours (1 … 168). |
 | `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
 | `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |
 | `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). `[]` disables the role check (protect the path with your firewall). Without SecurityBundle and a non-empty list, access is refused. |

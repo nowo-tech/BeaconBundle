@@ -10,6 +10,7 @@ use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
+use Nowo\BeaconBundle\Command\SchedulerCatalogCommand;
 use Nowo\BeaconBundle\Command\SelfTestCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
@@ -27,6 +28,7 @@ use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
+use Nowo\BeaconBundle\EventListener\BeaconSchedulerCheckInListener;
 use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
@@ -34,6 +36,9 @@ use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
+use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
+use Nowo\BeaconBundle\Scheduler\ScheduleCatalogBuilder;
+use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
 use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
@@ -457,6 +462,56 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($controller->hasTag('controller.service_arguments'));
         self::assertSame(['ROLE_OPS'], $controller->getArgument('$roles'));
         self::assertEquals(new Reference('security.csrf.token_manager', ContainerBuilder::NULL_ON_INVALID_REFERENCE), $controller->getArgument('$csrfTokenManager'));
+    }
+
+    public function testSchedulerCheckInsAreOptIn(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn' => 'https://pubkey:secret@beacon.example.com:9444/5',
+        ]], $container);
+
+        self::assertTrue($container->hasDefinition(ScheduleCatalogBuilder::class));
+        self::assertTrue($container->hasDefinition(SchedulerCatalogCommand::class));
+        self::assertFalse($container->getDefinition(SchedulerCatalogCommand::class)->getArgument('$checkInsEnabled'));
+        self::assertFalse($container->hasDefinition(BeaconSchedulerCheckInListener::class));
+        self::assertFalse($container->hasDefinition(SchedulerRunRegistry::class));
+        self::assertNull($container->getDefinition(BeaconMessengerFailedListener::class)->getArgument('$checkInRuns'));
+    }
+
+    public function testSchedulerCheckInsWireListenerWhenEnabled(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pubkey:secret@beacon.example.com:9444/5',
+            'scheduler' => ['check_ins' => [
+                'enabled'               => true,
+                'max_runtime'           => ['app:reports:nightly' => 1800],
+                'ignore'                => ['app:noisy'],
+                'catalog_refresh_hours' => 6,
+            ]],
+        ]], $container);
+
+        $listener = $container->getDefinition(BeaconSchedulerCheckInListener::class);
+        self::assertTrue($listener->hasTag('kernel.event_subscriber'));
+        self::assertSame(6, $listener->getArgument('$catalogRefreshHours'));
+        self::assertTrue($container->getDefinition(SchedulerRunRegistry::class)->hasTag('kernel.reset'));
+        self::assertSame(['app:reports:nightly' => 1800], $container->getDefinition(CheckInPolicy::class)->getArgument('$maxRuntime'));
+        self::assertSame(['app:noisy'], $container->getDefinition(CheckInPolicy::class)->getArgument('$ignore'));
+        self::assertTrue($container->getDefinition(SchedulerCatalogCommand::class)->getArgument('$checkInsEnabled'));
+        self::assertEquals(
+            new Reference(SchedulerRunRegistry::class),
+            $container->getDefinition(BeaconMessengerFailedListener::class)->getArgument('$checkInRuns'),
+        );
+
+        // Empty DSN: command only (explains why nothing is sent), no worker listener.
+        $null = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => '',
+            'scheduler' => ['check_ins' => ['enabled' => true]],
+        ]], $null);
+        self::assertTrue($null->hasDefinition(SchedulerCatalogCommand::class));
+        self::assertFalse($null->hasDefinition(BeaconSchedulerCheckInListener::class));
     }
 
     private function createContainer(): ContainerBuilder

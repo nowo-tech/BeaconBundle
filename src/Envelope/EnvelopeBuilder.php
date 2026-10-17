@@ -321,6 +321,68 @@ final class EnvelopeBuilder
     }
 
     /**
+     * Build a 3-line envelope with a `schedule_catalog` item (Symfony Scheduler check-ins).
+     *
+     * Schedule names, recurring ids, message classes, command names and trigger descriptions only —
+     * never message payloads or command arguments.
+     *
+     * @param list<array{name: string, entries: list<array<string, mixed>>}> $schedules
+     */
+    public function buildScheduleCatalogEnvelope(BeaconDsn $dsn, array $schedules): string
+    {
+        return $this->buildMetadataEnvelope($dsn, 'schedule_catalog', ['schedules' => $schedules]);
+    }
+
+    /**
+     * Build a 3-line envelope with a `check_in` item (one Symfony Scheduler run status).
+     *
+     * @param array<string, mixed> $checkIn
+     */
+    public function buildCheckInEnvelope(BeaconDsn $dsn, array $checkIn): string
+    {
+        return $this->buildMetadataEnvelope($dsn, 'check_in', ['check_in' => $checkIn]);
+    }
+
+    /**
+     * Shared framing for metadata-only items: header, item header, payload with `event_id`, `type`,
+     * `timestamp`, `platform`, optional `environment` / `server_name` (send.* switches), then `$body`.
+     *
+     * @param array<string, mixed> $body
+     */
+    private function buildMetadataEnvelope(BeaconDsn $dsn, string $type, array $body): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'  => $eventId,
+            'type'      => $type,
+            'timestamp' => (float) $now->format('U.u'),
+            'platform'  => 'php',
+        ];
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+        if ($this->sendOptions->serverName) {
+            $payload['server_name'] = $this->serverName;
+        }
+        $payload += $body;
+
+        $itemHeader = ['type' => $type, 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
      * Ensure a correlation id exists on the scope before tags are copied.
      */
     private function seedTraceId(): void

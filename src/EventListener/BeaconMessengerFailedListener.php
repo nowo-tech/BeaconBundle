@@ -7,8 +7,9 @@ namespace Nowo\BeaconBundle\EventListener;
 use DateTimeInterface;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
+use Nowo\BeaconBundle\Scheduler\ScheduledRun;
+use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
-use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 
@@ -21,7 +22,8 @@ use function class_exists;
  * When several handlers fail, `handler_classes` lists all of them (`handler_class` stays the first).
  *
  * When `symfony/scheduler` is installed and the envelope carries a
- * {@see ScheduledStamp}, optional `extra.scheduler` context is attached.
+ * {@see ScheduledStamp}, optional `extra.scheduler` context is attached (including the check-in
+ * `run_id`); with Scheduler check-ins enabled the event id is remembered so the `error` check-in links it.
  * Message bodies are never attached (PII / secrets risk). Beacon's own Envelope send and
  * `messenger.ignore_message_classes` are skipped ({@see MessengerContext::isIgnoredMessage()}).
  */
@@ -36,6 +38,7 @@ final class BeaconMessengerFailedListener
         private readonly ?TraceIdProvider $traceIdProvider = null,
         /** @var list<class-string> */
         private readonly array $ignoreMessageClasses = [],
+        private readonly ?SchedulerRunRegistry $checkInRuns = null,
     ) {
     }
 
@@ -72,28 +75,23 @@ final class BeaconMessengerFailedListener
             'messenger' => $messenger,
         ];
 
-        $scheduler = $this->schedulerExtra($envelope);
-        if ($scheduler !== null) {
-            $extra['scheduler'] = $scheduler;
+        $stamp = class_exists(ScheduledStamp::class) ? $envelope->last(ScheduledStamp::class) : null;
+        if ($stamp instanceof ScheduledStamp && $this->includeSchedulerContext) {
+            $extra['scheduler'] = $this->schedulerExtra($stamp);
         }
 
-        $this->client->captureException($throwable, $extra);
+        $eventId = $this->client->captureException($throwable, $extra);
+
+        if ($stamp instanceof ScheduledStamp && $eventId !== null && $this->checkInRuns instanceof SchedulerRunRegistry) {
+            $this->checkInRuns->rememberFailureEvent(ScheduledRun::runId($stamp->messageContext), $eventId);
+        }
     }
 
     /**
-     * @return array{schedule_name: string, recurring_id: string, triggered_at: string, trigger: string}|null
+     * @return array{schedule_name: string, recurring_id: string, triggered_at: string, trigger: string, run_id: string}
      */
-    private function schedulerExtra(Envelope $envelope): ?array
+    private function schedulerExtra(ScheduledStamp $stamp): array
     {
-        if (!$this->includeSchedulerContext || !class_exists(ScheduledStamp::class)) {
-            return null;
-        }
-
-        $stamp = $envelope->last(ScheduledStamp::class);
-        if (!$stamp instanceof ScheduledStamp) {
-            return null;
-        }
-
         $context = $stamp->messageContext;
 
         return [
@@ -101,6 +99,7 @@ final class BeaconMessengerFailedListener
             'recurring_id'  => $context->id,
             'triggered_at'  => $context->triggeredAt->format(DateTimeInterface::ATOM),
             'trigger'       => (string) $context->trigger,
+            'run_id'        => ScheduledRun::runId($context),
         ];
     }
 }

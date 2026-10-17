@@ -34,6 +34,8 @@ final class BeaconClientTest extends TestCase
         self::assertNull($client->captureTransaction('tx', 1.0, 2.0));
         self::assertNull($client->captureQueueSnapshot([['name' => 'failed', 'count' => 1, 'failure' => true]]));
         self::assertNull($client->captureDeploy(['release' => '1.0.0']));
+        self::assertNull($client->captureScheduleCatalog([]));
+        self::assertNull($client->captureCheckIn(['run_id' => 'x']));
         $client->addBreadcrumb('noop');
         $client->setTag('k', 'v');
         $client->setTags(['a' => 'b']);
@@ -66,10 +68,18 @@ final class BeaconClientTest extends TestCase
         self::assertCount(2, $bodies);
         self::assertStringContainsString('"type":"deploy"', $bodies[1]);
 
+        self::assertNotNull($client->captureScheduleCatalog([['name' => 'default', 'entries' => []]]));
+        self::assertNotNull($client->captureCheckIn(['run_id' => str_repeat('a', 32), 'status' => 'in_progress']));
+        self::assertCount(4, $bodies, 'before_send does not apply to check-ins');
+        self::assertStringContainsString('"type":"schedule_catalog"', $bodies[2]);
+        self::assertStringContainsString('"type":"check_in"', $bodies[3]);
+
         $disabled = new BeaconClient($transport, new EnvelopeBuilder('test'), false);
         self::assertNull($disabled->captureQueueSnapshot([]));
         self::assertNull($disabled->captureDeploy(['release' => '1']));
-        self::assertCount(2, $bodies);
+        self::assertNull($disabled->captureScheduleCatalog([]));
+        self::assertNull($disabled->captureCheckIn([]));
+        self::assertCount(4, $bodies);
     }
 
     public function testCaptureMessagePostsEnvelope(): void

@@ -25,7 +25,7 @@ use const JSON_UNESCAPED_UNICODE;
 /**
  * Default Beacon client: builds Envelope NDJSON and POSTs via {@see EnvelopeTransportInterface}.
  */
-final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface
+final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface, CheckInCapableInterface
 {
     /**
      * @param callable(array<string, mixed>): (?array<string, mixed>)|null $beforeSend
@@ -186,6 +186,40 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
         }
 
         $body = $this->envelopeBuilder->buildQueueSnapshotEnvelope($this->transport->getDsn(), $transports);
+        $this->transport->send($body);
+
+        return $this->extractEventId($body);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Catalogs carry only schedule metadata, so `before_send` is not applied.
+     */
+    public function captureScheduleCatalog(array $schedules): ?string
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $body = $this->envelopeBuilder->buildScheduleCatalogEnvelope($this->transport->getDsn(), $schedules);
+        $this->transport->send($body);
+
+        return $this->extractEventId($body);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Check-ins carry only run metadata, so `before_send` is not applied.
+     */
+    public function captureCheckIn(array $checkIn): ?string
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $body = $this->envelopeBuilder->buildCheckInEnvelope($this->transport->getDsn(), $checkIn);
         $this->transport->send($body);
 
         return $this->extractEventId($body);

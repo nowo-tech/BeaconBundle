@@ -135,4 +135,42 @@ final class ConfigurationTest extends TestCase
             'self_test' => ['http' => ['path' => 'admin/beacon']],
         ]]);
     }
+
+    public function testSchedulerCheckInsDefaultsAndValidation(): void
+    {
+        $defaults = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        self::assertSame(
+            ['enabled' => false, 'max_runtime' => [], 'ignore' => [], 'catalog_refresh_hours' => 24],
+            $defaults['scheduler']['check_ins'],
+        );
+
+        $custom = (new Processor())->processConfiguration(new Configuration(), [[
+            'scheduler' => ['check_ins' => [
+                'enabled'               => true,
+                'max_runtime'           => ['app:reports-nightly' => 1800, 'App\\Message\\SyncCatalog' => 600],
+                'ignore'                => ['app:noisy'],
+                'catalog_refresh_hours' => 6,
+            ]],
+        ]]);
+        self::assertSame(
+            ['app:reports-nightly' => 1800, 'App\\Message\\SyncCatalog' => 600],
+            $custom['scheduler']['check_ins']['max_runtime'],
+            'keys are not normalized (dashes in command names kept)',
+        );
+        self::assertSame(6, $custom['scheduler']['check_ins']['catalog_refresh_hours']);
+
+        foreach ([
+            ['max_runtime' => ['app:x' => 0]],
+            ['max_runtime' => ['app:x' => 604801]],
+            ['catalog_refresh_hours' => 0],
+            ['catalog_refresh_hours' => 169],
+        ] as $invalid) {
+            try {
+                (new Processor())->processConfiguration(new Configuration(), [['scheduler' => ['check_ins' => $invalid]]]);
+                self::fail('Expected invalid configuration for ' . json_encode($invalid));
+            } catch (InvalidConfigurationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }

@@ -467,7 +467,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     scheduler?: bool|array{ // Scheduler configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     disallow_search_engine_index?: bool|Param, // Enabled by default when debug is enabled. // Default: true
  *     http_client?: bool|array{ // HTTP Client configuration
@@ -1182,6 +1182,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         worker_memory_warning_ratio?: float|Param, // When set (e.g. 0.8), warn once per worker process when memory usage reaches this fraction of PHP memory_limit. Null disables. // Default: null
  *         ignore_message_classes?: list<scalar|Param|null>,
  *         failure_transports?: list<scalar|Param|null>,
+ *     },
+ *     scheduler?: array{ // Symfony Scheduler integration (requires symfony/scheduler).
+ *         check_ins?: array{ // Scheduler check-ins: a schedule catalog when a scheduler worker starts and one check-in per run (in_progress / ok / error), so Beacon detects missed, too long and failed runs. Off by default; enable it only with a Beacon that supports check-ins.
+ *             enabled?: bool|Param, // Send the schedule catalog and run check-ins (requires symfony/scheduler and symfony/messenger). // Default: false
+ *             max_runtime?: array<string, int|Param>,
+ *             ignore?: list<scalar|Param|null>,
+ *             catalog_refresh_hours?: int|Param, // Re-send the schedule catalog from a running scheduler worker every N hours (1 … 168). // Default: 24
+ *         },
  *     },
  *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths). // Default: false
  *     before_send?: scalar|Param|null, // Optional service id of an invokable that receives the event/transaction payload array and returns the mutated array, or null to drop the send. // Default: null

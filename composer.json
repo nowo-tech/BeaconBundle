@@ -43,6 +43,7 @@
     },
     "require-dev": {
         "doctrine/dbal": "^3.8 || ^4.0",
+        "dragonmantank/cron-expression": "^3.4",
         "friendsofphp/php-cs-fixer": "^3.0",
         "igor-php/igor-php": "^0.10.0",
         "monolog/monolog": "^3.0",
@@ -137,7 +138,7 @@
         "symfony/security-bundle": "Enable send.user authenticated context via the security token storage, and role checks for the optional self-test endpoint",
         "symfony/security-csrf": "Required by the optional self-test JSON endpoint (nowo_beacon.self_test.http) for CSRF protection",
         "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
-        "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context).",
+        "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context), and required by scheduler.check_ins (Scheduler check-ins).",
         "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware)."
     }
 }

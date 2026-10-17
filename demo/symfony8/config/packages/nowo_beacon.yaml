@@ -37,6 +37,14 @@ nowo_beacon:
     monolog_handler:
         enabled: true
         level: error
+    # Scheduler check-ins (1.15+): catalog on `messenger:consume scheduler_default`, one check-in per run.
+    # Enable only against a Beacon that supports check-ins (spec 153); older Beacons ignore the items
+    # but count them toward the event quota.
+    scheduler:
+        check_ins:
+            enabled: true
+            max_runtime:
+                'app:demo-nightly-report': 600
 
 when@dev:
     nowo_beacon:

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.15.0] - 2026-10-18](#1150---2026-10-18)
 - [[1.14.0] - 2026-10-14](#1140---2026-10-14)
 - [[1.13.1] - 2026-10-13](#1131---2026-10-13)
 - [[1.13.0] - 2026-10-13](#1130---2026-10-13)
@@ -61,6 +62,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.15.0] - 2026-10-18
+
+### Added
+
+- Symfony Scheduler check-ins (Beacon spec 153, bundle spec `specs/007-scheduler-check-ins`), off by default: `nowo_beacon.scheduler.check_ins.enabled`. A Scheduler worker (`messenger:consume scheduler_<name>`) sends a `schedule_catalog` Envelope item on start (and every `catalog_refresh_hours`) with each recurring task (recurring id, message class, command name for `RunCommandMessage`, trigger kind / expression / time zone / interval / description, next run, max runtime), and one `check_in` item per run (`in_progress`, `ok`, `error`) with a deterministic `run_id`, timestamps, duration, next run and `failure_event_id`. Each item travels in its own Envelope; message payloads and command arguments are never sent. Works with `sync`, `async` (the catalog and `in_progress` are flushed immediately) and `messenger` transport modes.
+- `#[BeaconCheckIn(maxRuntime: …, enabled: …)]` attribute and `scheduler.check_ins.max_runtime` / `ignore` / `catalog_refresh_hours` options (the attribute wins over the config).
+- `nowo:beacon:scheduler-catalog [--schedule=…] [--dry-run]` command.
+- `CheckInCapableInterface` (`captureScheduleCatalog()`, `captureCheckIn()`) on `BeaconClient` / `NullBeaconClient`; custom clients stay compatible.
+- `extra.scheduler.run_id` on Messenger failure events of scheduled messages.
+- Golden Envelope fixtures `schedule_catalog.ndjson`, `check_in_ok.ndjson`, `check_in_error.ndjson`.
+- Demo: `default` schedule with a fast, a slow (`maxRuntime`), a failing and a console-command task (`make scheduler`).
 
 ## [1.14.0] - 2026-10-14
 

@@ -41,6 +41,9 @@ final class EnvelopeGoldenShapeTest extends TestCase
         yield 'transaction_messenger' => ['transaction_messenger.ndjson', 'transaction'];
         yield 'queue_snapshot' => ['queue_snapshot.ndjson', 'queue_snapshot'];
         yield 'deploy' => ['deploy.ndjson', 'deploy'];
+        yield 'schedule_catalog' => ['schedule_catalog.ndjson', 'schedule_catalog'];
+        yield 'check_in_ok' => ['check_in_ok.ndjson', 'check_in'];
+        yield 'check_in_error' => ['check_in_error.ndjson', 'check_in'];
     }
 
     #[DataProvider('fixtureProvider')]
@@ -106,6 +109,42 @@ final class EnvelopeGoldenShapeTest extends TestCase
                 self::assertTrue($transport['count'] === null || is_int($transport['count']));
                 self::assertIsBool($transport['failure'] ?? null);
             }
+        }
+
+        if ($expectedType === 'schedule_catalog') {
+            self::assertSame('schedule_catalog', $payload['type']);
+            self::assertIsNumeric($payload['timestamp']);
+            self::assertIsArray($payload['schedules']);
+            foreach ($payload['schedules'] as $schedule) {
+                self::assertIsArray($schedule);
+                self::assertIsString($schedule['name'] ?? null);
+                self::assertIsArray($schedule['entries'] ?? null);
+                foreach ($schedule['entries'] as $entry) {
+                    self::assertIsArray($entry);
+                    self::assertMatchesRegularExpression('/^[A-Za-z0-9_.:-]{1,64}$/', (string) $entry['recurring_id']);
+                    self::assertArrayHasKey('message_class', $entry);
+                    self::assertContains($entry['trigger']['kind'] ?? null, ['cron', 'periodic', 'other']);
+                    self::assertIsString($entry['trigger']['description'] ?? null);
+                    self::assertArrayHasKey('next_run_at', $entry);
+                    self::assertArrayHasKey('max_runtime_seconds', $entry);
+                }
+            }
+        }
+
+        if ($expectedType === 'check_in') {
+            self::assertSame('check_in', $payload['type']);
+            $checkIn = $payload['check_in'];
+            self::assertIsArray($checkIn);
+            self::assertContains($checkIn['status'] ?? null, ['in_progress', 'ok', 'error']);
+            self::assertSame(
+                substr(hash('sha256', $checkIn['schedule'] . "\n" . $checkIn['recurring_id'] . "\n" . $checkIn['triggered_at']), 0, 32),
+                $checkIn['run_id'],
+                'run_id = sha256(schedule \\n recurring_id \\n triggered_at)[0:32]',
+            );
+            self::assertIsNumeric($checkIn['started_at']);
+            self::assertIsNumeric($checkIn['finished_at']);
+            self::assertTrue(is_int($checkIn['duration_ms']));
+            self::assertArrayHasKey('failure_event_id', $checkIn);
         }
 
         if ($expectedType === 'transaction') {

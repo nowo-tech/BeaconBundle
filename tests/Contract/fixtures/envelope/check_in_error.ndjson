@@ -1,0 +1,3 @@
+{"event_id":"33333333333333333333333333333333","dsn":"https://pubkey:secret@beacon.example.com:__HTTPS_PORT__/1","sent_at":"2024-07-20T16:00:12.250000Z"}
+{"type":"check_in","content_type":"application/json"}
+{"event_id":"33333333333333333333333333333333","type":"check_in","timestamp":1721491212.25,"platform":"php","environment":"test","server_name":"worker-1","check_in":{"run_id":"6e9b6919f919ea88bc80320e9dd20312","schedule":"default","recurring_id":"d4e5f6a7","status":"error","triggered_at":"2024-07-20T16:00:00+00:00","started_at":1721491200.5,"finished_at":1721491212.2,"duration_ms":11700,"next_run_at":"2024-07-20T16:15:00+00:00","failure_event_id":"44444444444444444444444444444444"}}

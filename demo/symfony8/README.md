@@ -27,6 +27,7 @@ Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejecte
 - Symfony Web Profiler
 - Symfony debug mode (`APP_DEBUG=1`)
 - `symfony/messenger` (Messenger failure demo)
+- `symfony/scheduler` (Scheduler check-ins demo)
 - `nowo-tech/twig-inspector-bundle`
 - `nowo-tech/password-toggle-bundle`
 
@@ -56,6 +57,24 @@ Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejecte
 - `/monolog` — Monolog handler demo
 - `/messenger-fail` — simulated final Messenger worker failure (`extra.messenger`)
 - `php bin/console app:demo-console-boom` — console error listener
+
+### Scheduler check-ins
+
+`App\Scheduler\DemoSchedule` (`default` schedule) with `nowo_beacon.scheduler.check_ins.enabled: true`:
+
+| Task | Trigger | Check-ins |
+|------|---------|-----------|
+| `DemoHeartbeatMessage` | every 30 seconds | `in_progress` → `ok` |
+| `DemoSlowSyncMessage` (`#[BeaconCheckIn(maxRuntime: 5)]`) | every 1 minute | sleeps 8 s → Beacon reports *ran longer than 5 s* |
+| `DemoFlakyTaskMessage` | every 2 minutes | `error`, linked to the exception event (`failure_event_id`) |
+| `app:demo-nightly-report --since=yesterday` (`RunCommandMessage`) | `0 3 * * *` Europe/Madrid | catalog sends `command: app:demo-nightly-report` only; `max_runtime` 600 s from config |
+
+```bash
+make scheduler                                                        # messenger:consume scheduler_default -vv (sends the catalog on start)
+docker compose exec php php bin/console nowo:beacon:scheduler-catalog --dry-run
+```
+
+Beacon needs Scheduler check-in support (spec 153) to show the tasks; older Beacons ignore the items.
 
 ### Status
 

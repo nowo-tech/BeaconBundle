@@ -9,7 +9,7 @@ use Throwable;
 /**
  * No-op client used when Beacon is disabled or DSN is empty.
  */
-final class NullBeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface
+final class NullBeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface, CheckInCapableInterface
 {
     /**
      * {@inheritdoc}
@@ -104,6 +104,22 @@ final class NullBeaconClient implements BeaconClientInterface, QueueSnapshotCapa
      * {@inheritdoc}
      */
     public function captureDeploy(array $deploy): ?string
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function captureScheduleCatalog(array $schedules): ?string
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function captureCheckIn(array $checkIn): ?string
     {
         return null;
     }

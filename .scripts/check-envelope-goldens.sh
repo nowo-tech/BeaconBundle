@@ -18,7 +18,12 @@ normalize_golden() {
 }
 
 failed=0
-for name in event_happy.ndjson event_exception.ndjson transaction_with_spans.ndjson transaction_messenger.ndjson queue_snapshot.ndjson deploy.ndjson; do
+for name in event_happy.ndjson event_exception.ndjson transaction_with_spans.ndjson transaction_messenger.ndjson queue_snapshot.ndjson deploy.ndjson schedule_catalog.ndjson check_in_ok.ndjson check_in_error.ndjson; do
+  if [ ! -f "$BEACON_FIXTURES/$name" ]; then
+    # New item types land in the bundle first; Beacon mirrors them when it implements the ingest side.
+    echo "PENDING: $name not mirrored in symfony-beacon yet"
+    continue
+  fi
   if ! cmp -s "$BUNDLE_FIXTURES/$name" "$BEACON_FIXTURES/$name"; then
     if [ "$(normalize_golden "$BUNDLE_FIXTURES/$name")" = "$(normalize_golden "$BEACON_FIXTURES/$name")" ]; then
       echo "WARN: $name differs only by DSN host port — rewrite both to __HTTPS_PORT__"

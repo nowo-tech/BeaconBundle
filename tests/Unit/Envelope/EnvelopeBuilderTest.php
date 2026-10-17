@@ -141,6 +141,30 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertArrayNotHasKey('server_name', $bare);
     }
 
+    public function testBuildsScheduleCatalogAndCheckInEnvelopes(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $builder = new EnvelopeBuilder('prod', '1.0.0', 'worker-1');
+        $catalog = [['name' => 'default', 'entries' => [['recurring_id' => 'a1b2c3d4', 'message_class' => null]]]];
+
+        [$header, $item, $payload] = $this->decodeEnvelope($builder->buildScheduleCatalogEnvelope($dsn, $catalog));
+        self::assertSame(['type' => 'schedule_catalog', 'content_type' => 'application/json'], $item);
+        self::assertSame($header['event_id'], $payload['event_id']);
+        self::assertSame(['event_id', 'type', 'timestamp', 'platform', 'environment', 'server_name', 'schedules'], array_keys($payload));
+        self::assertSame($catalog, $payload['schedules']);
+
+        $checkIn                          = ['run_id' => str_repeat('a', 32), 'status' => 'ok'];
+        [, $checkInItem, $checkInPayload] = $this->decodeEnvelope(
+            (new EnvelopeBuilder('prod', null, 'h', new SendOptions(environment: false, serverName: false)))
+                ->buildCheckInEnvelope($dsn, $checkIn),
+        );
+        self::assertSame('check_in', $checkInItem['type']);
+        self::assertSame('check_in', $checkInPayload['type']);
+        self::assertSame($checkIn, $checkInPayload['check_in']);
+        self::assertArrayNotHasKey('environment', $checkInPayload);
+        self::assertArrayNotHasKey('server_name', $checkInPayload);
+    }
+
     public function testAttachesContextsDbForDatabaseException(): void
     {
         $dsn            = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');

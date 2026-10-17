@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle;
 
+use Nowo\BeaconBundle\DependencyInjection\Compiler\ScheduleProviderLocatorPass;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
@@ -14,6 +17,16 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  */
 final class NowoBeaconBundle extends Bundle
 {
+    /**
+     * Registers the Scheduler check-in provider locator pass (after Symfony's scheduler pass).
+     */
+    public function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+
+        $container->addCompilerPass(new ScheduleProviderLocatorPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
+    }
+
     /**
      * Instantiates fatal / PHP-warning handlers (they register once per process).
      */

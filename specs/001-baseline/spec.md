@@ -23,6 +23,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Safe operation under FrankenPHP worker mode when the kernel is **not** reset between requests (scenario B)
 - Opt-in Messenger worker observability (transactions, retries, memory, queue snapshots) and deploy markers (`specs/004`, `specs/005`)
 - Real-failure self-test command, public service and optional JSON endpoint (`specs/006`)
+- Opt-in Symfony Scheduler check-ins: schedule catalog + per-run check-ins (`specs/007`)
 
 ## Non-goals
 
@@ -51,6 +52,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-12 | As an operator, I observe Messenger workers (slow handlers, retries, backlog, memory) | `nowo_beacon.messenger.*` opt-ins + `nowo:beacon:messenger-report` (`specs/004-messenger-observability`) |
 | US-13 | As a developer, I mark deploys from CI | `nowo:beacon:deploy` sends a `deploy` item (`specs/005-deploy-markers`) |
 | US-14 | As a developer, I prove the whole wiring with real failures | `nowo:beacon:self-test`, `BeaconSelfTest` service, optional `self_test.http` endpoint (`specs/006-self-test`) |
+| US-15 | As an operator, Beacon tells me when a scheduled task did not run, ran too long or keeps failing | `nowo_beacon.scheduler.check_ins` + `#[BeaconCheckIn]` + `nowo:beacon:scheduler-catalog` (`specs/007-scheduler-check-ins`) |
 
 ## Functional requirements
 

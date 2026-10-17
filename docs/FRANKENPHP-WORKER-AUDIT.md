@@ -48,6 +48,9 @@ A bundle that is safe under **B** is safe under **A** and under classic mode / P
 | `EventListener\BeaconRequestScopeResetListener` | yes | none; resets four buffers + flushes pending on main `kernel.request` (priority 4096) | ✅ | ✅ |
 | `EventListener\BeaconRequestTransactionListener` (opt-in) | yes (`kernel.reset`) | `$startedAt`, `$request`; cleared on every main request start, terminate, and `reset()` | ✅ | ✅ |
 | `EventListener\FlushPendingTransportsListener` | yes | none; terminate priority `-2048` (after transaction) | ✅ | ✅ |
+| `Scheduler\SchedulerRunRegistry` (1.15, opt-in `scheduler.check_ins`) | yes (`kernel.reset`) | `$startedAt`, `$failureEventIds` (run id maps, max 100 each); cleared on worker start / stop and after each handled message (Messenger `ResetServicesListener`) | ✅ | ✅ (only written by Messenger worker events, never by HTTP requests) |
+| `EventListener\BeaconSchedulerCheckInListener` (1.15, opt-in) | yes | `$workerSchedules`, `$lastCatalogAt` — worker-lifetime state, cleared on `WorkerStoppedEvent`; intentionally not `kernel.reset` (the catalog refresh timer must survive per-message resets) | ✅ | ✅ (HTTP requests never touch it) |
+| `Scheduler\CheckInPolicy` / `Scheduler\ScheduleCatalogBuilder` (1.15) | yes | `CheckInPolicy::$attributes` — immutable `#[BeaconCheckIn]` metadata cache, one entry per message class; the builder is stateless | ✅ | ✅ |
 | `EventListener\BeaconFatalErrorHandler` | yes (public, instantiated in `NowoBeaconBundle::boot()`) | `$registered` flag (once per process) | ✅ | ✅ |
 | `EventListener\BeaconPhpWarningHandler` | yes (public, instantiated in `NowoBeaconBundle::boot()`) | `$registered` / `$handling` (process-local `set_error_handler`) | ✅ | ✅ |
 | `Instrumentation\DoctrineSqlMiddleware` (opt-in) + internal driver / connection wrappers | yes | none; writes into the buffers | ✅ | ✅ |

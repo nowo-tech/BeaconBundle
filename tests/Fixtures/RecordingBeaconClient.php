@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Fixtures;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Client\CheckInCapableInterface;
 use Nowo\BeaconBundle\Client\DeployCapableInterface;
 use Nowo\BeaconBundle\Client\QueueSnapshotCapableInterface;
 use Throwable;
@@ -14,7 +15,7 @@ use function is_scalar;
 /**
  * In-memory client that records every capture call (tests only).
  */
-final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface
+final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface, CheckInCapableInterface
 {
     /** @var list<array{throwable: Throwable, extra: array<string, mixed>, fingerprint: list<string>|null}> */
     public array $exceptions = [];
@@ -30,6 +31,12 @@ final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapsho
 
     /** @var list<array<string, mixed>> */
     public array $deploys = [];
+
+    /** @var list<list<array{name: string, entries: list<array<string, mixed>>}>> */
+    public array $catalogs = [];
+
+    /** @var list<array<string, mixed>> */
+    public array $checkIns = [];
 
     /** @var array<string, string> */
     public array $tags = [];
@@ -112,5 +119,19 @@ final class RecordingBeaconClient implements BeaconClientInterface, QueueSnapsho
         $this->deploys[] = $deploy;
 
         return 'deploy-id';
+    }
+
+    public function captureScheduleCatalog(array $schedules): string
+    {
+        $this->catalogs[] = $schedules;
+
+        return 'catalog-id';
+    }
+
+    public function captureCheckIn(array $checkIn): string
+    {
+        $this->checkIns[] = $checkIn;
+
+        return 'check-in-id';
     }
 }

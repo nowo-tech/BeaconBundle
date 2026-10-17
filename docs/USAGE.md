@@ -18,6 +18,11 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
   - [Message handling transactions (opt-in)](#message-handling-transactions-opt-in)
   - [Worker memory warning (opt-in)](#worker-memory-warning-opt-in)
   - [Queue snapshot command](#queue-snapshot-command)
+- [Scheduler check-ins](#scheduler-check-ins)
+  - [What is sent](#what-is-sent)
+  - [Max runtime and opt-out](#max-runtime-and-opt-out)
+  - [Catalog command](#catalog-command)
+  - [Limitations](#limitations)
 - [Deploy markers](#deploy-markers)
 - [Self-test](#self-test)
   - [HTTP endpoint (optional, disabled by default)](#http-endpoint-optional-disabled-by-default)
@@ -226,7 +231,7 @@ Message bodies are never attached. When the envelope carries a `BeaconTraceStamp
 
 ### Scheduled tasks (Symfony Scheduler)
 
-When `include_scheduler_context: true` (default) and the failing envelope carries a `ScheduledStamp`, the same event also includes `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`). Reporting stays on the Messenger listener only (no duplicate `FailureEvent` capture; retries are still skipped via `willRetry()`). Message bodies are never attached.
+When `include_scheduler_context: true` (default) and the failing envelope carries a `ScheduledStamp`, the same event also includes `extra.scheduler` (`schedule_name`, `recurring_id`, `triggered_at`, `trigger`, and since 1.15.0 `run_id` — the [Scheduler check-in](#scheduler-check-ins) run id). Reporting stays on the Messenger listener only (no duplicate `FailureEvent` capture; retries are still skipped via `willRetry()`). Message bodies are never attached.
 
 ### Retries and recoveries (opt-in)
 
@@ -292,6 +297,95 @@ Sends a `queue_snapshot` Envelope item with the message count of every Messenger
 ```
 
 or with Symfony Scheduler (`RecurringMessage::every('5 minutes', new RunCommandMessage('nowo:beacon:messenger-report'))`).
+
+## Scheduler check-ins
+
+Opt-in (1.15.0+): Symfony Beacon learns which Symfony Scheduler tasks exist and when each run starts and ends, so it can alert on a run that **never happened** (worker down, lock stuck), a run that **takes too long**, and **repeated failures** — not only on exceptions.
+
+```yaml
+# config/packages/nowo_beacon.yaml
+nowo_beacon:
+    scheduler:
+        check_ins:
+            enabled: true                 # default false
+            max_runtime:                  # optional: seconds per message FQCN or command name
+                'app:reports:nightly': 1800
+                App\Message\SyncCatalog: 600
+            ignore: ['app:cache:warm']    # optional: never checked in nor listed
+            catalog_refresh_hours: 24     # re-send the catalog from a long-running worker
+```
+
+Requires `symfony/scheduler` (enabling it without the component fails container compilation) and a Scheduler worker (`messenger:consume scheduler_<name>`). Nothing is configured per task. **Enable it only against a Symfony Beacon that supports check-ins** (Beacon spec 153): older Beacons accept and ignore the two item types but count them toward the event quota.
+
+### What is sent
+
+Each item travels in **its own Envelope** (never mixed with events), through the configured `transport.mode` (`sync`, `async`, `messenger`). `before_send` is not applied (metadata only) and check-ins are never sampled.
+
+1. **`schedule_catalog`** — when a worker starts consuming `scheduler_<name>` transports (one catalog for those schedules), and again every `catalog_refresh_hours`:
+
+   ```json
+   {"event_id":"…","type":"schedule_catalog","timestamp":1792234800.12,"platform":"php","environment":"prod","server_name":"worker-1",
+    "schedules":[{"name":"default","entries":[
+      {"recurring_id":"a1b2c3d4","message_class":"Symfony\\Component\\Console\\Messenger\\RunCommandMessage","command":"app:reports:nightly",
+       "trigger":{"kind":"cron","expression":"0 3 * * *","timezone":"Europe/Madrid","interval_seconds":null,"description":"0 3 * * *"},
+       "next_run_at":"2026-10-18T01:00:00+00:00","max_runtime_seconds":1800},
+      {"recurring_id":"d4e5f6a7","message_class":"App\\Message\\SyncCatalog",
+       "trigger":{"kind":"periodic","expression":null,"timezone":null,"interval_seconds":900,"description":"every 900 seconds"},
+       "next_run_at":"2026-10-17T10:15:00+00:00","max_runtime_seconds":600}]}]}
+   ```
+
+   - `recurring_id` is `RecurringMessage::getId()`; `trigger.kind` is `cron` (`CronExpressionTrigger`, also behind jitter / exclude-time decorators), `periodic` (`PeriodicalTrigger`, idem) or `other`; `description` is the trigger's own text.
+   - `message_class` comes only from static messages (`RecurringMessage::every()` / `cron()`, `#[AsCronTask]`, `#[AsPeriodicTask]`); callback / custom message providers are never invoked (`null`). `RedispatchMessage` is unwrapped. `command` (the command **name** only) is present for `RunCommandMessage`.
+   - `next_run_at` is computed by the trigger itself (UTC, ATOM). `timezone` is the cron trigger's time zone, or PHP's default time zone (what the cron trigger uses) when none is set.
+   - At most 20 schedules × 200 entries; a schedule whose provider throws is skipped (never sent empty).
+
+2. **`check_in`** — per run of a message carrying a `ScheduledStamp`:
+
+   ```json
+   {"event_id":"…","type":"check_in","timestamp":1792234801.5,"platform":"php","environment":"prod","server_name":"worker-1",
+    "check_in":{"run_id":"5e1f…(32 hex)","schedule":"default","recurring_id":"a1b2c3d4","status":"ok",
+     "triggered_at":"2026-10-17T01:00:00+00:00","started_at":1792234500.0,"finished_at":1792234801.4,
+     "duration_ms":301400,"next_run_at":"2026-10-18T01:00:00+00:00","failure_event_id":null}}
+   ```
+
+   - `status`: `in_progress` (`WorkerMessageReceivedEvent`; skipped when the run is cancelled, e.g. by `PreRunEvent`), `ok` (`WorkerMessageHandledEvent`), `error` (`WorkerMessageFailedEvent`, retried or not). `in_progress` has no `finished_at`, `duration_ms` nor `failure_event_id`.
+   - `run_id` = first 32 hex chars of `sha256(schedule . "\n" . recurring_id . "\n" . triggered_at)` with `triggered_at` normalized to UTC — identical on every worker, so Beacon dedupes runs reported by several scheduler workers.
+   - `next_run_at` is the scheduler's own next occurrence (`MessageContext::$nextTriggerAt`).
+   - `failure_event_id` (on `error`) is the id of the exception event the Messenger failure listener sent for the same run; that event also carries `extra.scheduler.run_id`.
+
+Message payloads, handler arguments and command arguments / options are never read or sent — only class and command names, ids, trigger descriptions, timestamps and durations.
+
+In `async` mode the catalog and the `in_progress` check-in are flushed immediately (a long run is visible while it is still running); `ok` / `error` are flushed after each message as for every worker event. A Beacon outage never throws into the worker (logged as a warning).
+
+### Max runtime and opt-out
+
+```php
+use Nowo\BeaconBundle\Attribute\BeaconCheckIn;
+
+#[BeaconCheckIn(maxRuntime: 600)]          // seconds, 1 … 604 800
+final class SyncCatalog {}
+
+#[BeaconCheckIn(enabled: false)]           // never checked in nor listed
+final class CacheWarmup {}
+```
+
+Resolution: the attribute on the message class wins; then `max_runtime` / `ignore` by command name (for `RunCommandMessage`), exact FQCN, then parent classes / interfaces in config order. No max runtime = no *too long* alert. A value set in the Beacon UI wins over both.
+
+### Catalog command
+
+```bash
+php bin/console nowo:beacon:scheduler-catalog                      # send the catalog of all schedules
+php bin/console nowo:beacon:scheduler-catalog --schedule=default   # one or more schedules
+php bin/console nowo:beacon:scheduler-catalog --dry-run            # print only (works with check-ins disabled)
+```
+
+Useful in deploy scripts or when the scheduler worker rarely restarts. It sends nothing while `check_ins.enabled` is false or the DSN is empty.
+
+### Limitations
+
+- A schedule whose task uses `RedispatchMessage` (`#[AsCronTask(transports: …)]`) is checked in when the **redispatch** is handled by the scheduler worker (start and end within milliseconds), unless the inner envelope keeps the `ScheduledStamp`.
+- Dynamic schedules whose entries change without a worker restart are picked up by the next catalog refresh (or the catalog command).
+- Configuring `max_runtime` for `Symfony\Component\Scheduler\Messenger\ServiceCallMessage` (`#[AsPeriodicTask]` / `#[AsCronTask]` on service methods) applies to every such task; prefer the Beacon UI value per task.
 
 ## Deploy markers
 
