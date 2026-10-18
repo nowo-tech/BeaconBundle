@@ -140,7 +140,7 @@ final class ConfigurationTest extends TestCase
     {
         $defaults = (new Processor())->processConfiguration(new Configuration(), [[]]);
         self::assertSame(
-            ['enabled' => false, 'max_runtime' => [], 'ignore' => [], 'catalog_refresh_hours' => 24],
+            ['enabled' => false, 'max_runtime' => [], 'ignore' => [], 'descriptions' => [], 'catalog_refresh_hours' => 24],
             $defaults['scheduler']['check_ins'],
         );
 
@@ -149,9 +149,11 @@ final class ConfigurationTest extends TestCase
                 'enabled'               => true,
                 'max_runtime'           => ['app:reports-nightly' => 1800, 'App\\Message\\SyncCatalog' => 600],
                 'ignore'                => ['app:noisy'],
+                'descriptions'          => ['app:reports-nightly' => 'Nightly report.'],
                 'catalog_refresh_hours' => 6,
             ]],
         ]]);
+        self::assertSame(['app:reports-nightly' => 'Nightly report.'], $custom['scheduler']['check_ins']['descriptions']);
         self::assertSame(
             ['app:reports-nightly' => 1800, 'App\\Message\\SyncCatalog' => 600],
             $custom['scheduler']['check_ins']['max_runtime'],

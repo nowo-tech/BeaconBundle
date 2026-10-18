@@ -46,12 +46,14 @@ use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
 use Nowo\BeaconBundle\Scheduler\ScheduleCatalogBuilder;
 use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
+use Nowo\BeaconBundle\Scheduler\TaskDescriptionResolver;
 use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -497,6 +499,7 @@ final class ExtensionLoadTest extends TestCase
                 'enabled'               => true,
                 'max_runtime'           => ['app:reports:nightly' => 1800],
                 'ignore'                => ['app:noisy'],
+                'descriptions'          => ['app:reports:nightly' => 'Nightly report.'],
                 'catalog_refresh_hours' => 6,
             ]],
         ]], $container);
@@ -507,6 +510,12 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($container->getDefinition(SchedulerRunRegistry::class)->hasTag('kernel.reset'));
         self::assertSame(['app:reports:nightly' => 1800], $container->getDefinition(CheckInPolicy::class)->getArgument('$maxRuntime'));
         self::assertSame(['app:noisy'], $container->getDefinition(CheckInPolicy::class)->getArgument('$ignore'));
+        self::assertSame(['app:reports:nightly' => 'Nightly report.'], $container->getDefinition(CheckInPolicy::class)->getArgument('$descriptions'));
+        self::assertEquals(new Reference(TaskDescriptionResolver::class), $container->getDefinition(ScheduleCatalogBuilder::class)->getArgument('$descriptions'));
+        self::assertEquals(
+            new ServiceClosureArgument(new Reference('console.command_loader', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE)),
+            $container->getDefinition(TaskDescriptionResolver::class)->getArgument('$commandLoader'),
+        );
         self::assertTrue($container->getDefinition(SchedulerCatalogCommand::class)->getArgument('$checkInsEnabled'));
         self::assertEquals(
             new Reference(SchedulerRunRegistry::class),

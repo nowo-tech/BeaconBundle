@@ -34,7 +34,8 @@ use function sort;
  *
  * Message classes are only read from {@see StaticMessageProvider} (the default for
  * `RecurringMessage::every()` / `cron()` / `#[AsCronTask]` / `#[AsPeriodicTask]`); callback and custom
- * providers are never invoked (`message_class` null). Triggers are inspected through their public API
+ * providers are never invoked (`message_class` and `description` null). Each entry carries a human
+ * `description` ({@see TaskDescriptionResolver}, string|null). Triggers are inspected through their public API
  * plus read-only reflection for the cron time zone; periodic triggers are probed on a clone so the
  * schedule's own anchor is never moved.
  */
@@ -45,6 +46,8 @@ final class ScheduleCatalogBuilder
 
     private readonly ClockInterface $clock;
 
+    private readonly TaskDescriptionResolver $descriptions;
+
     /**
      * @param ServiceProviderInterface<ScheduleProviderInterface>|null $providers schedule providers by schedule name
      */
@@ -53,8 +56,10 @@ final class ScheduleCatalogBuilder
         private readonly ?ServiceProviderInterface $providers = null,
         ?ClockInterface $clock = null,
         private readonly ?LoggerInterface $logger = null,
+        ?TaskDescriptionResolver $descriptions = null,
     ) {
-        $this->clock = $clock ?? new class implements ClockInterface {
+        $this->descriptions = $descriptions ?? new TaskDescriptionResolver($policy);
+        $this->clock        = $clock ?? new class implements ClockInterface {
             public function now(): DateTimeImmutable
             {
                 return new DateTimeImmutable();
@@ -152,6 +157,7 @@ final class ScheduleCatalogBuilder
         $messageClass = null;
         $command      = null;
         $maxRuntime   = null;
+        $description  = null;
 
         $provider = $recurring->getProvider();
         if ($provider instanceof StaticMessageProvider) {
@@ -165,7 +171,8 @@ final class ScheduleCatalogBuilder
                 if (!$this->policy->isEnabled($messageClass, $command)) {
                     return null;
                 }
-                $maxRuntime = $this->policy->maxRuntime($messageClass, $command);
+                $maxRuntime  = $this->policy->maxRuntime($messageClass, $command);
+                $description = $this->descriptions->describe($first);
             }
         }
 
@@ -177,6 +184,7 @@ final class ScheduleCatalogBuilder
         if ($command !== null) {
             $entry['command'] = $command;
         }
+        $entry['description']         = $description;
         $entry['trigger']             = $this->describeTrigger($trigger);
         $entry['next_run_at']         = $this->nextRunAt($trigger);
         $entry['max_runtime_seconds'] = $maxRuntime;

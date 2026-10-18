@@ -13,5 +13,7 @@ Canonical NDJSON bodies for the Bundle ↔ Beacon ingest contract.
 
 - Scheduler check-ins (1.15.0): `schedule_catalog.ndjson`, `check_in_ok.ndjson`, `check_in_error.ndjson`
   (Beacon spec `153`). `make check-envelope-goldens` reports them as `PENDING` until Beacon mirrors them.
+- 1.16.0: every `schedule_catalog` entry carries `description` (string|null, plain text, one line, ≤ 500
+  chars). Beacon < 1.70 ignores the unknown key.
 
 When changing the wire format, update both copies and the contract tests.

@@ -15,6 +15,8 @@ use Attribute;
  * - `maxRuntime`: seconds (1 … 604 800) after which Beacon reports the run as too long; null = no limit.
  *   Values outside the range are ignored (treated as null). The Beacon UI value wins server side.
  * - `enabled: false`: the message is never checked in nor listed in the schedule catalog.
+ * - `description`: what the task does, in plain words (shown in Beacon; one line, ≤ 500 characters).
+ *   Wins over `nowo_beacon.scheduler.check_ins.descriptions`, the command description and docblocks.
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class BeaconCheckIn
@@ -22,6 +24,7 @@ final class BeaconCheckIn
     public function __construct(
         public readonly ?int $maxRuntime = null,
         public readonly bool $enabled = true,
+        public readonly ?string $description = null,
     ) {
     }
 }

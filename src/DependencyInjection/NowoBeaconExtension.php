@@ -52,6 +52,7 @@ use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
 use Nowo\BeaconBundle\Scheduler\ScheduleCatalogBuilder;
 use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
+use Nowo\BeaconBundle\Scheduler\TaskDescriptionResolver;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
@@ -59,6 +60,7 @@ use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -522,17 +524,27 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         }
 
         $policy = new Definition(CheckInPolicy::class, [
-            '$maxRuntime' => $checkIns['max_runtime'] ?? [],
-            '$ignore'     => array_values($checkIns['ignore'] ?? []),
+            '$maxRuntime'   => $checkIns['max_runtime'] ?? [],
+            '$ignore'       => array_values($checkIns['ignore'] ?? []),
+            '$descriptions' => $checkIns['descriptions'] ?? [],
         ]);
         $policy->setPublic(false);
         $container->setDefinition(CheckInPolicy::class, $policy);
 
+        // Lazy: the console command loader references the catalog command, which needs this resolver.
+        $descriptions = new Definition(TaskDescriptionResolver::class, [
+            '$policy'        => new Reference(CheckInPolicy::class),
+            '$commandLoader' => new ServiceClosureArgument(new Reference('console.command_loader', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE)),
+        ]);
+        $descriptions->setPublic(false);
+        $container->setDefinition(TaskDescriptionResolver::class, $descriptions);
+
         $builder = new Definition(ScheduleCatalogBuilder::class, [
-            '$policy'    => new Reference(CheckInPolicy::class),
-            '$providers' => null, // set by ScheduleProviderLocatorPass
-            '$clock'     => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
-            '$logger'    => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$policy'       => new Reference(CheckInPolicy::class),
+            '$providers'    => null, // set by ScheduleProviderLocatorPass
+            '$clock'        => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'       => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$descriptions' => new Reference(TaskDescriptionResolver::class),
         ]);
         $builder->setPublic(false);
         $container->setDefinition(ScheduleCatalogBuilder::class, $builder);

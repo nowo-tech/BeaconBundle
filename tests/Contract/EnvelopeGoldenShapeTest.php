@@ -123,6 +123,8 @@ final class EnvelopeGoldenShapeTest extends TestCase
                     self::assertIsArray($entry);
                     self::assertMatchesRegularExpression('/^[A-Za-z0-9_.:-]{1,64}$/', (string) $entry['recurring_id']);
                     self::assertArrayHasKey('message_class', $entry);
+                    self::assertArrayHasKey('description', $entry, 'BeaconBundle >= 1.16 always sends description (string|null)');
+                    self::assertTrue($entry['description'] === null || (is_string($entry['description']) && mb_strlen($entry['description']) <= 500 && !str_contains($entry['description'], "\n")));
                     self::assertContains($entry['trigger']['kind'] ?? null, ['cron', 'periodic', 'other']);
                     self::assertIsString($entry['trigger']['description'] ?? null);
                     self::assertArrayHasKey('next_run_at', $entry);

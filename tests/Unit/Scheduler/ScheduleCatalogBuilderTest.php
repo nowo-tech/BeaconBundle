@@ -29,6 +29,7 @@ use Symfony\Component\Scheduler\Trigger\PeriodicalTrigger;
 use Symfony\Component\Scheduler\Trigger\StaticMessageProvider;
 use Symfony\Component\Scheduler\Trigger\TriggerInterface;
 
+use function array_keys;
 use function array_slice;
 use function json_encode;
 
@@ -83,6 +84,8 @@ final class ScheduleCatalogBuilderTest extends TestCase
         );
         self::assertSame('2026-10-18T01:00:00+00:00', $cron['next_run_at']);
         self::assertSame(1800, $cron['max_runtime_seconds']);
+        self::assertNull($cron['description'], 'no command loader in this builder');
+        self::assertSame(['recurring_id', 'message_class', 'command', 'description', 'trigger', 'next_run_at', 'max_runtime_seconds'], array_keys($cron));
 
         self::assertSame('cron', $jitter['trigger']['kind']);
         self::assertSame(date_default_timezone_get(), $jitter['trigger']['timezone']);
@@ -95,6 +98,8 @@ final class ScheduleCatalogBuilderTest extends TestCase
         self::assertSame(['kind' => 'periodic', 'expression' => null, 'timezone' => null, 'interval_seconds' => 900, 'description' => 'every 900 seconds'], $every['trigger']);
         self::assertSame('2026-10-17T10:22:30+00:00', $every['next_run_at']);
         self::assertSame(600, $every['max_runtime_seconds']);
+        self::assertSame('Syncs the product catalog from the ERP.', $every['description']);
+        self::assertSame('Sends the weekly digest e-mail to subscribers.', $jitter['description']);
         self::assertNull(
             (new ReflectionProperty(PeriodicalTrigger::class, 'from'))->getValue($periodic->getTrigger()),
             'the real periodic trigger is never anchored by the catalog',
@@ -105,6 +110,8 @@ final class ScheduleCatalogBuilderTest extends TestCase
         self::assertSame('2026-10-17T10:08:00+00:00', $excluded['next_run_at']);
 
         self::assertNull($dynamic['message_class']);
+        self::assertNull($dynamic['description']);
+        self::assertArrayHasKey('description', $empty);
         self::assertSame('2026-10-17T11:00:00+00:00', $dynamic['next_run_at']);
         self::assertFalse($callbackInvoked, 'callback providers are never invoked');
 

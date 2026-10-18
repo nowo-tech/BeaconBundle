@@ -40,10 +40,12 @@ final class CheckInPolicy
     /**
      * @param array<string, int> $maxRuntime message FQCN or command name => seconds
      * @param list<string> $ignore message FQCNs or command names never checked in
+     * @param array<string, string> $descriptions message FQCN or command name => task description
      */
     public function __construct(
         private readonly array $maxRuntime = [],
         private readonly array $ignore = [],
+        private readonly array $descriptions = [],
     ) {
     }
 
@@ -118,6 +120,34 @@ final class CheckInPolicy
         foreach ($this->maxRuntime as $key => $seconds) {
             if ($key !== '' && is_a($messageClass, $key, true)) {
                 return $this->validMaxRuntime($seconds);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Configured description (attribute `description` first, then the `descriptions` config: command
+     * name, exact FQCN, parent classes / interfaces in config order); null when none. Not normalized.
+     */
+    public function description(string $messageClass, ?string $command = null): ?string
+    {
+        $attribute = $this->attribute($messageClass);
+        if ($attribute instanceof BeaconCheckIn && $attribute->description !== null && trim($attribute->description) !== '') {
+            return $attribute->description;
+        }
+
+        if ($command !== null && isset($this->descriptions[$command])) {
+            return $this->descriptions[$command];
+        }
+
+        if (isset($this->descriptions[$messageClass])) {
+            return $this->descriptions[$messageClass];
+        }
+
+        foreach ($this->descriptions as $key => $description) {
+            if ($key !== '' && is_a($messageClass, $key, true)) {
+                return $description;
             }
         }
 
