@@ -21,7 +21,7 @@ use const PHP_URL_HOST;
 /**
  * Decorates Symfony HttpClient to record opt-in outbound request spans / breadcrumbs.
  *
- * Beacon Envelope ingest calls are skipped to avoid noisy self-traces.
+ * Beacon Envelope ingest and remote Messenger command calls are skipped to avoid noisy self-traces.
  */
 final class TraceableBeaconHttpClient implements HttpClientInterface
 {
@@ -82,7 +82,7 @@ final class TraceableBeaconHttpClient implements HttpClientInterface
      */
     private function shouldSkip(string $url, array $options): bool
     {
-        if (str_contains($url, '/envelope/')) {
+        if (str_contains($url, '/envelope/') || str_contains($url, '/messenger/commands/')) {
             return true;
         }
 

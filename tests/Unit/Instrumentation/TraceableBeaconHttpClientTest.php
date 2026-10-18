@@ -35,12 +35,13 @@ final class TraceableBeaconHttpClientTest extends TestCase
 
     public function testSkipsBeaconEnvelopeUrls(): void
     {
-        $inner  = new MockHttpClient(new MockResponse('', ['http_code' => 200]));
+        $inner  = new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 200]));
         $spans  = new SpanBuffer();
         $crumbs = new BreadcrumbBuffer();
         $client = new TraceableBeaconHttpClient($inner, $spans, $crumbs);
 
         $client->request('POST', 'https://beacon.example.com/api/1/envelope/');
+        $client->request('POST', 'https://beacon.example.com/api/1/messenger/commands/claim');
 
         self::assertSame([], $spans->all());
         self::assertSame([], $crumbs->all());

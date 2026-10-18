@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use DateTimeInterface;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Messenger\FailureTransport\FailureTransportRecorder;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Scheduler\ScheduledRun;
 use Nowo\BeaconBundle\Scheduler\SchedulerRunRegistry;
@@ -26,9 +27,19 @@ use function class_exists;
  * `run_id`); with Scheduler check-ins enabled the event id is remembered so the `error` check-in links it.
  * Message bodies are never attached (PII / secrets risk). Beacon's own Envelope send and
  * `messenger.ignore_message_classes` are skipped ({@see MessengerContext::isIgnoredMessage()}).
+ *
+ * When the message was stored in a failure transport that can find messages by id (Doctrine, Redis),
+ * `failure_transport` and `failure_message_id` are added ({@see FailureTransportRecorder}) so Beacon
+ * can retry / discard it remotely.
  */
 final class BeaconMessengerFailedListener
 {
+    /**
+     * After Symfony's `SendFailedMessageToFailureTransportListener` (-100), so the failure-transport id
+     * is known; before the Scheduler check-in (-512) and transaction (-1024) listeners.
+     */
+    public const PRIORITY = -150;
+
     public function __construct(
         private readonly BeaconClientInterface $client,
         private readonly bool $enabled = true,
@@ -39,6 +50,7 @@ final class BeaconMessengerFailedListener
         /** @var list<class-string> */
         private readonly array $ignoreMessageClasses = [],
         private readonly ?SchedulerRunRegistry $checkInRuns = null,
+        private readonly ?FailureTransportRecorder $failureRecorder = null,
     ) {
     }
 
@@ -70,6 +82,11 @@ final class BeaconMessengerFailedListener
         $messenger['retry_state'] = ((int) $messenger['retry_count']) > 0
             ? MessengerContext::RETRY_STATE_EXHAUSTED
             : MessengerContext::RETRY_STATE_FAILED;
+
+        $failureIds = $this->failureRecorder?->take($event->getReceiverName());
+        if ($failureIds !== null) {
+            $messenger += $failureIds;
+        }
 
         $extra = [
             'messenger' => $messenger,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\DependencyInjection;
 
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommand;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
@@ -11,6 +12,7 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 use function is_string;
 use function str_starts_with;
+use function trim;
 
 /**
  * Defines the configuration tree for `nowo_beacon`.
@@ -165,9 +167,52 @@ final class Configuration implements ConfigurationInterface
                             ->defaultValue([])
                         ->end()
                         ->arrayNode('failure_transports')
-                            ->info('Transport names flagged as failure transports by nowo:beacon:messenger-report.')
+                            ->info('Transport names flagged as failure transports by nowo:beacon:messenger-report (and the default of remote_retry.failure_transports).')
                             ->scalarPrototype()->end()
                             ->defaultValue(['failed'])
+                        ->end()
+                        ->arrayNode('remote_retry')
+                            ->info('Retry or discard one failed message from the Beacon UI: workers poll Beacon (outbound HTTPS only) for signed, expiring commands. Off by default; needs a Beacon worker key and a Beacon that supports it.')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->booleanNode('enabled')
+                                    ->info('Poll Beacon for remote Messenger commands (requires symfony/messenger, BEACON_DSN and worker_key).')
+                                    ->defaultFalse()
+                                ->end()
+                                ->scalarNode('worker_key')
+                                    ->info('Beacon worker key (bwk_…, Beacon → Settings → Alerts → Remote Messenger commands). Keep it in an env var; required when enabled.')
+                                    ->defaultValue('%env(default::BEACON_WORKER_KEY)%')
+                                ->end()
+                                ->arrayNode('allowed_actions')
+                                    ->info('Actions this app accepts: retry and / or discard (e.g. [retry] forbids remote discards).')
+                                    ->scalarPrototype()
+                                        ->validate()
+                                            ->ifNotInArray(RemoteCommand::ACTIONS)
+                                            ->thenInvalid('Invalid nowo_beacon.messenger.remote_retry.allowed_actions entry %s (allowed: retry, discard).')
+                                        ->end()
+                                    ->end()
+                                    ->defaultValue(RemoteCommand::ACTIONS)
+                                ->end()
+                                ->arrayNode('failure_transports')
+                                    ->info('Failure transports commands may act on (empty = messenger.failure_transports). They must find messages by id (Doctrine, Redis).')
+                                    ->scalarPrototype()->end()
+                                    ->defaultValue([])
+                                ->end()
+                                ->integerNode('poll_interval')
+                                    ->info('Seconds between polls (10 … 600); Beacon may ask for longer with poll_after.')
+                                    ->defaultValue(30)
+                                    ->min(10)
+                                    ->max(600)
+                                ->end()
+                                ->booleanNode('poll_in_workers')
+                                    ->info('Poll from running messenger:consume workers between messages. False = only nowo:beacon:messenger-commands polls.')
+                                    ->defaultTrue()
+                                ->end()
+                            ->end()
+                            ->validate()
+                                ->ifTrue(static fn (array $v): bool => (bool) $v['enabled'] && (!is_string($v['worker_key']) || trim($v['worker_key']) === ''))
+                                ->thenInvalid('nowo_beacon.messenger.remote_retry.worker_key is required when remote_retry is enabled (use %%env(BEACON_WORKER_KEY)%%).')
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

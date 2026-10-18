@@ -1,0 +1,16 @@
+{
+    "commands": [
+        {
+            "id": "0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e5f6",
+            "project": "019fea2d-507b-7890-8b33-ca488db6f696",
+            "action": "retry",
+            "failure_transport": "failed",
+            "message_id": "8812",
+            "issued_at": "2026-10-17T10:02:11Z",
+            "expires_at": "2026-10-17T10:17:11Z",
+            "claim_token": "q2V0dGhpcy1pcy1hLXRlc3QtY2xhaW0tdG9rZW4tMDE",
+            "signature": "v1=00f625d96c727e932c179e732ad111eadf814f76f0e8bcca85491eb247025466"
+        }
+    ],
+    "poll_after": 30
+}

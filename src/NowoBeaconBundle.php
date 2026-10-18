@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle;
 
+use Nowo\BeaconBundle\DependencyInjection\Compiler\RecordingFailureSenderPass;
 use Nowo\BeaconBundle\DependencyInjection\Compiler\ScheduleProviderLocatorPass;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
@@ -18,13 +19,15 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
 final class NowoBeaconBundle extends Bundle
 {
     /**
-     * Registers the Scheduler check-in provider locator pass (after Symfony's scheduler pass).
+     * Registers the Scheduler check-in provider locator pass (after Symfony's scheduler pass) and the
+     * failure-sender recording pass (failure-transport ids in `extra.messenger`).
      */
     public function build(ContainerBuilder $container): void
     {
         parent::build($container);
 
         $container->addCompilerPass(new ScheduleProviderLocatorPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
+        $container->addCompilerPass(new RecordingFailureSenderPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
     }
 
     /**

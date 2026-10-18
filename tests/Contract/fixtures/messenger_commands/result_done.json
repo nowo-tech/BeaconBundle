@@ -1,0 +1,9 @@
+{
+    "claim_token": "q2V0dGhpcy1pcy1hLXRlc3QtY2xhaW0tdG9rZW4tMDE",
+    "status": "done",
+    "outcome": "requeued",
+    "reason_code": null,
+    "exception_class": null,
+    "executed_at": "2026-10-17T10:02:41Z",
+    "server_name": "worker-2"
+}

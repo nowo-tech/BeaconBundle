@@ -173,4 +173,45 @@ final class ConfigurationTest extends TestCase
             }
         }
     }
+
+    public function testMessengerRemoteRetryDefaultsAndValidation(): void
+    {
+        $defaults = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        self::assertSame([
+            'enabled'            => false,
+            'worker_key'         => '%env(default::BEACON_WORKER_KEY)%',
+            'allowed_actions'    => ['retry', 'discard'],
+            'failure_transports' => [],
+            'poll_interval'      => 30,
+            'poll_in_workers'    => true,
+        ], $defaults['messenger']['remote_retry']);
+
+        $custom = (new Processor())->processConfiguration(new Configuration(), [[
+            'messenger' => ['remote_retry' => [
+                'enabled'            => true,
+                'worker_key'         => '%env(BEACON_WORKER_KEY)%',
+                'allowed_actions'    => ['retry'],
+                'failure_transports' => ['failed', 'failed_high'],
+                'poll_interval'      => 600,
+                'poll_in_workers'    => false,
+            ]],
+        ]]);
+        self::assertSame(['retry'], $custom['messenger']['remote_retry']['allowed_actions']);
+        self::assertSame(['failed', 'failed_high'], $custom['messenger']['remote_retry']['failure_transports']);
+
+        foreach ([
+            ['poll_interval' => 9],
+            ['poll_interval' => 601],
+            ['allowed_actions' => ['purge']],
+            ['enabled' => true, 'worker_key' => ''],
+            ['enabled' => true, 'worker_key' => null],
+        ] as $invalid) {
+            try {
+                (new Processor())->processConfiguration(new Configuration(), [['messenger' => ['remote_retry' => $invalid]]]);
+                self::fail('Expected invalid configuration for ' . json_encode($invalid));
+            } catch (InvalidConfigurationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }

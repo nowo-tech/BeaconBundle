@@ -1,0 +1,9 @@
+{
+    "claim_token": "q2V0dGhpcy1pcy1hLXRlc3QtY2xhaW0tdG9rZW4tMDE",
+    "status": "failed",
+    "outcome": null,
+    "reason_code": "requeue_failed",
+    "exception_class": "Symfony\\Component\\Messenger\\Exception\\TransportException",
+    "executed_at": "2026-10-17T10:02:41Z",
+    "server_name": "worker-2"
+}

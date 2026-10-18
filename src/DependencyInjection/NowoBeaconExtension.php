@@ -12,6 +12,7 @@ use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
+use Nowo\BeaconBundle\Command\MessengerCommandsCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
 use Nowo\BeaconBundle\Command\SchedulerCatalogCommand;
 use Nowo\BeaconBundle\Command\SelfTestCommand;
@@ -40,6 +41,12 @@ use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
+use Nowo\BeaconBundle\Messenger\FailureTransport\FailureTransportRecorder;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\FailedMessageCommandExecutor;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandClient;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandPoller;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteRetryCredentials;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\WorkerKey;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
@@ -66,6 +73,7 @@ use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 use function array_values;
 use function class_exists;
 use function interface_exists;
+use function is_array;
 use function is_string;
 
 /**
@@ -162,6 +170,8 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         );
 
         $this->registerMessengerReportCommand($container, $config['messenger']['failure_transports'] ?? ['failed']);
+
+        $this->registerMessengerRemoteRetry($container, $config, $enabledFlag && $dsn !== '', $serverName);
 
         $this->registerSelfTest($container, $config, $enabledFlag && $dsn !== '');
 
@@ -332,6 +342,13 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         if ((bool) ($config['register_messenger_listener'] ?? true)
             && class_exists(WorkerMessageFailedEvent::class)
         ) {
+            // Failure-transport ids for extra.messenger (RecordingFailureSenderPass wraps the failure senders).
+            $recorder = new Definition(FailureTransportRecorder::class);
+            $recorder->addTag('kernel.event_subscriber');
+            $recorder->addTag('kernel.reset', ['method' => 'reset']);
+            $recorder->setPublic(false);
+            $container->setDefinition(FailureTransportRecorder::class, $recorder);
+
             $messenger = new Definition(BeaconMessengerFailedListener::class, [
                 '$client'                  => new Reference(BeaconClientInterface::class),
                 '$enabled'                 => true,
@@ -340,9 +357,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
                 '$traceIdProvider'         => new Reference(TraceIdProvider::class),
                 '$ignoreMessageClasses'    => $config['messenger']['ignore_message_classes'] ?? [],
                 '$checkInRuns'             => $checkInsEnabled ? new Reference(SchedulerRunRegistry::class) : null,
+                '$failureRecorder'         => new Reference(FailureTransportRecorder::class),
             ]);
+            // After Symfony's SendFailedMessageToFailureTransportListener (-100), before transactions (-1024).
             $messenger->addTag('kernel.event_listener', [
-                'event' => WorkerMessageFailedEvent::class,
+                'event'    => WorkerMessageFailedEvent::class,
+                'priority' => BeaconMessengerFailedListener::PRIORITY,
             ]);
             $messenger->setPublic(false);
             $container->setDefinition(BeaconMessengerFailedListener::class, $messenger);
@@ -573,6 +593,114 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $command->setPublic(false);
         $command->addTag('console.command');
         $container->setDefinition(MessengerReportCommand::class, $command);
+    }
+
+    /**
+     * Registers `nowo:beacon:messenger-commands` (whenever Messenger is installed; it explains when the
+     * feature is off) and, when `messenger.remote_retry.enabled` and reporting are on, the poller
+     * services. Enabling it without symfony/messenger fails compilation; a literal (non-env) worker key
+     * is validated at compile time, env values at runtime.
+     *
+     * @param array<string, mixed> $config
+     */
+    private function registerMessengerRemoteRetry(ContainerBuilder $container, array $config, bool $reportingEnabled, string $serverName): void
+    {
+        $remote  = $config['messenger']['remote_retry'] ?? [];
+        $enabled = (bool) ($remote['enabled'] ?? false);
+
+        if (!interface_exists(MessageBusInterface::class)) {
+            // @codeCoverageIgnoreStart
+            if ($enabled) {
+                throw new LogicException('nowo_beacon.messenger.remote_retry.enabled requires symfony/messenger. Run "composer require symfony/messenger" or set it to false.');
+            }
+
+            return;
+            // @codeCoverageIgnoreEnd
+        }
+
+        $command = new Definition(MessengerCommandsCommand::class, [
+            '$poller' => null,
+        ]);
+        $command->setAutowired(false);
+        $command->setPublic(false);
+        $command->addTag('console.command');
+        $container->setDefinition(MessengerCommandsCommand::class, $command);
+
+        if (!$enabled || !$reportingEnabled) {
+            return;
+        }
+
+        $workerKey = $remote['worker_key'] ?? '';
+        if (is_string($workerKey) && $workerKey !== '' && !$this->containsEnvPlaceholder($container, $workerKey) && !WorkerKey::isValid($workerKey)) {
+            throw new LogicException('nowo_beacon.messenger.remote_retry.worker_key is not a Beacon worker key (expected "bwk_…"). Copy it from Beacon → Settings → Alerts → Remote Messenger commands.');
+        }
+
+        $failureTransports = array_values($remote['failure_transports'] ?? []);
+        if ($failureTransports === []) {
+            $failureTransports = array_values($config['messenger']['failure_transports'] ?? ['failed']);
+        }
+
+        $credentials = new Definition(RemoteRetryCredentials::class, [
+            '$parser'       => new Reference(BeaconDsnParser::class),
+            '$rawDsn'       => $config['dsn'] ?? '',
+            '$rawWorkerKey' => $workerKey,
+        ]);
+        $credentials->setPublic(false);
+        $container->setDefinition(RemoteRetryCredentials::class, $credentials);
+
+        $client = new Definition(RemoteCommandClient::class, [
+            '$httpClient'  => new Reference('http_client'),
+            '$credentials' => new Reference(RemoteRetryCredentials::class),
+            '$serverName'  => $serverName,
+            '$environment' => $config['environment'],
+            '$verifyPeer'  => (bool) $config['verify_peer'],
+            '$clock'       => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $client->setPublic(false);
+        $container->setDefinition(RemoteCommandClient::class, $client);
+
+        $executor = new Definition(FailedMessageCommandExecutor::class, [
+            '$credentials'       => new Reference(RemoteRetryCredentials::class),
+            '$receiverLocator'   => new Reference('messenger.receiver_locator', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$allowedActions'    => array_values($remote['allowed_actions'] ?? []),
+            '$failureTransports' => $failureTransports,
+            '$cache'             => new Reference('cache.app', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$clock'             => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'            => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        $executor->setPublic(false);
+        $container->setDefinition(FailedMessageCommandExecutor::class, $executor);
+
+        $poller = new Definition(RemoteCommandPoller::class, [
+            '$client'       => new Reference(RemoteCommandClient::class),
+            '$executor'     => new Reference(FailedMessageCommandExecutor::class),
+            '$credentials'  => new Reference(RemoteRetryCredentials::class),
+            '$pollInterval' => (int) ($remote['poll_interval'] ?? 30),
+            '$logger'       => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        if ((bool) ($remote['poll_in_workers'] ?? true)) {
+            $poller->addTag('kernel.event_subscriber');
+        }
+        // Not tagged kernel.reset on purpose: Messenger resets services after each message (see the class doc).
+        $poller->setPublic(false);
+        $container->setDefinition(RemoteCommandPoller::class, $poller);
+
+        $command->setArgument('$poller', new Reference(RemoteCommandPoller::class));
+    }
+
+    /**
+     * Whether a configuration value is (or contains) an unresolved `%env(...)%` placeholder.
+     */
+    private function containsEnvPlaceholder(ContainerBuilder $container, string $value): bool
+    {
+        if (str_contains($value, '%env(')) {
+            return true;
+        }
+
+        $usedEnvs = null;
+        $container->resolveEnvPlaceholders($value, null, $usedEnvs);
+
+        return is_array($usedEnvs) && $usedEnvs !== [];
     }
 
     /**

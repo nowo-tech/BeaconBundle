@@ -1,0 +1,12 @@
+{
+    "server_name": "worker-2",
+    "environment": "prod",
+    "bundle_version": "1.16.0",
+    "failure_transports": [
+        {
+            "name": "failed",
+            "listable": true
+        }
+    ],
+    "max": 1
+}

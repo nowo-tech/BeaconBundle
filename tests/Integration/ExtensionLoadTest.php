@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Integration;
 
+use LogicException;
 use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
+use Nowo\BeaconBundle\Command\MessengerCommandsCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
 use Nowo\BeaconBundle\Command\SchedulerCatalogCommand;
 use Nowo\BeaconBundle\Command\SelfTestCommand;
@@ -34,6 +36,11 @@ use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
+use Nowo\BeaconBundle\Messenger\FailureTransport\FailureTransportRecorder;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\FailedMessageCommandExecutor;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandClient;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandPoller;
+use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteRetryCredentials;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
@@ -48,7 +55,9 @@ use RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\ParameterBag\EnvPlaceholderParameterBag;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 
 use const E_USER_WARNING;
 use const E_WARNING;
@@ -512,6 +521,99 @@ final class ExtensionLoadTest extends TestCase
         ]], $null);
         self::assertTrue($null->hasDefinition(SchedulerCatalogCommand::class));
         self::assertFalse($null->hasDefinition(BeaconSchedulerCheckInListener::class));
+    }
+
+    public function testFailureIdsRecorderAndListenerPriority(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn' => 'https://pubkey:secret@beacon.example.com:9444/5',
+        ]], $container);
+
+        $listener = $container->getDefinition(BeaconMessengerFailedListener::class);
+        self::assertSame([['event' => WorkerMessageFailedEvent::class, 'priority' => -150]], $listener->getTag('kernel.event_listener'));
+        self::assertEquals(new Reference(FailureTransportRecorder::class), $listener->getArgument('$failureRecorder'));
+        $recorder = $container->getDefinition(FailureTransportRecorder::class);
+        self::assertTrue($recorder->hasTag('kernel.event_subscriber'));
+        self::assertTrue($recorder->hasTag('kernel.reset'));
+
+        // Remote retry is off by default: only the command (which explains why).
+        self::assertTrue($container->hasDefinition(MessengerCommandsCommand::class));
+        self::assertNull($container->getDefinition(MessengerCommandsCommand::class)->getArgument('$poller'));
+        self::assertFalse($container->hasDefinition(RemoteCommandPoller::class));
+
+        $null = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => '']], $null);
+        self::assertFalse($null->hasDefinition(FailureTransportRecorder::class));
+        self::assertTrue($null->hasDefinition(MessengerCommandsCommand::class));
+    }
+
+    public function testRemoteRetryWiresPollerWhenEnabled(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => '%env(BEACON_DSN)%',
+            'messenger' => [
+                'failure_transports' => ['failed', 'failed_high'],
+                'remote_retry'       => ['enabled' => true, 'allowed_actions' => ['retry'], 'poll_interval' => 60],
+            ],
+        ]], $container);
+
+        $poller = $container->getDefinition(RemoteCommandPoller::class);
+        self::assertTrue($poller->hasTag('kernel.event_subscriber'));
+        self::assertFalse($poller->hasTag('kernel.reset'), 'the poll schedule must survive Messenger\'s per-message reset');
+        self::assertSame(60, $poller->getArgument('$pollInterval'));
+        self::assertEquals(new Reference(RemoteCommandPoller::class), $container->getDefinition(MessengerCommandsCommand::class)->getArgument('$poller'));
+
+        $executor = $container->getDefinition(FailedMessageCommandExecutor::class);
+        self::assertSame(['retry'], $executor->getArgument('$allowedActions'));
+        self::assertSame(['failed', 'failed_high'], $executor->getArgument('$failureTransports'));
+        self::assertEquals(new Reference('cache.app', ContainerBuilder::NULL_ON_INVALID_REFERENCE), $executor->getArgument('$cache'));
+        self::assertEquals(new Reference('messenger.receiver_locator', ContainerBuilder::NULL_ON_INVALID_REFERENCE), $executor->getArgument('$receiverLocator'));
+
+        $credentials = $container->getDefinition(RemoteRetryCredentials::class);
+        self::assertSame('%env(BEACON_DSN)%', $credentials->getArgument('$rawDsn'));
+        self::assertSame('%env(default::BEACON_WORKER_KEY)%', $credentials->getArgument('$rawWorkerKey'));
+        self::assertSame(RemoteCommandClient::class, $container->getDefinition(RemoteCommandClient::class)->getClass());
+
+        // Explicit failure transports win; poll_in_workers: false leaves polling to the command.
+        $own = $this->createContainer();
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pubkey:secret@beacon.example.com:9444/5',
+            'messenger' => ['remote_retry' => [
+                'enabled'            => true,
+                'worker_key'         => 'bwk_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+                'failure_transports' => ['dlq'],
+                'poll_in_workers'    => false,
+            ]],
+        ]], $own);
+        self::assertFalse($own->getDefinition(RemoteCommandPoller::class)->hasTag('kernel.event_subscriber'));
+        self::assertSame(['dlq'], $own->getDefinition(FailedMessageCommandExecutor::class)->getArgument('$failureTransports'));
+
+        // Reporting off (empty DSN): nothing to poll.
+        $off = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => '', 'messenger' => ['remote_retry' => ['enabled' => true]]]], $off);
+        self::assertFalse($off->hasDefinition(RemoteCommandPoller::class));
+    }
+
+    public function testRemoteRetryEnvPlaceholderKeyIsCheckedAtRuntimeAndLiteralKeysAtCompileTime(): void
+    {
+        // As in a real kernel: %env()% is already a placeholder string (env_…) when the extension loads.
+        $container = new ContainerBuilder(new EnvPlaceholderParameterBag());
+        $container->setParameter('kernel.environment', 'test');
+        $resolved = $container->getParameterBag()->get('env(BEACON_WORKER_KEY)');
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pubkey:secret@beacon.example.com:9444/5',
+            'messenger' => ['remote_retry' => ['enabled' => true, 'worker_key' => $resolved]],
+        ]], $container);
+        self::assertTrue($container->hasDefinition(RemoteCommandPoller::class));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('is not a Beacon worker key');
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pubkey:secret@beacon.example.com:9444/5',
+            'messenger' => ['remote_retry' => ['enabled' => true, 'worker_key' => 'pk_live_123']],
+        ]], $this->createContainer());
     }
 
     private function createContainer(): ContainerBuilder

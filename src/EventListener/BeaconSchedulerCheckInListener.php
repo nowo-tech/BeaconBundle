@@ -42,7 +42,7 @@ use function substr;
  * - Each scheduled run ({@see ScheduledStamp}): `in_progress` on receive, `ok` on handled, `error` on
  *   failure (with or without retry), each in its own `check_in` Envelope with a deterministic run id.
  *
- * Message priority -512: after {@see BeaconMessengerFailedListener} (0) so `failure_event_id` is known,
+ * Message priority -512: after {@see BeaconMessengerFailedListener} (-150) so `failure_event_id` is known,
  * before the transaction listener (-1024) and the async flush (-2048). Message bodies are never read
  * (only the class and, for `RunCommandMessage`, the command name). A Beacon outage never throws into
  * the worker. In async mode pending POSTs are flushed right after the catalog and the `in_progress`

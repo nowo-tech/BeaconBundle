@@ -1,0 +1,17 @@
+{
+    "worker_key": "bwk_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+    "hkdf": {
+        "algorithm": "sha256",
+        "ikm": "the worker key string exactly as configured, including the bwk_ prefix",
+        "salt": "",
+        "length": 32,
+        "auth_info": "beacon-worker-auth-v1",
+        "sign_info": "beacon-command-sign-v1"
+    },
+    "auth_subkey_hex": "ab54089bc214fb931391aa9e9f4e0d3da9cfd4c821f256af479aeff35bebba41",
+    "auth_subkey_sha256_hex": "3a4ffc121dd5e5a1ed7ad0e6147993fc488b774c1ff420ad8434eeed54f74015",
+    "sign_subkey_hex": "6f32ab5d9a15027c9897fb39c327b5cd67b9e84150d0d2f5f8de2e39f4e15048",
+    "authorization_header": "Bearer bwk_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+    "canonical": "v1\n0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e5f6\n019fea2d-507b-7890-8b33-ca488db6f696\nretry\nfailed\n8812\n2026-10-17T10:02:11Z\n2026-10-17T10:17:11Z",
+    "signature": "v1=00f625d96c727e932c179e732ad111eadf814f76f0e8bcca85491eb247025466"
+}
