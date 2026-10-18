@@ -1,4 +1,4 @@
-.PHONY: help up down build install shell logs logs-tail test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon composer-install scheduler
+.PHONY: help up down build install shell logs logs-tail test test-coverage cache-clear update-bundle ensure-up restart verify assets sync-beacon composer-install scheduler worker messenger-commands
 
 # Sibling checkout: repositories/other/symfony-beacon (override with BEACON_REPO=...)
 # demo/symfony8 → demo → BeaconBundle → bundles → repositories → other/symfony-beacon
@@ -26,6 +26,8 @@ help:
 	@echo "  make test-coverage  Run tests with coverage"
 	@echo "  make update-bundle  Update nowo-tech/beacon-bundle and clear cache"
 	@echo "  make scheduler      Run the Scheduler worker (Beacon check-ins demo, Ctrl+C to stop)"
+	@echo "  make worker         Run the async worker (remote retry demo: polls Beacon commands, Ctrl+C to stop)"
+	@echo "  make messenger-commands  Poll Beacon for remote Messenger commands once"
 	@echo ""
 	@echo "  BEACON_REPO=$(BEACON_REPO)"
 
@@ -121,6 +123,14 @@ logs-tail:
 
 scheduler: ensure-up
 	$(DC) exec php php bin/console messenger:consume scheduler_default -vv
+
+# Remote retry demo: consume the Doctrine `async` transport (failures land in `failed`); with
+# BEACON_WORKER_KEY set, the worker also polls Beacon for Retry / Discard commands between messages.
+worker: ensure-up
+	$(DC) exec php php bin/console messenger:consume async -vv
+
+messenger-commands: ensure-up
+	$(DC) exec php php bin/console nowo:beacon:messenger-commands --once -v
 
 test: ensure-up
 	$(DC) exec -T -e APP_ENV=test php php bin/phpunit

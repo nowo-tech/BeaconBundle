@@ -1,0 +1,5 @@
+# DBAL only (no ORM): the connection behind the Doctrine Messenger transports of the remote retry demo.
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        server_version: '8.4'

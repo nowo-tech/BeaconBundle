@@ -37,6 +37,15 @@ nowo_beacon:
     monolog_handler:
         enabled: true
         level: error
+    messenger:
+        failure_transports: ['failed']
+        # Remote retry / discard from the Beacon UI (1.16+): `make worker` polls between messages,
+        # `make messenger-commands` polls once. Needs BEACON_WORKER_KEY (empty = one warning, idle).
+        remote_retry:
+            enabled: true
+            worker_key: '%env(default::BEACON_WORKER_KEY)%'
+            allowed_actions: [retry, discard]
+            poll_interval: 10
     # Scheduler check-ins (1.15+): catalog on `messenger:consume scheduler_default`, one check-in per run.
     # Enable only against a Beacon that supports check-ins (spec 153); older Beacons ignore the items
     # but count them toward the event quota.
@@ -45,6 +54,9 @@ nowo_beacon:
             enabled: true
             max_runtime:
                 'app:demo-nightly-report': 600
+            # Task descriptions (1.16+): attribute > this map > command description / docblock summary.
+            descriptions:
+                App\Message\DemoHeartbeatMessage: 'Proves the scheduler worker is alive every 30 seconds.'
 
 when@dev:
     nowo_beacon:

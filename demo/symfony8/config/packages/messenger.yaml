@@ -1,6 +1,16 @@
 framework:
     messenger:
-        # Demo keeps Messenger installed so register_messenger_listener can wire.
-        # Worker failures are demonstrated via /messenger-fail (same extra shape as the listener).
+        # Remote retry demo (BeaconBundle 1.16+): `async` and the `failed` failure transport are Doctrine
+        # (MySQL), which can find a failed message by id — Beacon receives extra.messenger.failure_transport /
+        # failure_message_id and can send Retry / Discard commands (nowo_beacon.messenger.remote_retry).
+        failure_transport: failed
         transports:
             sync: 'sync://'
+            async:
+                dsn: 'doctrine://default?queue_name=async'
+                retry_strategy:
+                    max_retries: 1
+                    delay: 1000
+            failed: 'doctrine://default?queue_name=failed'
+        routing:
+            App\Message\DemoRemoteRetryMessage: async

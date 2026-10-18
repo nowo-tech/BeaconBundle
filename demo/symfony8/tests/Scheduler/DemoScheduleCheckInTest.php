@@ -24,5 +24,10 @@ final class DemoScheduleCheckInTest extends KernelTestCase
         self::assertStringContainsString('5 s', $display);
         self::assertStringContainsString('600 s', $display);
         self::assertStringContainsString('Dry run: catalog not sent.', $display);
+
+        // Task descriptions (1.16+): config map, console command description, class docblock summary.
+        self::assertStringContainsString('Proves the scheduler worker is alive every 30 seconds.', $display);
+        self::assertStringContainsString('Demo nightly report scheduled through Symfony Scheduler', $display);
+        self::assertStringContainsString('Scheduled task whose handler always throws', $display);
     }
 }

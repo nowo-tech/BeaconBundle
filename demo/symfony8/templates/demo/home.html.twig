@@ -29,6 +29,7 @@
     <ul>
         <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error → <code>monolog_handler</code></li>
         <li><a href="{{ path('demo_messenger_fail') }}">GET /messenger-fail</a> — simulated final Messenger worker failure</li>
+        <li><a href="{{ path('demo_messenger_remote_retry') }}">GET /messenger-remote-retry</a> — real Doctrine failure for remote Retry / Discard from Beacon (<code>make worker</code>, then <a href="{{ path('demo_messenger_remote_retry', {fix: 1}) }}">fix the gateway</a>)</li>
         <li><code>php bin/console app:demo-console-boom</code> — console listener (<code>register_console_listener</code>)</li>
     </ul>
 

@@ -4,7 +4,8 @@ FROM dunglas/frankenphp:1-php8.5-alpine
 RUN apk add --no-cache git unzip bash curl ca-certificates nodejs npm \
     && npm install -g pnpm@9.14.2
 
-RUN install-php-extensions intl zip
+# pdo_mysql: Doctrine Messenger transports (async + failed) for the remote retry demo.
+RUN install-php-extensions intl zip pdo_mysql
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 RUN git config --global --add safe.directory /app && \

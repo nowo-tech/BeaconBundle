@@ -28,6 +28,7 @@ Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejecte
 - Symfony debug mode (`APP_DEBUG=1`)
 - `symfony/messenger` (Messenger failure demo)
 - `symfony/scheduler` (Scheduler check-ins demo)
+- `doctrine/doctrine-bundle` (DBAL only) + `symfony/doctrine-messenger` on MySQL (`mysql` service, no published port) for the remote retry demo
 - `nowo-tech/twig-inspector-bundle`
 - `nowo-tech/password-toggle-bundle`
 
@@ -56,6 +57,7 @@ Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejecte
 
 - `/monolog` — Monolog handler demo
 - `/messenger-fail` — simulated final Messenger worker failure (`extra.messenger`)
+- `/messenger-remote-retry` — real Doctrine failure for remote Retry / Discard (see below)
 - `php bin/console app:demo-console-boom` — console error listener
 
 ### Scheduler check-ins
@@ -75,6 +77,22 @@ docker compose exec php php bin/console nowo:beacon:scheduler-catalog --dry-run
 ```
 
 Beacon needs Scheduler check-in support (spec 153) to show the tasks; older Beacons ignore the items.
+Each catalog entry carries a `description` (1.16+): the `descriptions` map in `nowo_beacon.yaml` for the
+heartbeat, the console command description for `app:demo-nightly-report`, class docblock summaries for the others.
+
+### Remote retry from Beacon (1.16+)
+
+`async` and the `failed` failure transport are Doctrine transports on MySQL, so final failures carry
+`extra.messenger.failure_transport` / `failure_message_id` and Beacon can send Retry / Discard commands
+(`nowo_beacon.messenger.remote_retry.enabled: true`).
+
+1. In Beacon: Project → Settings → Alerts → Remote Messenger commands → *Create worker key*; put it in
+   `.env` as `BEACON_WORKER_KEY=bwk_…` and `make restart` (without a key the poller logs one warning and stays idle).
+2. Open `/messenger-remote-retry` (takes the demo gateway down and dispatches `DemoRemoteRetryMessage`), then
+   `make worker`: the handler fails, is retried once and the message lands in `failed`.
+3. Open `/messenger-remote-retry?fix=1`, then click **Retry** on the event in Beacon: the running worker claims the
+   command between messages, re-queues the message to `async` and handles it. **Discard** removes it instead.
+   Without a running worker: `make messenger-commands` (one poll).
 
 ### Status
 

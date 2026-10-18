@@ -20,6 +20,10 @@ services:
       - APP_DEBUG=1
       - APP_SECRET=${APP_SECRET:-demo-secret}
       - FRANKENPHP_MODE=${FRANKENPHP_MODE:-worker}
+      # Doctrine Messenger transports (async + failed) of the remote retry demo.
+      - DATABASE_URL=${DATABASE_URL:-mysql://beacon:beacon@mysql:3306/beacon_demo?serverVersion=8.4&charset=utf8mb4}
+      # Beacon worker key (bwk_…) for messenger.remote_retry; empty = the poller logs one warning and stays idle.
+      - BEACON_WORKER_KEY=${BEACON_WORKER_KEY:-}
     # Reach Symfony Beacon published on the host (HTTP :9081 / HTTPS :9444).
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -27,11 +31,34 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
+    depends_on:
+      - mysql
+    networks:
+      - beacon-demo-network
+
+  # MySQL for the Doctrine Messenger transports (REQ-DEMO-011); no published port (REQ-DEMO-006).
+  mysql:
+    image: mysql:8.4
+    container_name: beacon-demo-symfony8-mysql
+    environment:
+      MYSQL_DATABASE: beacon_demo
+      MYSQL_USER: beacon
+      MYSQL_PASSWORD: beacon
+      MYSQL_ROOT_PASSWORD: beacon-root
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ubeacon", "-pbeacon"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mysql-data:/var/lib/mysql
     networks:
       - beacon-demo-network
 
 volumes:
   composer-cache:
+    driver: local
+  mysql-data:
     driver: local
 
 networks:
