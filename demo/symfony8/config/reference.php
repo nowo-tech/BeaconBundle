@@ -1205,7 +1205,9 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             catalog_refresh_hours?: int|Param, // Re-send the schedule catalog from a running scheduler worker every N hours (1 … 168). // Default: 24
  *         },
  *     },
- *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths). // Default: false
+ *     auto_http_transaction?: bool|Param, // When true, send a performance transaction for each main HTTP request (skips ignore_paths, ignore_routes and unsampled requests). // Default: false
+ *     http_transaction_sample_rate?: float|Param, // Fraction of main HTTP requests that send a transaction when auto_http_transaction is on (0.0–1.0). // Default: 1.0
+ *     ignore_routes?: list<scalar|Param|null>,
  *     before_send?: scalar|Param|null, // Optional service id of an invokable that receives the event/transaction payload array and returns the mutated array, or null to drop the send. // Default: null
  *     instrumentation?: array{ // Opt-in automatic spans / breadcrumbs for Doctrine SQL and HttpClient requests.
  *         doctrine?: bool|Param, // When true and doctrine/dbal is installed, record SQL query spans and breadcrumbs. // Default: false

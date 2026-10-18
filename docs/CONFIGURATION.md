@@ -90,6 +90,8 @@ nowo_beacon:
             descriptions: {}               # 1.16+: e.g. { 'app:reports:nightly': 'Builds the nightly sales report.' }
             catalog_refresh_hours: 24
     auto_http_transaction: false
+    http_transaction_sample_rate: 1.0  # 1.17+: fraction of HTTP requests that send a transaction
+    ignore_routes: []                  # 1.17+: route-name prefixes without HTTP transaction, e.g. [ingest_, api_poll_]
     before_send: null
     instrumentation:
         doctrine: false
@@ -159,7 +161,9 @@ nowo_beacon:
 | `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
 | `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |
 | `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). `[]` disables the role check (protect the path with your firewall). Without SecurityBundle and a non-empty list, access is refused. |
-| `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
+| `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`, `ignore_routes` and unsampled requests). |
+| `http_transaction_sample_rate` | `1.0` | Fraction (0.0–1.0) of main HTTP requests that send an `auto_http_transaction` transaction; decided once at request start. |
+| `ignore_routes` | `[]` | Route-name prefixes (`_route`) whose `auto_http_transaction` transactions are never sent, e.g. `ingest_` or a polling API. Does not affect error capture. |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (string, double-quoted and numeric literals scrubbed to `?`; truncated). |
 | `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest and remote Messenger command URLs are skipped. |
@@ -213,6 +217,8 @@ nowo_beacon:
 - Empty `dsn` means the bundle wires `NullBeaconClient`.
 - `ignore_exceptions` only affects the automatic listener. Manual `captureException()` calls still send unless your own code avoids them.
 - `ignore_paths` only affects the HTTP exception listener and `auto_http_transaction`. Console / Messenger listeners are unaffected.
+- `ignore_routes` and `http_transaction_sample_rate` only affect `auto_http_transaction`; exceptions on those routes are still reported.
+- `monolog_handler` never forwards the bundle transport's own logs (context flag `nowo_beacon_transport`, `EnvelopeTransport::LOG_CONTEXT_FLAG`): reporting a failed send through the same transport would loop while the receiver is down. Other handlers still receive them.
 - `timeout` applies to the synchronous HTTP request path.
 - `verify_peer: false` also disables host verification in the underlying HTTP client and should stay limited to local dev.
 - Enabling `send.user` or `send.client` transmits identifiers that may be personal data; align with GDPR / privacy policy and legal pages on the Beacon UI.

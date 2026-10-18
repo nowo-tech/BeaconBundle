@@ -653,6 +653,19 @@ nowo_beacon:
 
 Paths in `ignore_paths` are skipped (defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools probe). Prefer this for coarse request timing; use `captureTransaction()` for finer spans.
 
+Since 1.17 you can sample and filter by route name:
+
+```yaml
+nowo_beacon:
+    auto_http_transaction: true
+    http_transaction_sample_rate: 0.2      # keep 20 % of HTTP transactions
+    ignore_routes:                         # route-name prefixes (the transaction is named after the route)
+        - 'ingest_'                        # e.g. an ingest endpoint that would re-report itself
+        - 'api_poll_'                      # high-frequency polling noise
+```
+
+The sampling decision is taken once per request, before timing starts. Errors raised on ignored or unsampled requests are still reported.
+
 ## Monolog
 
 ```yaml
@@ -663,6 +676,8 @@ nowo_beacon:
 ```
 
 Requires `monolog/monolog`. Records at/above the level are forwarded as Beacon messages (or `captureException` when `context.exception` is a `Throwable`).
+
+The bundle's own transport logs ("Beacon ingest transport failed.", "Beacon ingest rate limited …", …) carry the context flag `nowo_beacon_transport: true` and are never forwarded (1.17+): sending them through the same transport while Beacon is unreachable would loop. They still reach your other handlers.
 
 ## Disabled mode
 

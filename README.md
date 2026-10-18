@@ -32,7 +32,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - Opt-in Symfony Scheduler check-ins (`scheduler.check_ins`): schedule catalog on worker start (with a human `description` per task) and one check-in per run (`in_progress` / `ok` / `error`), `#[BeaconCheckIn(maxRuntime: …, description: …)]`, `nowo:beacon:scheduler-catalog` — Beacon alerts on missed, too long and repeatedly failing tasks (requires a Beacon with check-in support)
 - Opt-in remote retry / discard of one failed Messenger message from the Beacon UI (`messenger.remote_retry`): workers poll signed, expiring commands over outbound HTTPS (no inbound endpoint), `nowo:beacon:messenger-commands` for cron; final failures carry the failure-transport id (`failure_transport`, `failure_message_id`) for Doctrine / Redis failure transports
 - `nowo:beacon:deploy` deploy markers (release / environment / commit) for Beacon's suspect-deploy hints
-- Optional automatic HTTP request transactions (`auto_http_transaction`)
+- Optional automatic HTTP request transactions (`auto_http_transaction`) with sampling (`http_transaction_sample_rate`) and route-name filter (`ignore_routes`)
 - Console command `nowo:beacon:test` to probe DSN connectivity (sync Envelope; `--check-only` available)
 - `nowo:beacon:self-test` producing **real** failures (uncaught exception / PHP error, PHP warning, captured exception / message, Messenger handler failure) reported by the bundle's own listeners, plus an optional, disabled-by-default JSON endpoint (`self_test.http`) and a public `BeaconSelfTest` service for admin pages
 - Precise timestamps (fractional Unix + ISO-8601 with microseconds)

@@ -95,18 +95,19 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 
 | ID | Requirement |
 |----|-------------|
-| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, include_scheduler_context, auto_http_transaction, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, messenger.*, before_send |
+| FR-DI-001 | Config keys include: enabled, dsn, environment, release, server_name, verify_peer, timeout, transport.mode, register_error_listener, register_console_listener, register_messenger_listener, include_scheduler_context, auto_http_transaction, http_transaction_sample_rate, ignore_routes, ignore_exceptions, ignore_paths, monolog_handler.*, send.*, instrumentation.*, messenger.*, before_send |
 | FR-DI-002 | Invalid **literal** DSN fails container compilation; `%env(...)%` / empty env resolves at runtime via `BeaconClientFactory` |
 | FR-LI-001 | Optional HTTP exception listener |
 | FR-LI-002 | Optional console error listener (`ConsoleEvents::ERROR`); nested `extra.console` with `command`, `exit_code`, `php_sapi`; MUST NOT attach argv/input arguments |
 | FR-LI-003 | Optional Messenger failure listener (`WorkerMessageFailedEvent`, final failures only; requires `symfony/messenger`); when `include_scheduler_context` and envelope has `ScheduledStamp`, attach `extra.scheduler` (no message body); do not also capture `FailureEvent` (avoids duplicates / retries) |
-| FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths` |
+| FR-LI-004 | Optional automatic HTTP request transactions (`auto_http_transaction`, default false); skipped paths come from `ignore_paths`, skipped route-name prefixes from `ignore_routes`; `http_transaction_sample_rate` (0.0–1.0) samples at request start (1.17) |
 | FR-LI-005 | `ignore_paths` defaults MUST include `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, and `/.well-known/appspecific/com.chrome.devtools.json` (aligned with typical Symfony Beacon host infra exclusions); trailing slashes are normalized; empty list disables path filtering; applies to HTTP exception listener and auto HTTP transactions only (not console/Messenger) |
 | FR-PW-001 | Optional PHP warning interceptor reports warnings / notices as events without converting them into exceptions |
 | FR-MQ-001..008 | Messenger observability — see [`specs/004-messenger-observability`](../004-messenger-observability/spec.md) (transactions, retries, `retry_state`, memory warning, `queue_snapshot`, flush after each worker message) |
 | FR-DEP-001..003 | Deploy markers — see [`specs/005-deploy-markers`](../005-deploy-markers/spec.md) |
 | FR-ST-001..008 | Self-test — see [`specs/006-self-test`](../006-self-test/spec.md) |
 | FR-MO-001 | When `monolog_handler.enabled` and Monolog is installed, register `BeaconMonologHandler` and prepend `monolog.handlers.nowo_beacon` as `type: service` |
+| FR-MO-002 | `BeaconMonologHandler` MUST NOT forward records flagged `EnvelopeTransport::LOG_CONTEXT_FLAG` (the transport's own failure / rate-limit logs): forwarding them loops while the receiver is down (1.17) |
 | FR-WK-001 | On every **main** `kernel.request`, reset `BreadcrumbBuffer`, `SpanBuffer`, `Scope`, and `TraceIdProvider` (in addition to `kernel.reset` tags) so FrankenPHP workers without `services_resetter` do not leak per-request data |
 | FR-WK-002 | `BeaconRequestTransactionListener` MUST clear stored Request/timing at the start of every main request (before ignore-path early returns) |
 | FR-WK-003 | `FlushPendingTransportsListener` terminate priority MUST be lower than the auto HTTP transaction listener so async POSTs enqueued on terminate are drained in the same cycle; leftover pending MAY also flush at the next main request start |

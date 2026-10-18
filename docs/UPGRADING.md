@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.17.0](#to-1170)
 - [To 1.16.0](#to-1160)
 - [To 1.15.0](#to-1150)
 - [To 1.14.0](#to-1140)
@@ -78,6 +79,18 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.17.0
+
+From **1.16.0** — Monolog self-loop fix, HTTP transaction sampling and route filter.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. `BeaconRequestTransactionListener` gains optional trailing constructor arguments (`$sampleRate`, `$ignoreRoutes`, `$random`).
+- With `monolog_handler.enabled: true`, the bundle transport's own failure / rate-limit logs are no longer sent to Beacon (they stay in your other handlers, e.g. the container log). If you dropped them in a `before_send` hook (message prefix `Beacon ingest transport failed` / `Beacon ingest rate limited`), that rule can go.
+- Optional: `http_transaction_sample_rate: 0.1` to keep 10 % of HTTP transactions, and `ignore_routes: [ingest_, api_poll_]` to skip HTTP transactions by route-name prefix. If a `before_send` hook dropped transactions by route name (`$event['transaction']`), move those prefixes to `ignore_routes`.
 
 ## To 1.16.0
 

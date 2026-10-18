@@ -101,6 +101,6 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/SqlNormalizer.php` | Normalize SQL for spans | FR-INS-001 |
 | `src/Instrumentation/DoctrineSqlMiddleware.php` | DBAL middleware (+ tracing driver/connection) | FR-INS-001 |
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
-| `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
+| `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon (skips transport self-logs) | FR-MO-001, FR-MO-002 |
 
 **Count:** 94 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

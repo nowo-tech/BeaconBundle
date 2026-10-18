@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.17.0] - 2026-10-18](#1170---2026-10-18)
 - [[1.16.0] - 2026-10-18](#1160---2026-10-18)
 - [[1.15.0] - 2026-10-18](#1150---2026-10-18)
 - [[1.14.0] - 2026-10-14](#1140---2026-10-14)
@@ -63,6 +64,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.17.0] - 2026-10-18
+
+### Fixed
+
+- `monolog_handler` no longer forwards the bundle transport's own logs ("Beacon ingest transport failed." / "Beacon ingest rate limited …" / "… authentication rejected" / "… rejected envelope"). While the receiver was down every failure log was captured, queued a new send to the same unreachable receiver, failed and logged again: one endless chain per failure (worst with `transport.mode: messenger`). `EnvelopeTransport` now sets the context flag `EnvelopeTransport::LOG_CONTEXT_FLAG` (`nowo_beacon_transport: true`) on every record it writes and `BeaconMonologHandler` skips flagged records; the other Monolog handlers still receive them. Found in Symfony Beacon, which had to drop these messages in a `before_send` hook.
+
+### Added
+
+- `http_transaction_sample_rate` (0.0–1.0, default `1.0`): fraction of main HTTP requests that send an `auto_http_transaction` transaction, decided at request start.
+- `ignore_routes` (default `[]`): route-name prefixes whose `auto_http_transaction` transactions are never sent (e.g. ingest, polling or health routes), in addition to the path-based `ignore_paths`.
 
 ## [1.16.0] - 2026-10-18
 
