@@ -166,6 +166,7 @@ final class BeaconClientFactory
         ) {
             $this->logger?->warning(
                 'nowo_beacon.transport.mode=messenger requires symfony/messenger and a MessageBusInterface; falling back to async.',
+                [EnvelopeTransport::LOG_CONTEXT_FLAG => true],
             );
 
             return $this->wrapAsync($sync);

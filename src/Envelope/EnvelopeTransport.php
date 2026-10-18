@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Envelope;
 
 use Nowo\BeaconBundle\Client\ClientUserAgent;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -21,6 +22,15 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final class EnvelopeTransport implements EnvelopeTransportInterface
 {
+    /**
+     * Context key (value `true`) set on every log record this transport writes.
+     *
+     * {@see BeaconMonologHandler} skips flagged records: forwarding
+     * "Beacon ingest transport failed." to Beacon would queue a new send to the same unreachable
+     * receiver, fail again and log again — one endless chain per failure while the receiver is down.
+     */
+    public const LOG_CONTEXT_FLAG = 'nowo_beacon_transport';
+
     private readonly string $clientName;
 
     private ?string $lastStartError = null;
@@ -100,8 +110,9 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             // @igor-ignore - Not shared worker service state.
             $this->lastStartError = $exception->getMessage();
             $this->logger()->error('Beacon ingest transport failed.', [
-                'exception' => $exception->getMessage(),
-                'url'       => $this->dsn->getEnvelopeUrl(),
+                'exception'            => $exception->getMessage(),
+                'url'                  => $this->dsn->getEnvelopeUrl(),
+                self::LOG_CONTEXT_FLAG => true,
             ]);
 
             return null;
@@ -129,8 +140,9 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             $status = $response->getStatusCode();
         } catch (TransportExceptionInterface $exception) {
             $this->logger()->error('Beacon ingest transport failed.', [
-                'exception' => $exception->getMessage(),
-                'url'       => $this->dsn->getEnvelopeUrl(),
+                'exception'            => $exception->getMessage(),
+                'url'                  => $this->dsn->getEnvelopeUrl(),
+                self::LOG_CONTEXT_FLAG => true,
             ]);
 
             return new TransportResult(false, null, $exception->getMessage());
@@ -151,8 +163,9 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     private function logRejectedResponse(int $status, ResponseInterface $response): void
     {
         $context = [
-            'status' => $status,
-            'url'    => $this->dsn->getEnvelopeUrl(),
+            'status'               => $status,
+            'url'                  => $this->dsn->getEnvelopeUrl(),
+            self::LOG_CONTEXT_FLAG => true,
         ];
 
         if ($status === 429) {

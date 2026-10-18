@@ -8,11 +8,16 @@ use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Throwable;
 
 /**
  * Forwards Monolog records to Beacon as messages (optional; requires monolog/monolog).
+ *
+ * Records written by the bundle's own transport (context flag {@see EnvelopeTransport::LOG_CONTEXT_FLAG})
+ * are never forwarded: they describe a failed send to Beacon, and reporting them through the same
+ * transport while the receiver is down would loop forever. They still reach the other handlers.
  */
 final class BeaconMonologHandler extends AbstractProcessingHandler
 {
@@ -29,7 +34,7 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
      */
     protected function write(LogRecord $record): void
     {
-        if (!$this->client->isEnabled()) {
+        if (($record->context[EnvelopeTransport::LOG_CONTEXT_FLAG] ?? false) === true || !$this->client->isEnabled()) {
             return;
         }
 
