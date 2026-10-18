@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.16.0](#to-1160)
 - [To 1.15.0](#to-1150)
 - [To 1.14.0](#to-1140)
 - [To 1.13.1](#to-1131)
@@ -77,6 +78,24 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.16.0
+
+From **1.15.0** — remote Messenger retry / discard (opt-in), failure-transport ids, Scheduler task descriptions.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. New constructor arguments are optional and last; `BeaconClientInterface` is unchanged.
+- Final Messenger failures gain `extra.messenger.failure_transport` / `failure_message_id` when the failure transport is Doctrine or Redis (ids only). `BeaconMessengerFailedListener` now runs at priority **-150** instead of 0: if you registered your own `WorkerMessageFailedEvent` listener that relied on running *after* Beacon's report, give it a priority below -150.
+- `schedule_catalog` entries gain `description` (string|null). Symfony Beacon **< 1.70** ignores the unknown key (verified against the 1.69 `ScheduleCatalogWriter`, which reads known keys only); Beacon ≥ 1.70 stores and shows it. Optional: add `#[BeaconCheckIn(description: …)]` or `scheduler.check_ins.descriptions`, then restart the Scheduler workers (or run `nowo:beacon:scheduler-catalog`).
+- To retry / discard failed messages from the Beacon UI ([Usage → Remote retry from Beacon](USAGE.md#remote-retry-from-beacon)):
+  1. upgrade Symfony Beacon to a release with remote Messenger commands (spec 154) and create a worker key in Project → Settings → Alerts → Remote Messenger commands;
+  2. set `BEACON_WORKER_KEY=bwk_…` on the hosts that run workers (secret);
+  3. use a failure transport that can find messages by id (Doctrine or Redis);
+  4. set `nowo_beacon.messenger.remote_retry.enabled: true` (optionally `allowed_actions: [retry]`) and restart the workers, or schedule `nowo:beacon:messenger-commands --once`.
+  Against an older Beacon the first poll gets `404`: polling pauses for an hour with one warning.
 
 ## To 1.15.0
 

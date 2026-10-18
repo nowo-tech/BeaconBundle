@@ -5,6 +5,7 @@
 - [Security considerations for integrators](#security-considerations-for-integrators)
 - [Attack surface and threat model](#attack-surface-and-threat-model)
 - [Bundle security measures](#bundle-security-measures)
+- [Remote Messenger commands (1.16+)](#remote-messenger-commands-116)
 - [Supported Versions](#supported-versions)
 - [Reporting a Vulnerability](#reporting-a-vulnerability)
 - [Release security checklist (12.4.1)](#release-security-checklist-1241)
@@ -30,6 +31,7 @@
 | `kernel.exception` listener | Uncaught exceptions may include sensitive messages or request context if your app throws them | Review exception messages, use `ignore_exceptions` for known noisy/sensitive classes, disable listener if your app wants manual reporting only |
 | Outbound HTTP call | Slow or unavailable Beacon server can delay the request path | Keep `timeout` low; use `transport.mode: async` or `messenger`; the transport has no retry loop |
 | Ingest rate limit | Sustained spikes may receive HTTP 429 | Back off using `Retry-After`; fix noisy reporters; raise `BEACON_INGEST_RATE_LIMIT` only on the server if appropriate |
+| `BEACON_WORKER_KEY` (remote Messenger commands, opt-in) | Leaked key lets an attacker claim (steal) this project's commands or post fake results; with a TLS interception position it could also forge commands (HMAC signing key is derived from the same key) | Keep it only on worker hosts, rotate / revoke in Beacon (10-minute overlap); `allowed_actions: [retry]` forbids remote discards; see [Remote Messenger commands](#remote-messenger-commands-116) |
 | Dependency supply chain | Vulnerable Composer dependency included in the release | Run `composer audit` before release and triage findings |
 
 ## Bundle security measures
@@ -51,6 +53,20 @@ Residual risk to remember:
 - When `send.request` is true, events and transactions include the current HTTP URL/method/query and a small allow-list of headers (Host, User-Agent, … — not cookies or Authorization). Query parameters with secret-like names (`token`, `password`, `api_key`, `secret`, `auth`, …), URL credential parameters (`hash` from Symfony login links, `_hash`, `signature`, `sig`, OAuth `code`) and URL userinfo are replaced with `[Filtered]` in the URL, query string, Referer and `extra.request_uri`; other values (e.g. `?email=`, `?state=`) are sent as-is, so still avoid secrets in URLs or disable `send.request` if URLs are sensitive.
 - `send.user` is off by default. Enabling it may transmit personal data (user identifier / email) to your Beacon host; keep it aligned with your privacy policy and legal pages.
 - `send.stack_vars` is off by default. Enabling it attaches function arguments to stack frames (`vars`); treat that like other PII and keep redaction/`before_send` in mind.
+
+## Remote Messenger commands (1.16+)
+
+`messenger.remote_retry` (off by default) lets a Beacon project admin retry or discard **one** failed Messenger message. Threat notes for the client side (Symfony Beacon spec 154 owns the server side):
+
+| Threat | Client-side controls |
+|---|---|
+| Inbound exposure / SSRF | **Pull only**: workers poll Beacon over outbound HTTPS; the bundle registers no route and opens no port. Beacon never connects to the app. |
+| Forged command (database-only Beacon compromise) | Every command is signed (`v1=` HMAC-SHA256 over id, project, action, transport, message id, issue and expiry times) with a subkey derived by HKDF from the worker key; checked with `hash_equals` before anything else and refused as `signature_invalid`. The project must match the DSN project. |
+| Replay of a captured command | Commands expire after 15 minutes (60 s clock skew tolerated); executed command ids are kept 24 h in `cache.app` and never executed twice (the stored result is re-posted). Beacon hands a claimed command out only once (*at most once*). |
+| Full Beacon compromise (accepted residual risk) | Bounded to retry / discard of messages already in an allow-listed failure transport (`failure_transports`, Doctrine / Redis only) with an allow-listed action (`allowed_actions`). No payload edits, no arbitrary commands, no handler runs in the poller; one switch (`enabled: false`) turns it off. |
+| Leaked worker key | Scope = the two command endpoints of one project (no issue data, no ingest). Results are tied to a per-claim token. Rotate / revoke in Beacon. A leaked ingest DSN does **not** grant this. HMAC means a leaked key **plus** a man-in-the-middle position could forge commands; Ed25519 signatures with a pinned Beacon public key are a recorded future improvement. |
+| Message content disclosure | Message bodies are never sent in either direction; results carry reason codes and the exception **class** only; logs carry ids and codes — never the key, claim tokens or envelopes. The key is redacted from `var_dump()` / exceptions (`#[SensitiveParameter]`). |
+| Abuse / DoS against the worker | One command per claim, 3-second HTTP timeout, polling between messages only, exponential backoff, `Retry-After`, one-hour pause on `401` / `403` / `404`; nothing throws into the worker. |
 
 ## Supported Versions
 

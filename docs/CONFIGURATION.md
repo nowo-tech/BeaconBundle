@@ -16,6 +16,7 @@
 |----------|-------------|
 | `BEACON_DSN` | Full Beacon DSN. Empty string disables outbound reporting. |
 | `BEACON_RELEASE` | Optional app/code version string (wire via `release`). |
+| `BEACON_WORKER_KEY` | Optional worker key (`bwk_…`) for [remote Messenger commands](USAGE.md#remote-retry-from-beacon) (1.16+); only on hosts that run workers. Secret: never commit it. |
 
 ## DSN format
 
@@ -74,11 +75,19 @@ nowo_beacon:
         retry_sample_rate: 1.0
         worker_memory_warning_ratio: null   # e.g. 0.8
         failure_transports: ['failed']
+        remote_retry:                      # Retry / discard from the Beacon UI (1.16+), off by default
+            enabled: false
+            worker_key: '%env(default::BEACON_WORKER_KEY)%'   # bwk_…, required when enabled
+            allowed_actions: [retry, discard]
+            failure_transports: []         # empty = messenger.failure_transports
+            poll_interval: 30              # seconds, 10 … 600
+            poll_in_workers: true
     scheduler:
         check_ins:
             enabled: false                 # Scheduler check-ins (1.15+), needs symfony/scheduler
             max_runtime: {}                # e.g. { 'app:reports:nightly': 1800, App\Message\SyncCatalog: 600 }
             ignore: []                     # message FQCNs or command names
+            descriptions: {}               # 1.16+: e.g. { 'app:reports:nightly': 'Builds the nightly sales report.' }
             catalog_refresh_hours: 24
     auto_http_transaction: false
     before_send: null
@@ -135,10 +144,17 @@ nowo_beacon:
 | `messenger.retry_sample_rate` | `1.0` | Fraction of retry / recovered events sent (0.0–1.0). |
 | `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
 | `messenger.ignore_message_classes` | `[]` | Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon's own `SendBeaconEnvelopeMessage` is always skipped, so `transport.mode: messenger` cannot loop on its own telemetry. |
-| `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`. |
+| `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`; also the default of `messenger.remote_retry.failure_transports`. |
+| `messenger.remote_retry.enabled` | `false` | Poll Beacon for signed retry / discard commands on one failed message (outbound HTTPS only, no inbound endpoint). Needs `symfony/messenger`, a non-empty DSN and a worker key; ignored while reporting is off. See [Usage → Remote retry from Beacon](USAGE.md#remote-retry-from-beacon). |
+| `messenger.remote_retry.worker_key` | `%env(default::BEACON_WORKER_KEY)%` | Beacon worker key (`bwk_…`, Beacon → Settings → Alerts → Remote Messenger commands). Required when enabled; a literal value must look like `bwk_…` (compile error otherwise), an env value is checked at runtime (empty / invalid → feature off with one warning per worker). |
+| `messenger.remote_retry.allowed_actions` | `[retry, discard]` | Actions this app executes; others are refused with `action_not_allowed` (e.g. `[retry]`). |
+| `messenger.remote_retry.failure_transports` | `[]` | Failure transports commands may act on (empty = `messenger.failure_transports`); others are refused with `transport_not_allowed`. They must find messages by id (Doctrine, Redis). |
+| `messenger.remote_retry.poll_interval` | `30` | Seconds between polls (10 … 600). Beacon may ask for longer (`poll_after`); errors back off up to 600 s; `429` / `503` honour `Retry-After`; `401` / `403` / `404` pause polling for one hour. |
+| `messenger.remote_retry.poll_in_workers` | `true` | Poll from running `messenger:consume` workers between messages. `false` = only `nowo:beacon:messenger-commands` polls. |
 | `scheduler.check_ins.enabled` | `false` | Send a `schedule_catalog` when a Scheduler worker (`messenger:consume scheduler_<name>`) starts and one `check_in` per run (`in_progress` / `ok` / `error`), each in its own Envelope. Requires `symfony/scheduler` (compile error otherwise). Enable only with a Symfony Beacon that supports check-ins. See [Usage → Scheduler check-ins](USAGE.md#scheduler-check-ins). |
 | `scheduler.check_ins.max_runtime` | `{}` | Seconds (1 … 604 800) per message FQCN (subclasses / interfaces match) or command name (`RunCommandMessage`). `#[BeaconCheckIn(maxRuntime: …)]` on the message class wins. Keys are kept as written (dashes are not normalized). |
 | `scheduler.check_ins.ignore` | `[]` | Message FQCNs (subclasses / interfaces match) or command names never checked in nor listed in the catalog. `#[BeaconCheckIn(enabled: …)]` wins. |
+| `scheduler.check_ins.descriptions` | `{}` | 1.16+: human task description (plain text, one line, ≤ 500 chars) per message FQCN (subclasses / interfaces match) or command name, sent as `description` in the catalog. `#[BeaconCheckIn(description: …)]` wins; the console command description / method or class docblock summary are the fallbacks. Keys are kept as written. |
 | `scheduler.check_ins.catalog_refresh_hours` | `24` | Re-send the catalog from a running Scheduler worker every N hours (1 … 168). |
 | `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
 | `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |
@@ -146,7 +162,7 @@ nowo_beacon:
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`). |
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (string, double-quoted and numeric literals scrubbed to `?`; truncated). |
-| `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest URLs are skipped. |
+| `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest and remote Messenger command URLs are skipped. |
 | `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
 | `ignore_paths` | `IgnoredRequestPath::DEFAULTS` | HTTP path prefixes skipped by the exception listener and auto HTTP transactions (trailing slashes ignored). Defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools Appspecific probe — aligned with Symfony Beacon security/PWA/site-backup/setup exclusions. Replacing the list removes defaults; use `[]` to report every path. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |

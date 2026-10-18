@@ -23,7 +23,8 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Safe operation under FrankenPHP worker mode when the kernel is **not** reset between requests (scenario B)
 - Opt-in Messenger worker observability (transactions, retries, memory, queue snapshots) and deploy markers (`specs/004`, `specs/005`)
 - Real-failure self-test command, public service and optional JSON endpoint (`specs/006`)
-- Opt-in Symfony Scheduler check-ins: schedule catalog + per-run check-ins (`specs/007`)
+- Opt-in Symfony Scheduler check-ins: schedule catalog (with task descriptions) + per-run check-ins (`specs/007`)
+- Opt-in remote retry / discard of failed Messenger messages from the Beacon UI (pull model) and failure-transport ids on final failures (`specs/008`)
 
 ## Non-goals
 
@@ -53,6 +54,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-13 | As a developer, I mark deploys from CI | `nowo:beacon:deploy` sends a `deploy` item (`specs/005-deploy-markers`) |
 | US-14 | As a developer, I prove the whole wiring with real failures | `nowo:beacon:self-test`, `BeaconSelfTest` service, optional `self_test.http` endpoint (`specs/006-self-test`) |
 | US-15 | As an operator, Beacon tells me when a scheduled task did not run, ran too long or keeps failing | `nowo_beacon.scheduler.check_ins` + `#[BeaconCheckIn]` + `nowo:beacon:scheduler-catalog` (`specs/007-scheduler-check-ins`) |
+| US-16 | As a project admin, I retry or discard one failed Messenger message from Beacon without SSH | `nowo_beacon.messenger.remote_retry` + `nowo:beacon:messenger-commands` (`specs/008-messenger-remote-retry`) |
 
 ## Functional requirements
 

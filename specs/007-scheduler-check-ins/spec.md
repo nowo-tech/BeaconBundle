@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-18
 
-**Status**: Implemented (released in **1.15.0**, 2026-10-18)
+**Status**: Implemented (released in **1.15.0**, 2026-10-18; `description` added in **1.16.0**)
 
 **Input**: Client half of Symfony Beacon spec `153-scheduler-check-ins` (roadmap Phase 7.7, approved 2026-10-17, FR-B01 – FR-B08). Beacon only learned about a Symfony Scheduler task when its handler threw; a task that never runs (worker down, lock stuck) or runs for hours was invisible.
 
@@ -46,6 +46,7 @@ As a developer, I put `#[BeaconCheckIn(maxRuntime: 600)]` on a message class (or
 - **FR-SCI-005** (FR-B05): `nowo:beacon:scheduler-catalog [--schedule=…] [--dry-run]`, registered whenever `symfony/scheduler` is installed (also with `NullBeaconClient`); sends nothing while check-ins are disabled.
 - **FR-SCI-006** (FR-B06): `CheckInCapableInterface` (`captureScheduleCatalog()`, `captureCheckIn()`) on `BeaconClient` / `NullBeaconClient`; `before_send` not applied; never sampled.
 - **FR-SCI-007** (FR-B07): Worker safety — `SchedulerRunRegistry` (`kernel.reset`, run id → started at / failure event id, max 100 each, cleared on worker start / stop); listener keeps only worker-lifetime state (schedules, last catalog time). Check-ins go through the configured `transport.mode`.
+- **FR-SCI-009** (1.16.0, amendment requested 2026-10-18): every catalog entry carries `description` (string|null, plain text, one line collapsed, ≤ 500 chars, always present). Resolution: `#[BeaconCheckIn(description: …)]`; `scheduler.check_ins.descriptions` (command name, exact FQCN, parent classes / interfaces); `RunCommandMessage` → console command description through the lazy `console.command_loader` (a `LazyCommand` is not instantiated) / `ServiceCallMessage` → target method docblock summary (service id = class name); message class docblock summary (first sentence; null without doc comments). Never arguments or payload values. Beacon < 1.70 ignores the key (its `ScheduleCatalogWriter` reads known keys only).
 - **FR-SCI-008** (FR-B08): Golden fixtures `schedule_catalog.ndjson`, `check_in_ok.ndjson`, `check_in_error.ndjson`; 100 % line coverage.
 
 ## Payload contract

@@ -18,9 +18,16 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
   - [Message handling transactions (opt-in)](#message-handling-transactions-opt-in)
   - [Worker memory warning (opt-in)](#worker-memory-warning-opt-in)
   - [Queue snapshot command](#queue-snapshot-command)
+- [Remote retry from Beacon](#remote-retry-from-beacon)
+  - [Setup](#setup)
+  - [How a command runs](#how-a-command-runs)
+  - [Wire format](#wire-format)
+  - [Polling, backoff and errors](#polling-backoff-and-errors)
+  - [Polling without workers (cron)](#polling-without-workers-cron)
 - [Scheduler check-ins](#scheduler-check-ins)
   - [What is sent](#what-is-sent)
   - [Max runtime and opt-out](#max-runtime-and-opt-out)
+  - [Task descriptions](#task-descriptions)
   - [Catalog command](#catalog-command)
   - [Limitations](#limitations)
 - [Deploy markers](#deploy-markers)
@@ -224,6 +231,10 @@ With `register_messenger_listener: true` (default) and `symfony/messenger` insta
 | `handler_classes` | All failing handlers, only when more than one failed |
 | `first_failure_at` | ISO-8601 time of the first `RedeliveryStamp` when present |
 | `retry_state` | `exhausted` (failed after at least one retry) or `failed` (first attempt) |
+| `failure_transport` | 1.16.0+: failure transport that stored the message — only when it can find messages by id (Doctrine, Redis; not AMQP / SQS / in-memory) |
+| `failure_message_id` | 1.16.0+: the message id **in that failure transport** (string, ≤ 255), e.g. what `messenger:failed:retry <id>` expects |
+
+`transport_message_id` is the id in the **original** transport; `failure_message_id` is the id the message got in the failure transport. Symfony's `SendFailedMessageToFailureTransportListener` (priority -100) discards the envelope returned by the failure sender, so a compiler pass wraps that listener's failure senders in a `RecordingFailureSender` that records the returned `TransportMessageIdStamp`; the Beacon failure listener runs at priority **-150** (after the failure send, before the transaction listener at -1024) and reads it. Both keys are always sent when available (ids only, no opt-in) and enable [Remote retry from Beacon](#remote-retry-from-beacon). If the failure send itself throws (failure transport down), the worker stops with that exception (reported by the console listener) and the message is redelivered later.
 
 The event culprit is taken from the root cause behind `HandlerFailedException` (application code), not from Messenger middleware frames.
 
@@ -298,6 +309,108 @@ Sends a `queue_snapshot` Envelope item with the message count of every Messenger
 
 or with Symfony Scheduler (`RecurringMessage::every('5 minutes', new RunCommandMessage('nowo:beacon:messenger-report'))`).
 
+## Remote retry from Beacon
+
+Opt-in (1.16.0+, Symfony Beacon spec 154): a project admin opens a final Messenger failure in Beacon and clicks **Retry** or **Discard**; one of your workers picks the command up and puts the message back on its original transport (retry) or removes it from the failure transport (discard). The direction is **pull**: workers poll Beacon over outbound HTTPS; your app exposes **no endpoint** and Beacon never connects to it.
+
+### Setup
+
+1. In Beacon: Project → Settings → Alerts → **Remote Messenger commands** → *Create worker key*. The key (`bwk_…`) is shown once.
+2. Put it in an env var on the hosts that run workers (never in Git):
+
+   ```dotenv
+   BEACON_WORKER_KEY=bwk_…
+   ```
+
+3. Enable the feature:
+
+   ```yaml
+   # config/packages/nowo_beacon.yaml
+   nowo_beacon:
+       messenger:
+           failure_transports: ['failed']            # also the default of remote_retry.failure_transports
+           remote_retry:
+               enabled: true                         # default false
+               worker_key: '%env(default::BEACON_WORKER_KEY)%'   # default
+               allowed_actions: [retry, discard]     # e.g. [retry] forbids remote discards
+               failure_transports: []                # empty = messenger.failure_transports
+               poll_interval: 30                     # seconds, 10 … 600
+               poll_in_workers: true                 # poll from messenger:consume between messages
+   ```
+
+Requirements: `symfony/messenger`, a non-empty `BEACON_DSN`, a failure transport that can find messages by id (**Doctrine** or **Redis**; AMQP / SQS / Beanstalkd / in-memory cannot) and a Beacon release that supports remote commands. It is a **double opt-in**: nothing happens until Beacon has a worker key *and* the app enables `remote_retry`. Workers on older Beacons get `404` on the first poll, pause polling for an hour and log one warning — harmless.
+
+### How a command runs
+
+Each claimed command is verified, in this order, before anything is touched; a failed check is reported back as `failed` + reason code and nothing runs:
+
+1. **Signature** — `v1=` + HMAC-SHA256 (constant-time compare) with a key derived from the worker key.
+2. **Project** — the command's project UUID must be the DSN project (with a legacy numeric DSN id the per-project signing key is the binding).
+3. **Expiry** — `expires_at` must be later than now − 60 s (clock skew); Beacon issues commands for 15 minutes.
+4. **Action** in `allowed_actions`, **transport** in `failure_transports` and its receiver implements `ListableReceiverInterface`.
+5. **Replay guard** — command ids executed in the last 24 h (`cache.app`, shared by the workers of a host) are never executed again; the stored result is re-posted instead.
+
+Then:
+
+- **retry**: `find(message_id)` on the failure transport → the envelope is sent to the **original transport's sender** (`SentToFailureTransportStamp::getOriginalReceiverName()`) without `SentToFailureTransportStamp`, `RedeliveryStamp` (retry count starts again), the failure transport's `TransportMessageIdStamp` and `DelayStamp` (Beacon's trace stamp and `ErrorDetailsStamp` are kept) → the message is rejected from the failure transport → `done / requeued`. The handler is **not** run by the poller: the regular worker of the original transport handles it, and a new failure arrives in the same Beacon issue with a new failure id.
+- **discard**: `find(message_id)` → `reject()` → `done / removed`.
+
+Reason codes (closed list): `not_found`, `transport_not_allowed`, `transport_not_listable`, `action_not_allowed`, `signature_invalid` (also a project mismatch), `expired`, `requeue_failed` (nothing removed; also for messages that can no longer be decoded), `remove_failed`, `remove_failed_after_requeue` (re-queued but still in the failure transport: duplicate risk, shown as a warning in Beacon), `internal_error`. Results carry the code and, optionally, the **exception class** — never exception messages or message bodies. Delivery is **at most once**: a command whose worker dies mid-way is never handed out again (Beacon shows *outcome unknown*).
+
+### Wire format
+
+Both calls go to the DSN origin with `Authorization: Bearer bwk_…`, `Content-Type: application/json`, a 3-second timeout (independent of `timeout`) and the bundle `User-Agent`; they are direct HttpClient requests (never the Envelope transport nor a Messenger message), identical under every `transport.mode`.
+
+`POST {origin}/api/{project}/messenger/commands/claim`
+
+```json
+{"server_name":"worker-2","environment":"prod","bundle_version":"1.16.0","failure_transports":[{"name":"failed","listable":true}],"max":1}
+```
+
+`200` response:
+
+```json
+{"commands":[{"id":"0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e5f6","project":"019fea2d-507b-7890-8b33-ca488db6f696","action":"retry",
+  "failure_transport":"failed","message_id":"8812","issued_at":"2026-10-17T10:02:11Z","expires_at":"2026-10-17T10:17:11Z",
+  "claim_token":"…","signature":"v1=00f625d9…"}],"poll_after":30}
+```
+
+`POST {origin}/api/{project}/messenger/commands/{id}/result`
+
+```json
+{"claim_token":"…","status":"done","outcome":"requeued","reason_code":null,"exception_class":null,"executed_at":"2026-10-17T10:02:41Z","server_name":"worker-2"}
+```
+
+Keys (all HKDF-SHA256, input key = the worker key string exactly as configured including `bwk_`, empty salt, 32-byte output): `auth` with info `beacon-worker-auth-v1` (Beacon stores its SHA-256; the client sends the plain key as Bearer) and `sign` with info `beacon-command-sign-v1`. Signature: `v1=` + lowercase hex `HMAC-SHA256(sign, canonical)` with
+
+```text
+v1\n{id}\n{project}\n{action}\n{failure_transport}\n{message_id}\n{issued_at}\n{expires_at}
+```
+
+(values exactly as received, no trailing newline). Test vectors and the full bodies live in `tests/Contract/fixtures/messenger_commands/`.
+
+### Polling, backoff and errors
+
+- In workers (`poll_in_workers: true`) the poll runs on `WorkerRunningEvent` — between messages and while idle, **never while a message is being handled** — when the next poll is due on a monotonic clock. After a successful claim the next poll is `max(poll_interval, poll_after)` (Beacon slows idle projects down).
+- Network errors, timeouts and 5xx back off exponentially: 30 → 60 → 120 → 240 → 480 → 600 s (one warning per outage).
+- `429` / `503` honour `Retry-After` (seconds or HTTP date, capped at one hour).
+- `401` / `403` / `404` on the claim (wrong or revoked key, unknown project, Beacon without the feature) and `401` / `403` on a result: polling **pauses for one hour** in that process with one warning.
+- A result that cannot be posted (network, 5xx, 429) is retried before the next claim (up to 10 attempts, 20 pending results); `404` / `409` on a result (unknown command or claim token, different final result) drop it. A worker stop makes one last attempt.
+- Nothing ever throws into the worker. Logs carry command ids, actions, transports, message ids and codes — never the key, claim tokens or message bodies.
+
+### Polling without workers (cron)
+
+```bash
+php bin/console nowo:beacon:messenger-commands --once             # one poll (cron)
+php bin/console nowo:beacon:messenger-commands --time-limit=3600  # poll on the schedule for an hour
+```
+
+Use it when no `messenger:consume` process runs permanently, or set `poll_in_workers: false` and run one dedicated poller. `--once` exits non-zero when the feature is disabled, the key / DSN is missing or Beacon refuses the key. With `remote_retry.enabled: false` the command explains how to enable it.
+
+```cron
+* * * * * php /app/bin/console nowo:beacon:messenger-commands --once --no-interaction --quiet
+```
+
 ## Scheduler check-ins
 
 Opt-in (1.15.0+): Symfony Beacon learns which Symfony Scheduler tasks exist and when each run starts and ends, so it can alert on a run that **never happened** (worker down, lock stuck), a run that **takes too long**, and **repeated failures** — not only on exceptions.
@@ -327,15 +440,17 @@ Each item travels in **its own Envelope** (never mixed with events), through the
    {"event_id":"…","type":"schedule_catalog","timestamp":1792234800.12,"platform":"php","environment":"prod","server_name":"worker-1",
     "schedules":[{"name":"default","entries":[
       {"recurring_id":"a1b2c3d4","message_class":"Symfony\\Component\\Console\\Messenger\\RunCommandMessage","command":"app:reports:nightly",
+       "description":"Builds the nightly sales report and e-mails it to the finance team.",
        "trigger":{"kind":"cron","expression":"0 3 * * *","timezone":"Europe/Madrid","interval_seconds":null,"description":"0 3 * * *"},
        "next_run_at":"2026-10-18T01:00:00+00:00","max_runtime_seconds":1800},
-      {"recurring_id":"d4e5f6a7","message_class":"App\\Message\\SyncCatalog",
+      {"recurring_id":"d4e5f6a7","message_class":"App\\Message\\SyncCatalog","description":"Syncs the product catalog from the ERP.",
        "trigger":{"kind":"periodic","expression":null,"timezone":null,"interval_seconds":900,"description":"every 900 seconds"},
        "next_run_at":"2026-10-17T10:15:00+00:00","max_runtime_seconds":600}]}]}
    ```
 
    - `recurring_id` is `RecurringMessage::getId()`; `trigger.kind` is `cron` (`CronExpressionTrigger`, also behind jitter / exclude-time decorators), `periodic` (`PeriodicalTrigger`, idem) or `other`; `description` is the trigger's own text.
    - `message_class` comes only from static messages (`RecurringMessage::every()` / `cron()`, `#[AsCronTask]`, `#[AsPeriodicTask]`); callback / custom message providers are never invoked (`null`). `RedispatchMessage` is unwrapped. `command` (the command **name** only) is present for `RunCommandMessage`.
+   - `description` (1.16.0+, always present, string|null): what the task does — see [Task descriptions](#task-descriptions).
    - `next_run_at` is computed by the trigger itself (UTC, ATOM). `timezone` is the cron trigger's time zone, or PHP's default time zone (what the cron trigger uses) when none is set.
    - At most 20 schedules × 200 entries; a schedule whose provider throws is skipped (never sent empty).
 
@@ -370,6 +485,27 @@ final class CacheWarmup {}
 ```
 
 Resolution: the attribute on the message class wins; then `max_runtime` / `ignore` by command name (for `RunCommandMessage`), exact FQCN, then parent classes / interfaces in config order. No max runtime = no *too long* alert. A value set in the Beacon UI wins over both.
+
+### Task descriptions
+
+Since 1.16.0 every catalog entry carries `description`: plain text on one line (tags stripped, whitespace collapsed), at most 500 characters, or `null`. Resolution order:
+
+1. `#[BeaconCheckIn(description: 'Syncs the product catalog from the ERP.')]` on the message class;
+2. `nowo_beacon.scheduler.check_ins.descriptions` — command name (for `RunCommandMessage`), exact FQCN, then parent classes / interfaces in config order:
+
+   ```yaml
+   nowo_beacon:
+       scheduler:
+           check_ins:
+               descriptions:
+                   'app:reports:nightly': 'Builds the nightly sales report and e-mails it to the finance team.'
+                   App\Message\SyncCatalog: 'Syncs the product catalog from the ERP.'
+   ```
+
+3. `RunCommandMessage`: the console command's description (`#[AsCommand(description: …)]` / `setDescription()`), read through the console command loader — a lazy `#[AsCommand]` command is **not** instantiated; `ServiceCallMessage` (`#[AsPeriodicTask]` / `#[AsCronTask]` on a method): the summary of the target method's docblock (when the service id is the class name);
+4. the summary (first sentence) of the message class docblock — only when PHP keeps doc comments (`opcache.save_comments=1`, the default); otherwise silently skipped.
+
+Only class, command and method metadata is read — never arguments or payload values. Beacon < 1.70 ignores the key (backward compatible).
 
 ### Catalog command
 

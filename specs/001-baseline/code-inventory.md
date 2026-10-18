@@ -1,17 +1,18 @@
 # Code inventory — baseline (100% of production `src/`)
 
 **Last audited:** 2026-10-18  
-**Aligned with:** **v1.15.0** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`)
+**Aligned with:** **v1.16.0** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`, Messenger remote retry `specs/008`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process; registers `ScheduleProviderLocatorPass`) | FR-WK-005, FR-PW-001, FR-SCI-003 |
+| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process; registers `ScheduleProviderLocatorPass` and `RecordingFailureSenderPass`) | FR-WK-005, FR-PW-001, FR-SCI-003, FR-MRR-001 |
 | `src/Command/TestConnectionCommand.php` | Console `nowo:beacon:test` | FR-CMD-001..007 (`specs/003-connection-test-command`) |
 | `src/Command/MessengerReportCommand.php` | Console `nowo:beacon:messenger-report` (`queue_snapshot`) | FR-MQ-005 (`specs/004-messenger-observability`) |
 | `src/Command/DeployCommand.php` | Console `nowo:beacon:deploy` (`deploy` item) | FR-DEP-001 (`specs/005-deploy-markers`) |
 | `src/Command/SchedulerCatalogCommand.php` | Console `nowo:beacon:scheduler-catalog` (`schedule_catalog`) | FR-SCI-005 (`specs/007-scheduler-check-ins`) |
+| `src/Command/MessengerCommandsCommand.php` | Console `nowo:beacon:messenger-commands [--once] [--time-limit]` (remote command polling outside workers) | FR-MRR-004 (`specs/008-messenger-remote-retry`) |
 | `src/Command/SelfTestCommand.php` | Console `nowo:beacon:self-test` (real failures) | FR-ST-001..003 (`specs/006-self-test`) |
 | `src/SelfTest/BeaconSelfTest.php` | Public self-test service (`status`, `assertReady`, `run`, `flush`) | FR-ST-001..004 |
 | `src/SelfTest/SelfTestResult.php` | Returning-kind result VO | FR-ST-001 |
@@ -26,6 +27,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
 | `src/DependencyInjection/Configuration.php` | Config tree `nowo_beacon` | FR-DI-001 |
 | `src/DependencyInjection/Compiler/ScheduleProviderLocatorPass.php` | Schedule providers locator for the catalog builder | FR-SCI-003 |
+| `src/DependencyInjection/Compiler/RecordingFailureSenderPass.php` | Wraps the failure senders of Symfony's failure-transport listener in `RecordingFailureSender` | FR-MRR-001 |
 | `src/DependencyInjection/NowoBeaconExtension.php` | DI wiring, Monolog prepend, enable/disable, transports, instrumentation, connection test command | FR-DI-001/002, FR-CL-004, FR-MO-001, FR-LI-*, FR-TR-002, FR-INS-001, FR-CMD-001 |
 | `src/Resources/config/services.yaml` | Shared service defaults | — |
 | `src/Dsn/BeaconDsn.php` | DSN value object | FR-DSN-003 |
@@ -43,6 +45,19 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Scheduler/ScheduleCatalogBuilder.php` | Schedules → `schedule_catalog` entries (static providers only, trigger kinds, next run) | FR-SCI-003 |
 | `src/Scheduler/ScheduledRun.php` | Deterministic run id + UTC ATOM dates | FR-SCI-004 |
 | `src/Scheduler/SchedulerRunRegistry.php` | Bounded per-process run map (`kernel.reset`) | FR-SCI-007 |
+| `src/Scheduler/TaskDescriptionResolver.php` | Catalog entry `description` (attribute > config > command description / method docblock > class docblock), bounded cache | FR-SCI-009 |
+| `src/Messenger/FailureTransport/FailureTransportRecorder.php` | Per-message holder of the failure-transport id (`kernel.reset`, cleared on receive) | FR-MRR-001 |
+| `src/Messenger/FailureTransport/RecordingFailureSender.php` | Failure sender decorator recording the returned `TransportMessageIdStamp` (listable transports only) | FR-MRR-001 |
+| `src/Messenger/RemoteRetry/WorkerKey.php` | `bwk_…` key, HKDF auth / sign subkeys, Bearer header (redacted from dumps) | FR-MRR-003 |
+| `src/Messenger/RemoteRetry/RemoteRetryCredentials.php` | Lazy DSN + worker key resolution, project match | FR-MRR-002, FR-MRR-005 |
+| `src/Messenger/RemoteRetry/RemoteCommand.php` | Claimed command VO, canonical string, expected signature | FR-MRR-003, FR-MRR-005 |
+| `src/Messenger/RemoteRetry/CommandResult.php` | Result VO (status, outcome, closed reason codes, exception class) | FR-MRR-006 |
+| `src/Messenger/RemoteRetry/ClaimResponse.php` | Parsed claim response | FR-MRR-003 |
+| `src/Messenger/RemoteRetry/RemoteCommandClient.php` | Claim / result HTTP calls (Bearer key, 3 s timeout, status classification, `Retry-After`) | FR-MRR-003, FR-MRR-008 |
+| `src/Messenger/RemoteRetry/RemoteCommandException.php` | Classified HTTP failure (auth / rate limited / unavailable / rejected) | FR-MRR-003 |
+| `src/Messenger/RemoteRetry/FailedMessageCommandExecutor.php` | Verification order, retry / discard execution, executed-ids cache | FR-MRR-005, FR-MRR-006 |
+| `src/Messenger/RemoteRetry/RemoteCommandPoller.php` | `WorkerRunningEvent` poller (schedule, backoff, pause, pending results) | FR-MRR-003, FR-MRR-007 |
+| `src/Messenger/RemoteRetry/PollReport.php` | Poll outcome VO (command / tests) | FR-MRR-004 |
 | `src/Client/ClientUserAgent.php` | Versioned `User-Agent` | FR-TR-001 |
 | `src/Breadcrumb/BreadcrumbBuffer.php` | Request-scoped breadcrumb trail | FR-CL-005 |
 | `src/Scope/Scope.php` | Mutable tags / context / extras | FR-SCOPE-001, FR-CL-007 |
@@ -87,4 +102,4 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 69 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 93 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

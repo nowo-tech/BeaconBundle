@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.16.0] - 2026-10-18](#1160---2026-10-18)
 - [[1.15.0] - 2026-10-18](#1150---2026-10-18)
 - [[1.14.0] - 2026-10-14](#1140---2026-10-14)
 - [[1.13.1] - 2026-10-13](#1131---2026-10-13)
@@ -62,6 +63,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.16.0] - 2026-10-18
+
+### Added
+
+- Retry or discard one failed Messenger message from the Beacon UI (Beacon spec 154, bundle spec `specs/008-messenger-remote-retry`), off by default: `nowo_beacon.messenger.remote_retry.{enabled,worker_key,allowed_actions,failure_transports,poll_interval,poll_in_workers}`. Workers poll Beacon over outbound HTTPS (`POST /api/{project}/messenger/commands/claim` and `…/{id}/result`, `Authorization: Bearer bwk_…`, 3 s timeout) between messages; the app exposes no endpoint. Commands are HMAC-SHA256 signed with an HKDF subkey of the worker key, expire after 15 minutes and are executed at most once (24 h executed-ids cache). Retry re-sends the envelope to its original transport without `SentToFailureTransportStamp` / `RedeliveryStamp` and then rejects it from the failure transport; discard rejects it; handlers never run in the poller. Results carry a reason code and the exception class only. Backoff 30 → 600 s, `Retry-After`, one-hour pause on `401` / `403` / `404`.
+- `nowo:beacon:messenger-commands [--once] [--time-limit=…]` to poll from cron or one dedicated process (`poll_in_workers: false`).
+- Final Messenger failure events carry `extra.messenger.failure_transport` and `extra.messenger.failure_message_id` (the id in the failure transport) when the failure transport can find messages by id (Doctrine, Redis): `RecordingFailureSenderPass` wraps the senders of Symfony's `SendFailedMessageToFailureTransportListener`.
+- Every `schedule_catalog` entry carries `description` (string|null, plain text, one line, ≤ 500 chars): `#[BeaconCheckIn(description: …)]`, then `scheduler.check_ins.descriptions` (FQCN or command name), then the console command description (`RunCommandMessage`, lazy commands are not instantiated) or the target method's docblock summary (`ServiceCallMessage`), then the message class docblock summary. Never arguments or payload values. Golden `schedule_catalog.ndjson` updated.
+- Contract fixtures `tests/Contract/fixtures/messenger_commands/` (signing vectors, claim / result bodies) shared with Symfony Beacon.
+- Demo: Doctrine (MySQL) `async` / `failed` transports, a failing message and `make worker` / `make messenger-commands` for the remote retry flow.
+
+### Changed
+
+- `BeaconMessengerFailedListener` runs at priority **-150** (was 0): after Symfony's failure-transport listener (-100), so the failure-transport id is known; still before the Scheduler check-in (-512) and transaction (-1024) listeners.
+- `instrumentation.http_client` also skips Beacon's remote Messenger command calls.
 
 ## [1.15.0] - 2026-10-18
 
