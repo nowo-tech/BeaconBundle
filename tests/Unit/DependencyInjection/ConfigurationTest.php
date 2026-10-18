@@ -30,6 +30,8 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($config['register_messenger_listener']);
         self::assertTrue($config['include_scheduler_context']);
         self::assertFalse($config['auto_http_transaction']);
+        self::assertSame(1.0, $config['http_transaction_sample_rate']);
+        self::assertSame([], $config['ignore_routes']);
         self::assertNull($config['before_send']);
         self::assertFalse($config['instrumentation']['doctrine']);
         self::assertFalse($config['instrumentation']['http_client']);

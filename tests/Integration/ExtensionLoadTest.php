@@ -257,14 +257,16 @@ final class ExtensionLoadTest extends TestCase
         $container = $this->createContainer();
 
         (new NowoBeaconExtension())->load([[
-            'enabled'                     => true,
-            'dsn'                         => 'https://pubkey:secret@beacon.example.com/5',
-            'register_console_listener'   => false,
-            'register_messenger_listener' => true,
-            'include_scheduler_context'   => false,
-            'auto_http_transaction'       => true,
-            'monolog_handler'             => ['enabled' => true, 'level' => 'warning'],
-            'instrumentation'             => [
+            'enabled'                      => true,
+            'dsn'                          => 'https://pubkey:secret@beacon.example.com/5',
+            'register_console_listener'    => false,
+            'register_messenger_listener'  => true,
+            'include_scheduler_context'    => false,
+            'auto_http_transaction'        => true,
+            'http_transaction_sample_rate' => 0.25,
+            'ignore_routes'                => ['ingest_', 'api_poll_'],
+            'monolog_handler'              => ['enabled' => true, 'level' => 'warning'],
+            'instrumentation'              => [
                 'doctrine'    => true,
                 'http_client' => true,
             ],
@@ -276,6 +278,9 @@ final class ExtensionLoadTest extends TestCase
             $container->getDefinition(BeaconMessengerFailedListener::class)->getArgument('$includeSchedulerContext'),
         );
         self::assertTrue($container->hasDefinition(BeaconRequestTransactionListener::class));
+        $tx = $container->getDefinition(BeaconRequestTransactionListener::class);
+        self::assertSame(0.25, $tx->getArgument('$sampleRate'));
+        self::assertSame(['ingest_', 'api_poll_'], $tx->getArgument('$ignoreRoutes'));
         self::assertTrue($container->hasDefinition(DoctrineSqlMiddleware::class));
         self::assertTrue($container->hasDefinition(TraceableBeaconHttpClient::class));
         if (class_exists(AbstractProcessingHandler::class)) {

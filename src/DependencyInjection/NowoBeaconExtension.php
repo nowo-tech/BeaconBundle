@@ -71,6 +71,7 @@ use Symfony\Component\Messenger\Event\WorkerStartedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 
+use function array_map;
 use function array_values;
 use function class_exists;
 use function interface_exists;
@@ -381,9 +382,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
 
         if ((bool) ($config['auto_http_transaction'] ?? false)) {
             $tx = new Definition(BeaconRequestTransactionListener::class, [
-                '$client'      => new Reference(BeaconClientInterface::class),
-                '$enabled'     => true,
-                '$ignorePaths' => $config['ignore_paths'],
+                '$client'       => new Reference(BeaconClientInterface::class),
+                '$enabled'      => true,
+                '$ignorePaths'  => $config['ignore_paths'],
+                '$sampleRate'   => (float) $config['http_transaction_sample_rate'],
+                '$ignoreRoutes' => array_values(array_map('strval', $config['ignore_routes'])),
             ]);
             $tx->addTag('kernel.event_subscriber');
             $tx->addTag('kernel.reset', ['method' => 'reset']);
