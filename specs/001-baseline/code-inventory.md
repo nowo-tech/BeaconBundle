@@ -7,7 +7,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process; registers `ScheduleProviderLocatorPass` and `RecordingFailureSenderPass`) | FR-WK-005, FR-PW-001, FR-SCI-003, FR-MRR-001 |
+| `src/NowoBeaconBundle.php` | Bundle class (boots fatal / PHP warning handlers once per process; registers `ScheduleProviderLocatorPass`, `RecordingFailureSenderPass` and `TaskDescriptionCommandLoaderPass`) | FR-WK-005, FR-PW-001, FR-SCI-003, FR-MRR-001 |
 | `src/Command/TestConnectionCommand.php` | Console `nowo:beacon:test` | FR-CMD-001..007 (`specs/003-connection-test-command`) |
 | `src/Command/MessengerReportCommand.php` | Console `nowo:beacon:messenger-report` (`queue_snapshot`) | FR-MQ-005 (`specs/004-messenger-observability`) |
 | `src/Command/DeployCommand.php` | Console `nowo:beacon:deploy` (`deploy` item) | FR-DEP-001 (`specs/005-deploy-markers`) |
@@ -27,6 +27,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
 | `src/DependencyInjection/Configuration.php` | Config tree `nowo_beacon` | FR-DI-001 |
 | `src/DependencyInjection/Compiler/ScheduleProviderLocatorPass.php` | Schedule providers locator for the catalog builder | FR-SCI-003 |
+| `src/DependencyInjection/Compiler/TaskDescriptionCommandLoaderPass.php` | Lazy `console.command_loader` for task descriptions (before removing, after `AddConsoleCommandPass`) | FR-SCI-009 |
 | `src/DependencyInjection/Compiler/RecordingFailureSenderPass.php` | Wraps the failure senders of Symfony's failure-transport listener in `RecordingFailureSender` | FR-MRR-001 |
 | `src/DependencyInjection/NowoBeaconExtension.php` | DI wiring, Monolog prepend, enable/disable, transports, instrumentation, connection test command | FR-DI-001/002, FR-CL-004, FR-MO-001, FR-LI-*, FR-TR-002, FR-INS-001, FR-CMD-001 |
 | `src/Resources/config/services.yaml` | Shared service defaults | — |
@@ -102,4 +103,4 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
 | `src/Monolog/BeaconMonologHandler.php` | Optional Monolog → Beacon | FR-MO-001 |
 
-**Count:** 93 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.
+**Count:** 94 PHP production files under `src/` (+ `services.yaml`). Inventory complete — no placeholders.

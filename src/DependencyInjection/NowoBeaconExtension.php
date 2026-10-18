@@ -60,7 +60,6 @@ use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -531,10 +530,10 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $policy->setPublic(false);
         $container->setDefinition(CheckInPolicy::class, $policy);
 
-        // Lazy: the console command loader references the catalog command, which needs this resolver.
+        // $commandLoader is set by TaskDescriptionCommandLoaderPass once console.command_loader exists.
         $descriptions = new Definition(TaskDescriptionResolver::class, [
             '$policy'        => new Reference(CheckInPolicy::class),
-            '$commandLoader' => new ServiceClosureArgument(new Reference('console.command_loader', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE)),
+            '$commandLoader' => null,
         ]);
         $descriptions->setPublic(false);
         $container->setDefinition(TaskDescriptionResolver::class, $descriptions);

@@ -36,6 +36,7 @@ final class SchedulerCatalogCommandTest extends TestCase
         self::assertStringContainsString('Schedule catalog sent (event catalog-id).', $display);
         self::assertStringContainsString('app:reports:nightly', $display);
         self::assertStringContainsString('600 s', $display);
+        self::assertStringContainsString('Syncs the product catalog from the ERP.', $display);
         self::assertStringContainsString('(callback provider)', $display);
         self::assertStringNotContainsString('--token', $display);
         self::assertSame(['default', 'reports'], array_column($client->catalogs[0], 'name'));

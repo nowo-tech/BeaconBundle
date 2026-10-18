@@ -87,13 +87,14 @@ final class SchedulerCatalogCommand extends Command
                     $schedule['name'],
                     $entry['recurring_id'] ?? '',
                     $this->label($entry),
+                    is_string($entry['description'] ?? null) ? $entry['description'] : '—',
                     is_string($trigger['description'] ?? null) ? $trigger['description'] : '',
                     is_string($entry['next_run_at'] ?? null) ? $entry['next_run_at'] : '—',
                     isset($entry['max_runtime_seconds']) ? $entry['max_runtime_seconds'] . ' s' : '—',
                 ];
             }
         }
-        $io->table(['Schedule', 'Recurring id', 'Task', 'Trigger', 'Next run (UTC)', 'Max runtime'], $rows);
+        $io->table(['Schedule', 'Recurring id', 'Task', 'Description', 'Trigger', 'Next run (UTC)', 'Max runtime'], $rows);
 
         if ((bool) $input->getOption('dry-run')) {
             $io->note('Dry run: catalog not sent.');
