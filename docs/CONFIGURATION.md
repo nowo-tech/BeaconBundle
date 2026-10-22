@@ -172,6 +172,8 @@ nowo_beacon:
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
 
+The self-test routes come from the `nowo_beacon` route loader instead of `#[Route]` attributes on the controller: they exist only when `self_test.http.enabled` is true and their path is configurable (`self_test.http.path`), which static attributes cannot express. The import file only points at the loader; route names (`nowo_beacon_self_test`, `nowo_beacon_self_test_trigger`) are stable.
+
 ## Timeout hierarchy (REQ-RUNTIME-001)
 
 Outbound Envelope ingest uses Symfony HttpClient with `timeout` / `max_duration` from `nowo_beacon.timeout` (default **5.0** seconds). Under FrankenPHP / FPM, keep:

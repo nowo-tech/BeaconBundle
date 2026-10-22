@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\Support;
 
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class IgnoredRequestPathTest extends TestCase
@@ -24,9 +25,7 @@ final class IgnoredRequestPathTest extends TestCase
         yield 'chrome no trailing slash' => ['/.well-known/appspecific/com.chrome.devtools.json'];
     }
 
-    /**
-     * @dataProvider defaultPathProvider
-     */
+    #[DataProvider('defaultPathProvider')]
     public function testDefaultsMatchInfraAndChromeNoise(string $path): void
     {
         self::assertTrue(IgnoredRequestPath::matches($path, IgnoredRequestPath::DEFAULTS));

@@ -13,6 +13,7 @@ BeaconBundle demos use **FrankenPHP + Caddy**. Runtime mode is selected with **`
 - [Switching classic vs worker (`FRANKENPHP_MODE`)](#switching-classic-vs-worker-frankenphp_mode)
 - [PHP version policy (Symfony 8 demo)](#php-version-policy-symfony-8-demo)
 - [Timeout hierarchy (REQ-RUNTIME-001)](#timeout-hierarchy-req-runtime-001)
+- [Troubleshooting](#troubleshooting)
 
 ## Worker-mode snippet
 
@@ -126,3 +127,14 @@ Outbound Beacon ingest uses Symfony HttpClient with an explicit **`timeout`** (a
 Prefer `transport.mode: async` or `messenger` in production so HTML/API responses are not delayed by ingest RTT. See [PERFORMANCE.md](PERFORMANCE.md).
 
 **Worker + `reset_kernel` false:** BeaconBundle clears request-scoped buffers without relying on Symfony’s `services_resetter`. Full matrix: [FRANKENPHP-WORKER-AUDIT.md](FRANKENPHP-WORKER-AUDIT.md).
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `make up` stops after `composer install` / the page does not answer on `:8011` | Port taken or the container exited | `make -C demo/symfony8 logs`; free `PORT` in `demo/symfony8/.env` and `make -C demo/symfony8 up` again |
+| No events reach Symfony Beacon | `BEACON_DSN` empty or pointing at an unreachable host | Re-run the Beacon server step above (it rewrites `.demo-client.env`), then restart the demo; with `transport.mode: sync` failures are logged, never thrown |
+| Twig / PHP edits not visible | Worker mode keeps the kernel in memory | Use `FRANKENPHP_MODE=classic` while editing, or restart the container |
+| Login rejected with "Invalid CSRF token" | Stale session cookie from an older demo | Clear cookies for `localhost:8011` and sign in again (`debugger / debug`) |
+| Slow requests while Beacon is down | Sync ingest waits up to `nowo_beacon.timeout` | Lower the timeout or use `transport.mode: async` / `messenger` (see [PERFORMANCE.md](PERFORMANCE.md)) |
+

@@ -186,6 +186,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         ]);
         $deploy->setAutowired(false);
         $deploy->setPublic(false);
+        // REQ-SF-003: definitions registered here are conditional and not autoconfigured, so their tags are
+        // required (the console.command tag takes name / description from #[AsCommand]); no tag duplicates an
+        // attribute that autoconfiguration would also apply.
         $deploy->addTag('console.command');
         $container->setDefinition(DeployCommand::class, $deploy);
 

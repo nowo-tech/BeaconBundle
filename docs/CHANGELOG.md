@@ -65,6 +65,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- CI: Symfony matrix 7.4 / 8.1 with every `symfony/*` package pinned to the cell minor (7.0 and 8.0 are end of maintenance and their releases carry security advisories; `composer.json` still allows them); the code-style job runs PHPStan and Igor on every push and pull request (REQ-SF-002, REQ-CS-005/006/008).
+- `release-check` starts with `ensure-up` and runs the new `check-no-raw-html-form` gate; Rector capped at 2 parallel workers (REQ-MAKE-002).
+- Demo login renders its CSRF token through `LoginFormType` (`_csrf_token` / `authenticate`) with the child-row loop instead of a raw hidden `<input>` (REQ-TWIG-005).
+- Tests use `#[DataProvider]` instead of a `@dataProvider` docblock (REQ-TEST-010); the inline `@codeCoverageIgnore` markers are justified in the README (REQ-TEST-003).
+- Docs: demo troubleshooting (REQ-DEMO-002); why the self-test routes come from the `nowo_beacon` loader (REQ-SF-004).
+- `.scripts/check-no-cursor-coauthor.sh` accepts git worktrees (REQ-GIT-001).
+
 ## [1.17.0] - 2026-10-18
 
 ### Fixed

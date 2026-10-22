@@ -32,14 +32,12 @@ jobs:
       fail-fast: false
       matrix:
         php: ['8.2', '8.3', '8.4', '8.5']
-        symfony: ['7.0', '7.4', '8.0', '8.1']
+        # REQ-SF-002: 7.0 and 8.0 are end of maintenance and every 7.0.x / 8.0.x release carries security advisories
+        # that Composer refuses to install, so those cells are dropped (composer.json keeps allowing them).
+        symfony: ['7.4', '8.1']
         exclude:
           - php: '8.2'
-            symfony: '8.0'
-          - php: '8.2'
             symfony: '8.1'
-          - php: '8.3'
-            symfony: '8.0'
           - php: '8.3'
             symfony: '8.1'
 
@@ -76,14 +74,10 @@ jobs:
 
       - name: Install dependencies with Symfony ${{ matrix.symfony }}
         run: |
-          composer require \
-            symfony/config:^${{ matrix.symfony }} \
-            symfony/dependency-injection:^${{ matrix.symfony }} \
-            symfony/http-client:^${{ matrix.symfony }} \
-            symfony/http-kernel:^${{ matrix.symfony }} \
-            symfony/framework-bundle:^${{ matrix.symfony }} \
-            --no-interaction --no-update
-          composer update symfony/* --with-all-dependencies --no-interaction --prefer-dist --no-progress
+          # REQ-SF-002: pin every symfony/* package of composer.json to the cell's minor (no caret drift to 8.x).
+          PACKAGES=$(jq -r --arg c '${{ matrix.symfony }}.*' '(.require + ."require-dev") | keys[] | select(startswith("symfony/")) | . + ":" + $c' composer.json)
+          composer require $PACKAGES --no-interaction --no-update
+          composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
       - name: Composer audit (Critical/High)
         run: composer audit --locked
@@ -145,9 +139,8 @@ jobs:
           git push
 
   code-style-check:
-    name: Code Style Check
+    name: Code style, PHPStan, Igor
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
@@ -165,6 +158,12 @@ jobs:
 
       - name: Check code style
         run: composer cs-check
+
+      - name: PHPStan (REQ-CS-005 / REQ-CS-006)
+        run: composer phpstan
+
+      - name: Igor worker-state audit (REQ-CS-008)
+        run: composer igor
 
   coverage:
     name: Code Coverage
@@ -184,14 +183,9 @@ jobs:
 
       - name: Install dependencies (Symfony 7.4)
         run: |
-          composer require \
-            symfony/config:^7.4 \
-            symfony/dependency-injection:^7.4 \
-            symfony/http-client:^7.4 \
-            symfony/http-kernel:^7.4 \
-            symfony/framework-bundle:^7.4 \
-            --no-interaction --no-update
-          composer update symfony/* --with-all-dependencies --no-interaction --prefer-dist --no-progress
+          PACKAGES=$(jq -r '(.require + ."require-dev") | keys[] | select(startswith("symfony/")) | . + ":7.4.*"' composer.json)
+          composer require $PACKAGES --no-interaction --no-update
+          composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
       - name: Run tests with coverage
         run: composer test-coverage

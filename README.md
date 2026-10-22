@@ -186,3 +186,9 @@ Coverage (Lines): **100.00%** (measured with `make test-coverage` / PCOV).
 | PHP unit + integration | 100.00% Lines |
 | TypeScript / Python | N/A (no frontend or Python in this bundle) |
 
+Justified exclusions (REQ-TEST-003): the inline `@codeCoverageIgnore` markers in `src/` only cover branches a
+supported install cannot reach in the test environment — optional-dependency guards (`class_exists` /
+`interface_exists` for Messenger, Scheduler and `composer/runtime-api`), reflection fallbacks around Symfony
+internals, and defensive returns that the surrounding code already rules out (empty DSN secret after `parse_url`,
+`file()` failure on an existing file, empty filtered stack trace, non-`RedeliveryStamp` first stamp, DBAL exception
+bindings). New markers need the same justification in review.

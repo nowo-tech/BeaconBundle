@@ -11,6 +11,8 @@ return RectorConfig::configure()
         __DIR__ . '/src',
         __DIR__ . '/tests',
     ])
+    // Machine-wide cap: at most 2 worker processes; generous timeout for slow (WSL2 / CI) hosts.
+    ->withParallel(300, 2, 10)
     ->withPhpVersion(PhpVersion::PHP_82)
     ->withComposerBased(symfony: true)
     ->withPreparedSets(

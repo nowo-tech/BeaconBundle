@@ -11,18 +11,11 @@
             {% endif %}
 
             {{ form_start(loginForm, { attr: { class: 'vstack gap-3' } }) }}
-                <div>
-                    {{ form_label(loginForm._username) }}
-                    {{ form_widget(loginForm._username) }}
-                    {{ form_errors(loginForm._username) }}
-                </div>
-                <div>
-                    {{ form_label(loginForm._password) }}
-                    {{ form_widget(loginForm._password) }}
-                    {{ form_errors(loginForm._password) }}
-                    <div class="form-text">Password toggle powered by PasswordToggleBundle.</div>
-                </div>
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                {% for child in loginForm %}
+                    {% if not child.rendered %}
+                        {{ form_row(child) }}
+                    {% endif %}
+                {% endfor %}
                 <button type="submit" class="btn btn-primary w-100">Sign in</button>
             {{ form_end(loginForm) }}
 
