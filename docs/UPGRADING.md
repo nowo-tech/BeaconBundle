@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [To 1.17.2](#to-1172)
 - [To 1.17.0](#to-1170)
 - [To 1.16.0](#to-1160)
 - [To 1.15.0](#to-1150)
@@ -79,6 +80,19 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## To 1.17.2
+
+From **1.17.1** — no container kept per kernel boot.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes, no configuration. If your test environment set `register_fatal_handler: false` (or
+  `register_php_warning_handler: false`) only to stop PHPUnit memory growing, you can remove it.
+- `BeaconFatalErrorHandler::unregister()` and the static `dispatchShutdown()` / `BeaconPhpWarningHandler::dispatch()`
+  are new; `NowoBeaconBundle::shutdown()` calls `unregister()` on both.
 
 ## To 1.17.0
 

@@ -66,6 +66,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A process that boots many kernels (PHPUnit functional tests, any long-running script) no longer keeps every kernel's container alive: the fatal-error handler and the PHP-warning handler each install **one** process-wide hook (`register_shutdown_function` / `set_error_handler` with a static closure) that forwards to the handler of the kernel booted last, and `NowoBeaconBundle::shutdown()` releases it. Before, each boot registered `$this` again (≈65 MB per functional test in a Symfony app). FrankenPHP workers boot once and were not affected.
+
 ## [1.17.1] - 2026-10-22
 
 Wave-2 REQ compliance: pinned CI matrix with PHPStan and Igor, full release-check chain, demo login CSRF through the form type. See [UPGRADING](UPGRADING.md#to-1171).
