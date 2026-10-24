@@ -39,12 +39,15 @@ final class BeaconPhpWarningHandler
         | E_CORE_WARNING | E_COMPILE_WARNING;
 
     /** The handler of the kernel booted last (null after its kernel shut down). */
+    // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
     private static ?self $active = null;
 
     /** The process-wide error handler installed by {@see register()} (null when not installed). */
+    // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
     private static ?Closure $installed = null;
 
-    /** @var (callable(int, string, string, int): bool)|null the handler that was current before {@see $installed} */
+    /** @var (callable(int, string, string, int): bool)|null the handler that was current before ours was installed */
+    // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
     private static $processPrevious;
 
     private bool $registered = false;
@@ -77,15 +80,17 @@ final class BeaconPhpWarningHandler
         if (!self::$installed instanceof Closure) {
             // Static closure: the error-handler stack retains no handler instance.
             // @igor-ignore - Process-local installed-handler pointer, cleared by unregister().
+            // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
             self::$installed = self::dispatch(...);
             // Intentional: must observe PHP warnings before Symfony converts them; restored via unregister().
-            // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
+            // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler, frankenphp.worker.noMutableStaticProperty
             self::$processPrevious = set_error_handler(self::$installed); // @igor-ignore - Process-local previous-handler pointer.
         }
 
         // @igor-ignore - Process-local previous-handler pointer.
         $this->previous = self::$processPrevious;
         // @igor-ignore - Process-wide pointer to the current kernel's handler, cleared by unregister().
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$active = $this;
     }
 
@@ -108,6 +113,7 @@ final class BeaconPhpWarningHandler
         }
 
         // @igor-ignore - Kernel shutdown; drops the process-wide pointer.
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$active = null;
         // Peek the top of the stack: set_error_handler() returns the current handler.
         // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
@@ -119,8 +125,10 @@ final class BeaconPhpWarningHandler
 
         restore_error_handler();
         // @igor-ignore - Kernel shutdown; the process-wide handler is uninstalled.
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$installed = null;
         // @igor-ignore - Kernel shutdown; clears the previous-handler pointer.
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$processPrevious = null;
     }
 

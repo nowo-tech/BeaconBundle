@@ -28,8 +28,10 @@ use const E_USER_ERROR;
 final class BeaconFatalErrorHandler
 {
     /** The handler of the kernel booted last (null after its kernel shut down). */
+    // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
     private static ?self $active = null;
 
+    // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
     private static bool $shutdownFunctionRegistered = false;
 
     private bool $registered = false;
@@ -52,12 +54,14 @@ final class BeaconFatalErrorHandler
         // @igor-ignore - Not shared worker service state.
         $this->registered = true;
         // @igor-ignore - Process-wide pointer to the current kernel's handler, cleared by unregister().
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$active = $this;
         if (self::$shutdownFunctionRegistered) {
             return;
         }
 
         // @igor-ignore - Process-local once-per-process flag.
+        // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
         self::$shutdownFunctionRegistered = true;
         // Intentional: fatals never hit kernel.exception / ConsoleEvents::ERROR. Static closure: retains no handler.
         // @phpstan-ignore frankenphp.worker.noRegisterShutdownFunction
@@ -77,6 +81,7 @@ final class BeaconFatalErrorHandler
         $this->registered = false;
         if (self::$active === $this) {
             // @igor-ignore - Kernel shutdown; drops the process-wide pointer.
+            // @phpstan-ignore frankenphp.worker.noMutableStaticProperty (process-wide hook state, cleared by unregister())
             self::$active = null;
         }
     }
