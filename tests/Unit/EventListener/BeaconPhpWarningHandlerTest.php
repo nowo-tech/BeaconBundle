@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\EventListener\BeaconPhpWarningHandler;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use RuntimeException;
+use WeakReference;
+
+use function gc_collect_cycles;
+use function restore_error_handler;
+use function set_error_handler;
+use function trigger_error;
 
 use const E_ALL;
 use const E_COMPILE_WARNING;
@@ -234,5 +241,98 @@ final class BeaconPhpWarningHandlerTest extends TestCase
         self::assertFalse(
             (new ReflectionProperty(BeaconPhpWarningHandler::class, 'registered'))->getValue($handler),
         );
+    }
+
+    public function testOneProcessHandlerForwardsToTheLatestRegisteredHandler(): void
+    {
+        $captured = [];
+        $first    = new BeaconPhpWarningHandler($this->recordingClient($captured, 'first'), true);
+        $second   = new BeaconPhpWarningHandler($this->recordingClient($captured, 'second'), true);
+        $first->register();
+        $second->register();
+        $this->registeredHandler = $second;
+
+        // @phpstan-ignore frankenphp.worker.noErrorReportingMutation
+        $previousReporting = error_reporting(E_ALL);
+        try {
+            trigger_error('forwarded', E_USER_WARNING);
+        } finally {
+            // @phpstan-ignore frankenphp.worker.noErrorReportingMutation
+            error_reporting($previousReporting);
+        }
+
+        self::assertSame(['second: User Warning: forwarded'], $captured);
+        $first->unregister();
+        self::assertSame($second, (new ReflectionProperty(BeaconPhpWarningHandler::class, 'active'))->getValue());
+    }
+
+    public function testDispatchFallsBackToThePreviousHandlerOrFalse(): void
+    {
+        $calls    = 0;
+        $previous = static function () use (&$calls): bool {
+            ++$calls;
+
+            return true;
+        };
+        $processPrevious = new ReflectionProperty(BeaconPhpWarningHandler::class, 'processPrevious');
+        $saved           = $processPrevious->getValue();
+        try {
+            $processPrevious->setValue(null, $previous);
+            self::assertTrue(BeaconPhpWarningHandler::dispatch(E_USER_WARNING, 'm', __FILE__, __LINE__));
+            $processPrevious->setValue(null, null);
+            self::assertFalse(BeaconPhpWarningHandler::dispatch(E_USER_WARNING, 'm', __FILE__, __LINE__));
+        } finally {
+            $processPrevious->setValue(null, $saved);
+        }
+
+        self::assertSame(1, $calls);
+    }
+
+    public function testUnregisterLeavesAHandlerPushedLaterInPlace(): void
+    {
+        $handler = new BeaconPhpWarningHandler(new NullBeaconClient(), true);
+        $handler->register();
+        // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
+        set_error_handler(static fn (): bool => true);
+        try {
+            $handler->unregister();
+            self::assertNotNull((new ReflectionProperty(BeaconPhpWarningHandler::class, 'installed'))->getValue());
+        } finally {
+            restore_error_handler();
+        }
+
+        // Ours is on top again: a later handler's unregister removes it.
+        $later = new BeaconPhpWarningHandler(new NullBeaconClient(), true);
+        $later->register();
+        $later->unregister();
+        self::assertNull((new ReflectionProperty(BeaconPhpWarningHandler::class, 'installed'))->getValue());
+    }
+
+    public function testUnregisteredHandlerIsFreed(): void
+    {
+        $handler = new BeaconPhpWarningHandler(new NullBeaconClient(), true);
+        $handler->register();
+        $handler->unregister();
+        $reference = WeakReference::create($handler);
+        unset($handler);
+        gc_collect_cycles();
+
+        self::assertNull($reference->get());
+    }
+
+    /**
+     * @param list<string> $captured
+     */
+    private function recordingClient(array &$captured, string $name): BeaconClientInterface
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->method('captureMessage')->willReturnCallback(static function (string $message) use (&$captured, $name): string {
+            $captured[] = $name . ': ' . $message;
+
+            return 'id';
+        });
+
+        return $client;
     }
 }

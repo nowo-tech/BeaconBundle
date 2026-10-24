@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\EventListener;
 
+use Closure;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Throwable;
 
@@ -27,12 +28,24 @@ use const E_WARNING;
  *
  * When {@see $continue} is true (default), handled levels are reported and the request
  * keeps running even if Symfony's ErrorHandler would otherwise throw in debug mode.
+ *
+ * One error handler per process forwards to the handler of the kernel booted last: pushing `$this` on every boot
+ * kept each kernel's container alive in the error-handler stack. {@see unregister()} (bundle shutdown) releases it.
  */
 final class BeaconPhpWarningHandler
 {
     /** Default: warnings + notices (not deprecations). Untyped for PHP 8.2 (typed consts need 8.3+). */
     public const DEFAULT_LEVELS = E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE
         | E_CORE_WARNING | E_COMPILE_WARNING;
+
+    /** The handler of the kernel booted last (null after its kernel shut down). */
+    private static ?self $active = null;
+
+    /** The process-wide error handler installed by {@see register()} (null when not installed). */
+    private static ?Closure $installed = null;
+
+    /** @var (callable(int, string, string, int): bool)|null the handler that was current before {@see $installed} */
+    private static $processPrevious;
 
     private bool $registered = false;
 
@@ -51,7 +64,7 @@ final class BeaconPhpWarningHandler
     }
 
     /**
-     * Register the error handler once (newest handler runs first).
+     * Make this handler the active one; the process-wide error handler is installed once (newest handler runs first).
      */
     public function register(): void
     {
@@ -61,15 +74,24 @@ final class BeaconPhpWarningHandler
 
         // @igor-ignore - Process-local once-per-worker flag (same pattern as BeaconFatalErrorHandler).
         $this->registered = true;
-        // Intentional: must observe PHP warnings before Symfony converts them; restored via unregister().
-        // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
-        $this->previous = set_error_handler($this->handle(...)); // @igor-ignore - Process-local previous-handler pointer.
+        if (!self::$installed instanceof Closure) {
+            // Static closure: the error-handler stack retains no handler instance.
+            // @igor-ignore - Process-local installed-handler pointer, cleared by unregister().
+            self::$installed = self::dispatch(...);
+            // Intentional: must observe PHP warnings before Symfony converts them; restored via unregister().
+            // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
+            self::$processPrevious = set_error_handler(self::$installed); // @igor-ignore - Process-local previous-handler pointer.
+        }
+
+        // @igor-ignore - Process-local previous-handler pointer.
+        $this->previous = self::$processPrevious;
+        // @igor-ignore - Process-wide pointer to the current kernel's handler, cleared by unregister().
+        self::$active = $this;
     }
 
     /**
-     * Restore the previous handler (tests / explicit teardown).
-     *
-     * @internal
+     * Release this handler (kernel shutdown); the process-wide error handler is removed when it is still on top of the
+     * stack (another handler pushed later stays in place, ours then only forwards to the previous one).
      */
     public function unregister(): void
     {
@@ -77,11 +99,47 @@ final class BeaconPhpWarningHandler
             return;
         }
 
-        restore_error_handler();
-        // @igor-ignore - Test/teardown only; clears process-local registration flags.
+        // @igor-ignore - Kernel shutdown; clears process-local registration flags.
         $this->registered = false;
-        // @igor-ignore - Test/teardown only; clears process-local previous-handler pointer.
+        // @igor-ignore - Kernel shutdown; clears the previous-handler pointer.
         $this->previous = null;
+        if (self::$active !== $this) {
+            return;
+        }
+
+        // @igor-ignore - Kernel shutdown; drops the process-wide pointer.
+        self::$active = null;
+        // Peek the top of the stack: set_error_handler() returns the current handler.
+        // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
+        $top = set_error_handler(static fn (): bool => false);
+        restore_error_handler();
+        if ($top !== self::$installed) {
+            return;
+        }
+
+        restore_error_handler();
+        // @igor-ignore - Kernel shutdown; the process-wide handler is uninstalled.
+        self::$installed = null;
+        // @igor-ignore - Kernel shutdown; clears the previous-handler pointer.
+        self::$processPrevious = null;
+    }
+
+    /**
+     * The process-wide error handler: forwards to the active handler, else to the previous one.
+     *
+     * @internal
+     */
+    public static function dispatch(int $type, string $message, string $file, int $line): bool
+    {
+        if (self::$active instanceof self) {
+            return self::$active->handle($type, $message, $file, $line);
+        }
+
+        if (self::$processPrevious !== null) {
+            return (bool) (self::$processPrevious)($type, $message, $file, $line);
+        }
+
+        return false;
     }
 
     /**

@@ -20,9 +20,18 @@ use const E_USER_ERROR;
 
 /**
  * Reports fatal PHP errors that never reach kernel.exception / ConsoleEvents::ERROR.
+ *
+ * One shutdown function per process forwards to the handler of the kernel booted last: PHP keeps shutdown functions
+ * until the process ends, so registering `$this` on every boot kept each kernel's container alive (PHPUnit, any
+ * process that boots many kernels). {@see unregister()} (bundle shutdown) releases it.
  */
 final class BeaconFatalErrorHandler
 {
+    /** The handler of the kernel booted last (null after its kernel shut down). */
+    private static ?self $active = null;
+
+    private static bool $shutdownFunctionRegistered = false;
+
     private bool $registered = false;
 
     public function __construct(
@@ -32,7 +41,7 @@ final class BeaconFatalErrorHandler
     }
 
     /**
-     * Register the shutdown function once.
+     * Make this handler the active one; the shutdown function is registered once per process.
      */
     public function register(): void
     {
@@ -42,9 +51,44 @@ final class BeaconFatalErrorHandler
 
         // @igor-ignore - Not shared worker service state.
         $this->registered = true;
-        // Intentional: fatals never hit kernel.exception / ConsoleEvents::ERROR.
+        // @igor-ignore - Process-wide pointer to the current kernel's handler, cleared by unregister().
+        self::$active = $this;
+        if (self::$shutdownFunctionRegistered) {
+            return;
+        }
+
+        // @igor-ignore - Process-local once-per-process flag.
+        self::$shutdownFunctionRegistered = true;
+        // Intentional: fatals never hit kernel.exception / ConsoleEvents::ERROR. Static closure: retains no handler.
         // @phpstan-ignore frankenphp.worker.noRegisterShutdownFunction
-        register_shutdown_function($this->onShutdown(...));
+        register_shutdown_function(self::dispatchShutdown(...));
+    }
+
+    /**
+     * Release this handler (kernel shutdown) so its client and container can be freed.
+     */
+    public function unregister(): void
+    {
+        if (!$this->registered) {
+            return;
+        }
+
+        // @igor-ignore - Kernel shutdown; clears the registration flag.
+        $this->registered = false;
+        if (self::$active === $this) {
+            // @igor-ignore - Kernel shutdown; drops the process-wide pointer.
+            self::$active = null;
+        }
+    }
+
+    /**
+     * The process shutdown function: forwards to the active handler, if any.
+     *
+     * @internal
+     */
+    public static function dispatchShutdown(): void
+    {
+        self::$active?->onShutdown();
     }
 
     /**

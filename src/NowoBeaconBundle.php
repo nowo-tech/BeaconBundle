@@ -35,7 +35,7 @@ final class NowoBeaconBundle extends Bundle
     }
 
     /**
-     * Instantiates fatal / PHP-warning handlers (they register once per process).
+     * Instantiates fatal / PHP-warning handlers and makes them the active ones (one process-wide hook each).
      */
     public function boot(): void
     {
@@ -57,6 +57,29 @@ final class NowoBeaconBundle extends Bundle
             if ($handler instanceof BeaconPhpWarningHandler) {
                 // @igor-ignore - Not shared worker service state.
                 $handler->register();
+            }
+        }
+    }
+
+    /**
+     * Releases the handlers this kernel instantiated, so a process that boots many kernels (PHPUnit) frees each
+     * kernel's container.
+     */
+    public function shutdown(): void
+    {
+        $container = $this->container;
+        if (!$container instanceof ContainerInterface) {
+            return;
+        }
+
+        foreach ([BeaconFatalErrorHandler::class, BeaconPhpWarningHandler::class] as $id) {
+            if (!$container->initialized($id)) {
+                continue;
+            }
+
+            $handler = $container->get($id);
+            if ($handler instanceof BeaconFatalErrorHandler || $handler instanceof BeaconPhpWarningHandler) {
+                $handler->unregister();
             }
         }
     }
