@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.18.0] - 2026-10-26](#1180---2026-10-26)
 - [[1.17.2] - 2026-10-24](#1172---2026-10-24)
 - [[1.17.1] - 2026-10-22](#1171---2026-10-22)
 - [[1.17.0] - 2026-10-18](#1170---2026-10-18)
@@ -66,6 +67,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.18.0] - 2026-10-26
+
+Added: Envelope sends retried with exponential backoff when Beacon answers 5xx (transport.retry) See [UPGRADING](UPGRADING.md#to-1180).
 
 ### Added
 
@@ -693,7 +698,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.17.2...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.18.0...HEAD
 [1.13.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.1...v1.12.0

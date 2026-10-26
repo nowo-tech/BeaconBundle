@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.18.0](#to-1180)
 - [To 1.17.2](#to-1172)
 - [To 1.17.0](#to-1170)
 - [To 1.16.0](#to-1160)
@@ -83,6 +84,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.18.0
+
+From **1.17.2**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 From **1.17.2** — retries with backoff when Beacon answers 5xx.
 
