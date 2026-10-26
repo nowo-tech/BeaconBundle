@@ -20,6 +20,7 @@ use Nowo\BeaconBundle\Controller\SelfTestController;
 use Nowo\BeaconBundle\DependencyInjection\Configuration;
 use Nowo\BeaconBundle\DependencyInjection\NowoBeaconExtension;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
+use Nowo\BeaconBundle\Envelope\IngestHttpClientFactory;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
@@ -141,6 +142,39 @@ final class ExtensionLoadTest extends TestCase
         ], $listenerDefinition->getArgument('$ignorePaths'));
         self::assertArrayHasKey('user', $clientDefinition->getArgument('$send'));
         self::assertFalse($clientDefinition->getArgument('$send')['user']);
+
+        self::assertEquals(
+            new Reference('nowo.beacon.ingest_http_client'),
+            $container->getDefinition(BeaconClientFactory::class)->getArgument('$httpClient'),
+        );
+        $ingestClient = $container->getDefinition('nowo.beacon.ingest_http_client');
+        self::assertSame([IngestHttpClientFactory::class, 'create'], $ingestClient->getFactory());
+        self::assertEquals(
+            [new Reference('http_client'), 2, 500, 2.0, 5000, 0.1, [500, 502, 503, 504]],
+            $ingestClient->getArguments(),
+        );
+    }
+
+    public function testTransportRetryOptionsReachTheIngestClient(): void
+    {
+        $container = $this->createContainer();
+
+        (new NowoBeaconExtension())->load([[
+            'dsn'       => 'https://pubkey:secret@beacon.example.com:9444/5',
+            'transport' => ['retry' => [
+                'max_retries'  => 4,
+                'delay_ms'     => 250,
+                'multiplier'   => 3.0,
+                'max_delay_ms' => 2000,
+                'jitter'       => 0.0,
+                'status_codes' => [503],
+            ]],
+        ]], $container);
+
+        self::assertEquals(
+            [new Reference('http_client'), 4, 250, 3.0, 2000, 0.0, [503]],
+            $container->getDefinition('nowo.beacon.ingest_http_client')->getArguments(),
+        );
     }
 
     public function testWorkerSafetyServicesAreRegistered(): void

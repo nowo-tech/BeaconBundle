@@ -25,6 +25,14 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($config['verify_peer']);
         self::assertSame(5.0, $config['timeout']);
         self::assertSame('sync', $config['transport']['mode']);
+        self::assertSame([
+            'max_retries'  => 2,
+            'delay_ms'     => 500,
+            'multiplier'   => 2.0,
+            'max_delay_ms' => 5000,
+            'jitter'       => 0.1,
+            'status_codes' => [500, 502, 503, 504],
+        ], $config['transport']['retry']);
         self::assertTrue($config['register_error_listener']);
         self::assertTrue($config['register_console_listener']);
         self::assertTrue($config['register_messenger_listener']);
@@ -111,6 +119,15 @@ final class ConfigurationTest extends TestCase
         self::assertFalse($config['send']['stacktrace']);
         self::assertFalse($config['send']['request']);
         self::assertTrue($config['send']['runtime']);
+    }
+
+    public function testTransportRetryRejectsNonServerErrorStatusCodes(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'transport' => ['retry' => ['status_codes' => [404]]],
+        ]]);
     }
 
     public function testTimeoutMustBeAtLeastMinimum(): void

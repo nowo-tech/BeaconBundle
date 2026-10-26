@@ -57,6 +57,13 @@ nowo_beacon:
     timeout: 5.0
     transport:
         mode: sync   # sync | async | messenger
+        retry:       # Beacon answered 5xx → wait and retry (0 retries = off)
+            max_retries: 2
+            delay_ms: 500
+            multiplier: 2.0
+            max_delay_ms: 5000
+            jitter: 0.1
+            status_codes: [500, 502, 503, 504]
     register_error_listener: true
     register_console_listener: true
     register_messenger_listener: true
@@ -130,6 +137,12 @@ nowo_beacon:
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
 | `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
+| `transport.retry.max_retries` | `2` | Extra attempts when Beacon answers with one of `transport.retry.status_codes` (0 … 10; `0` disables retries). Applies to `sync`, `async` and the Messenger handler. See [Retries](#retries-on-beacon-server-errors). |
+| `transport.retry.delay_ms` | `500` | Wait before the first retry, in milliseconds. |
+| `transport.retry.multiplier` | `2.0` | Factor applied to the wait before each further retry (≥ 1.0): 500 ms, 1 s, 2 s, … |
+| `transport.retry.max_delay_ms` | `5000` | Upper bound of a single wait (`0` = no bound). |
+| `transport.retry.jitter` | `0.1` | Random variation of each wait (0.0–1.0), so many apps do not retry in lockstep after a Beacon restart. |
+| `transport.retry.status_codes` | `[500, 502, 503, 504]` | Beacon responses (500 … 599) that are retried. 4xx (bad DSN, 401/403, 413, 429) are never retried. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
 | `register_console_listener` | `true` | Reports uncaught console command errors with nested `extra.console` (`command`, `command_class`, `exit_code`, `php_sapi`, `verbosity`, `cwd`, `interactive`, redacted `arguments`/`options`, `missing_arguments`). Does not send raw argv. |
 | `register_messenger_listener` | `true` | Reports Messenger `WorkerMessageFailedEvent` when the message will not retry (requires `symfony/messenger`). |
@@ -183,6 +196,16 @@ Outbound Envelope ingest uses Symfony HttpClient with `timeout` / `max_duration`
 so the bundle deadline fires first, the transport fails soft (log + `false`), and the worker thread is released. Demo Caddy/PHP budgets: [PERFORMANCE.md](PERFORMANCE.md#timeout-hierarchy) and [DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md#timeout-hierarchy-req-runtime-001).
 
 When raising `timeout`, raise PHP `max_execution_time` and Caddy `servers.timeouts.write` in the **same** change.
+
+## Retries on Beacon server errors
+
+When Beacon answers an Envelope POST with a server error (`transport.retry.status_codes`, default 500 / 502 / 503 / 504), the bundle waits and sends the same Envelope again, up to `transport.retry.max_retries` times. The wait grows with each attempt — `delay_ms` × `multiplier`ⁿ, bounded by `max_delay_ms` and varied by `jitter` — and a `Retry-After` header from Beacon takes precedence. Only the last response is logged (`Beacon ingest rejected envelope.`).
+
+- Not retried: 4xx responses and transport errors (DNS, refused connection, timeout) — a Beacon that is down does not multiply the time spent per send.
+- Safe to repeat: Beacon stores one event per `event_id` and project, so a retry after a 500 that was in fact stored does not duplicate the event.
+- Where the wait happens: in `sync` mode inside the request that reports; in `async` mode on `kernel.terminate` / `console.terminate` (after the response is sent); in `messenger` mode in the worker. Worst case per send with the defaults: 3 × `timeout` + 0.5 s + 1 s. In `sync` mode under FrankenPHP / FPM keep that sum inside the [timeout hierarchy](#timeout-hierarchy-req-runtime-001), or lower `max_retries`.
+
+Built with Symfony's `RetryableHttpClient` + `GenericRetryStrategy` around `http_client` (service `nowo.beacon.ingest_http_client`), used only for Envelope ingest; `nowo:beacon:test` and remote Messenger commands keep the plain client.
 
 ### `send.*` context switches
 

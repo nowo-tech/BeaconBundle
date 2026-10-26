@@ -2,6 +2,7 @@
 
 ## Table of contents
 
+- [Unreleased](#unreleased)
 - [To 1.17.2](#to-1172)
 - [To 1.17.0](#to-1170)
 - [To 1.16.0](#to-1160)
@@ -80,6 +81,22 @@
   - [Breaking: `BeaconDsn::getProjectId()` return type](#breaking-beacondsngetprojectid-return-type)
 - [From 1.8.0 to 1.8.1](#from-180-to-181)
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
+
+## Unreleased
+
+From **1.17.2** — retries with backoff when Beacon answers 5xx.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- No breaking changes. **Behaviour change:** an Envelope POST answered with 500 / 502 / 503 / 504 is now retried
+  twice (waits of about 0.5 s and 1 s). In `sync` mode that wait happens inside the reporting request; worst case per
+  send with the defaults is 3 × `timeout` + 1.5 s. To keep the previous behaviour set
+  `nowo_beacon.transport.retry.max_retries: 0`; to tune it see
+  [CONFIGURATION](CONFIGURATION.md#retries-on-beacon-server-errors).
+- `BeaconClientFactory` now receives the `nowo.beacon.ingest_http_client` service instead of `http_client`. If you
+  decorated `http_client` to intercept Beacon ingest, the decorator still sees every attempt.
 
 ## To 1.17.2
 

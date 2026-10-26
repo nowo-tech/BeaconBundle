@@ -12,6 +12,9 @@ nowo_beacon:
     verify_peer: true
     # transport:
     #     mode: sync   # sync | async | messenger
+    #     retry:       # Beacon answered 5xx → wait and retry (max_retries: 0 = off)
+    #         max_retries: 2
+    #         delay_ms: 500
     # Set false only for local self-signed HTTPS:
     # when@dev:
     #     nowo_beacon:

@@ -67,6 +67,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Retries with backoff on Beacon server errors** (`transport.retry`): an Envelope POST answered with 500 / 502 / 503 / 504 is sent again up to `max_retries` times (default 2), waiting `delay_ms` (500) × `multiplier` (2.0)ⁿ between attempts, bounded by `max_delay_ms` (5000) with `jitter` (0.1); `Retry-After` is honoured. 4xx and transport errors are not retried. Applies to the `sync`, `async` and `messenger` transport modes (Symfony `RetryableHttpClient` + `GenericRetryStrategy`, service `nowo.beacon.ingest_http_client`). See [CONFIGURATION](CONFIGURATION.md#retries-on-beacon-server-errors).
+
 ## [1.17.2] - 2026-10-24
 
 Fix: no container kept per kernel boot — one process-wide fatal / warning hook, released by the bundle's shutdown(). See [UPGRADING](UPGRADING.md#to-1172).

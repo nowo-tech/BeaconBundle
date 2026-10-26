@@ -23,6 +23,7 @@ use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Controller\SelfTestController;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
+use Nowo\BeaconBundle\Envelope\IngestHttpClientFactory;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
@@ -70,6 +71,7 @@ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerStartedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_map;
 use function array_values;
@@ -215,9 +217,23 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $container->setParameter('nowo.beacon.enabled', true);
         }
 
+        $retry        = $config['transport']['retry'];
+        $ingestClient = new Definition(HttpClientInterface::class, [
+            new Reference('http_client'),
+            (int) $retry['max_retries'],
+            (int) $retry['delay_ms'],
+            (float) $retry['multiplier'],
+            (int) $retry['max_delay_ms'],
+            (float) $retry['jitter'],
+            array_values(array_map('intval', $retry['status_codes'])),
+        ]);
+        $ingestClient->setFactory([IngestHttpClientFactory::class, 'create']);
+        $ingestClient->setPublic(false);
+        $container->setDefinition('nowo.beacon.ingest_http_client', $ingestClient);
+
         $factory = new Definition(BeaconClientFactory::class, [
             '$parser'              => new Reference(BeaconDsnParser::class),
-            '$httpClient'          => new Reference('http_client'),
+            '$httpClient'          => new Reference('nowo.beacon.ingest_http_client'),
             '$logger'              => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$userContextProvider' => new Reference(UserContextProviderInterface::class),
             '$breadcrumbBuffer'    => new Reference(BreadcrumbBuffer::class),
