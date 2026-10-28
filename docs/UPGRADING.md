@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.19.1](#to-1191)
 - [To 1.19.0](#to-1190)
 - [To 1.18.2](#to-1182)
 - [To 1.18.1](#to-1181)
@@ -87,6 +88,10 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.19.1
+
+From **1.19.0**: no change needed (development dependencies updated).
 
 ## To 1.19.0
 

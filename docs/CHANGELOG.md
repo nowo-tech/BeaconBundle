@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.19.1] - 2026-10-28](#1191---2026-10-28)
 - [[1.19.0] - 2026-10-28](#1190---2026-10-28)
 - [[1.18.2] - 2026-10-28](#1182---2026-10-28)
 - [[1.18.1] - 2026-10-28](#1181---2026-10-28)
@@ -70,6 +71,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.19.1] - 2026-10-28
+
+Dependency update
+
+### Changed
+
+- **Dependencies updated** within their constraints: Symfony 7.4 patch releases in the development lock (PHP 8.2 baseline), PHPStan and Rector. No change in the bundle's behaviour or configuration.
 
 ## [1.19.0] - 2026-10-28
 
