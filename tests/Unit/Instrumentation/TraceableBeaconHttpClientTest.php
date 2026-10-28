@@ -12,9 +12,9 @@ use ReflectionMethod;
 use RuntimeException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpClient\RetryableHttpClient;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
-use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 final class TraceableBeaconHttpClientTest extends TestCase
 {
@@ -25,9 +25,12 @@ final class TraceableBeaconHttpClientTest extends TestCase
         $crumbs = new BreadcrumbBuffer();
         $client = new TraceableBeaconHttpClient($inner, $spans, $crumbs);
 
-        $client->request('GET', 'https://api.example.com/v1/items');
+        $response = $client->request('GET', 'https://api.example.com/v1/items');
+        self::assertSame([], $spans->all(), 'nothing is read inside request()');
 
+        self::assertSame(200, $response->getStatusCode());
         self::assertCount(1, $spans->all());
+        self::assertSame(200, $spans->all()[0]['data']['http.status_code'] ?? null);
         self::assertSame('http.client', $spans->all()[0]['op']);
         self::assertStringContainsString('GET api.example.com', $spans->all()[0]['description']);
         self::assertCount(1, $crumbs->all());
@@ -40,8 +43,8 @@ final class TraceableBeaconHttpClientTest extends TestCase
         $crumbs = new BreadcrumbBuffer();
         $client = new TraceableBeaconHttpClient($inner, $spans, $crumbs);
 
-        $client->request('POST', 'https://beacon.example.com/api/1/envelope/');
-        $client->request('POST', 'https://beacon.example.com/api/1/messenger/commands/claim');
+        self::assertSame(200, $client->request('POST', 'https://beacon.example.com/api/1/envelope/')->getStatusCode());
+        $client->request('POST', 'https://beacon.example.com/api/1/messenger/commands/claim')->getContent();
 
         self::assertSame([], $spans->all());
         self::assertSame([], $crumbs->all());
@@ -101,18 +104,61 @@ final class TraceableBeaconHttpClientTest extends TestCase
         self::assertSame('network boom', $spans->all()[0]['data']['error'] ?? null);
     }
 
-    public function testStreamAndWithOptionsDelegate(): void
+    public function testAnOuterAsyncDecoratorCanWrapIt(): void
     {
-        $stream = $this->createMock(ResponseStreamInterface::class);
-        $inner  = $this->createMock(HttpClientInterface::class);
-        $inner->expects(self::once())->method('stream')->willReturn($stream);
-        $inner->expects(self::once())->method('withOptions')->with(['timeout' => 1.0])->willReturn($inner);
+        // 1.18.1: NoPrivateNetworkHttpClient / RetryableHttpClient wrap the response in an AsyncResponse; reading it
+        // inside request() made them throw "A decorated client should not call any of the response's methods".
+        $spans  = new SpanBuffer();
+        $client = new RetryableHttpClient(new TraceableBeaconHttpClient(
+            new MockHttpClient([new MockResponse('down', ['http_code' => 503]), new MockResponse('up', ['http_code' => 200])]),
+            $spans,
+            new BreadcrumbBuffer(),
+        ), null, 1);
 
-        $client   = new TraceableBeaconHttpClient($inner, new SpanBuffer(), new BreadcrumbBuffer());
-        $cloned   = $client->withOptions(['timeout' => 1.0]);
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $client->request('GET', 'https://status.example.com/health');
 
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('up', $response->getContent());
+        self::assertSame([503, 200], array_map(static fn (array $span): mixed => $span['data']['http.status_code'] ?? null, $spans->all()));
+    }
+
+    public function testRecordsATransportErrorOnce(): void
+    {
+        $spans  = new SpanBuffer();
+        $crumbs = new BreadcrumbBuffer();
+        $client = new TraceableBeaconHttpClient(new MockHttpClient(new MockResponse('', ['error' => 'connection refused'])), $spans, $crumbs);
+
+        $response = $client->request('GET', 'https://down.example.com/');
+        try {
+            $response->getStatusCode();
+            self::fail('Expected a transport error');
+        } catch (TransportExceptionInterface) {
+        }
+
+        self::assertCount(1, $spans->all());
+        self::assertStringContainsString('connection refused', (string) ($spans->all()[0]['data']['error'] ?? ''));
+        self::assertSame('error', $crumbs->all()[0]['level'] ?? null);
+    }
+
+    public function testStreamAndWithOptionsKeepTracing(): void
+    {
+        $spans  = new SpanBuffer();
+        $client = new TraceableBeaconHttpClient(
+            new MockHttpClient(static fn (): MockResponse => new MockResponse('body', ['http_code' => 201])),
+            $spans,
+            new BreadcrumbBuffer(),
+        );
+        $cloned = $client->withOptions(['timeout' => 1.0]);
         self::assertNotSame($client, $cloned);
-        self::assertSame($stream, $cloned->stream($response));
+
+        $response = $cloned->request('GET', 'https://api.example.com/stream');
+        $content  = '';
+        foreach ($cloned->stream($response) as $chunk) {
+            $content .= $chunk->getContent();
+        }
+
+        self::assertSame('body', $content);
+        self::assertSame(201, $spans->all()[0]['data']['http.status_code'] ?? null);
+        $client->reset();
     }
 }

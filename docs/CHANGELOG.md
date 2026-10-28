@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.18.1] - 2026-10-28](#1181---2026-10-28)
 - [[1.18.0] - 2026-10-26](#1180---2026-10-26)
 - [[1.17.2] - 2026-10-24](#1172---2026-10-24)
 - [[1.17.1] - 2026-10-22](#1171---2026-10-22)
@@ -67,6 +68,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.18.1] - 2026-10-28
+
+### Fixed
+
+- **Outbound HTTP tracing broke async decorators** (`instrumentation.http_client`): `TraceableBeaconHttpClient` read
+  the status code inside `request()`, so a client wrapping it — `NoPrivateNetworkHttpClient`, `RetryableHttpClient`,
+  any `AsyncDecoratorTrait` decorator — failed every request with *"Instance of CurlResponse is already consumed and
+  cannot be managed by AsyncResponse. A decorated client should not call any of the response's methods in its
+  request() method"*. It is now an async decorator itself: the span and breadcrumb are recorded when the first chunk
+  (with the status) or the transport error arrives, and requests are no longer made synchronous by the tracing.
+  Found in Symfony Beacon, whose uptime checks (NowoUptimeMonitorBundle behind `NoPrivateNetworkHttpClient`) all
+  failed in production.
 
 ## [1.18.0] - 2026-10-26
 

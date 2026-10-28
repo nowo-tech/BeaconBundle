@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.18.1](#to-1181)
 - [To 1.18.0](#to-1180)
 - [To 1.17.2](#to-1172)
 - [To 1.17.0](#to-1170)
@@ -84,6 +85,11 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.18.1
+
+No change needed. With `instrumentation.http_client` on, an outbound request's span is now recorded when its response
+starts (or fails), not inside `request()`: a response nobody reads leaves no span.
 
 ## To 1.18.0
 

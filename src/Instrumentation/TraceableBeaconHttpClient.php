@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Instrumentation;
 
+use Closure;
+use Generator;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Symfony\Component\HttpClient\AsyncDecoratorTrait;
+use Symfony\Component\HttpClient\Response\AsyncContext;
+use Symfony\Component\HttpClient\Response\AsyncResponse;
+use Symfony\Contracts\HttpClient\ChunkInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
-use Symfony\Contracts\HttpClient\ResponseStreamInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Throwable;
 
 use function is_array;
@@ -22,14 +29,22 @@ use const PHP_URL_HOST;
  * Decorates Symfony HttpClient to record opt-in outbound request spans / breadcrumbs.
  *
  * Beacon Envelope ingest and remote Messenger command calls are skipped to avoid noisy self-traces.
+ *
+ * 1.18.1: an async decorator — the span is recorded when the first chunk (the status) or a transport error arrives,
+ * never by reading the response inside request(). Reading it there made the response unusable for an outer async
+ * decorator (NoPrivateNetworkHttpClient, RetryableHttpClient: "A decorated client should not call any of the
+ * response's methods in its request() method").
  */
-final class TraceableBeaconHttpClient implements HttpClientInterface
+final class TraceableBeaconHttpClient implements HttpClientInterface, ResetInterface
 {
+    use AsyncDecoratorTrait;
+
     public function __construct(
-        private readonly HttpClientInterface $client,
+        HttpClientInterface $client,
         private readonly SpanBuffer $spanBuffer,
         private readonly BreadcrumbBuffer $breadcrumbBuffer,
     ) {
+        $this->client = $client;
     }
 
     /**
@@ -40,18 +55,14 @@ final class TraceableBeaconHttpClient implements HttpClientInterface
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         if ($this->shouldSkip($url, $options)) {
-            return $this->client->request($method, $url, $options);
+            return new AsyncResponse($this->client, $method, $url, $options);
         }
 
         $start = microtime(true);
         $host  = $this->hostFromUrl($url);
 
         try {
-            $response = $this->client->request($method, $url, $options);
-            $status   = $response->getStatusCode();
-            $this->record($method, $host, $start, microtime(true), $status);
-
-            return $response;
+            return new AsyncResponse($this->client, $method, $url, $options, $this->passthru($method, $host, $start));
         } catch (Throwable $exception) {
             $this->record($method, $host, $start, microtime(true), null, $exception->getMessage());
 
@@ -60,21 +71,32 @@ final class TraceableBeaconHttpClient implements HttpClientInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Records the span once, on the first chunk (with the status code) or on the transport error that replaces it.
      */
-    public function stream(ResponseInterface|iterable $responses, ?float $timeout = null): ResponseStreamInterface
+    private function passthru(string $method, string $host, float $start): Closure
     {
-        return $this->client->stream($responses, $timeout);
-    }
+        $recorded = new class {
+            public bool $done = false;
+        };
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param array<string, mixed> $options
-     */
-    public function withOptions(array $options): static
-    {
-        return new self($this->client->withOptions($options), $this->spanBuffer, $this->breadcrumbBuffer);
+        return function (ChunkInterface $chunk, AsyncContext $context) use ($method, $host, $start, $recorded): Generator {
+            if (!$recorded->done) {
+                try {
+                    $first = $chunk->isFirst();
+                } catch (TransportExceptionInterface $exception) {
+                    $recorded->done = true;
+                    $this->record($method, $host, $start, microtime(true), null, $exception->getMessage());
+
+                    throw $exception;
+                }
+                if ($first) {
+                    $recorded->done = true;
+                    $this->record($method, $host, $start, microtime(true), $context->getStatusCode());
+                }
+            }
+
+            yield $chunk;
+        };
     }
 
     /**
