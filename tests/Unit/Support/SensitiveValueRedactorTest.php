@@ -90,4 +90,24 @@ final class SensitiveValueRedactorTest extends TestCase
 
         self::assertSame(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'signature' => 'Jane'], $out);
     }
+
+    public function testRedactMessageReplacesCredentialShapedSubstrings(): void
+    {
+        self::assertSame('', SensitiveValueRedactor::redactMessage(''));
+        self::assertSame('Undefined index: user_id', SensitiveValueRedactor::redactMessage('Undefined index: user_id'));
+        self::assertSame(
+            'Stripe said no to [Filtered] (Bearer [Filtered]) for password=[Filtered], db mysql://app:[Filtered]@db/app',
+            SensitiveValueRedactor::redactMessage('Stripe said no to sk_live_abcdefghijklmnop (Bearer abcdefgh12345) for password=hunter2, db mysql://app:s3cr3t@db/app'),
+        );
+        self::assertSame(
+            '[Filtered] [Filtered] [Filtered] [Filtered] [Filtered] [Filtered] [Filtered]',
+            SensitiveValueRedactor::redactMessage('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N AKIAABCDEFGHIJKLMNOP ghp_abcdefghijklmnopqrstuvwxyz0123456789 github_pat_abcdefghijklmnopqrstuvwxyz0123 xoxb-1234567890-abc AIzaSyA1234567890abcdefghijklmnopqrstuv sk-ant-api03-abcdefghijklmnopqrstuvwxyz'),
+        );
+        self::assertSame('{"api_key": "[Filtered]"}', SensitiveValueRedactor::redactMessage('{"api_key": "abc123"}'));
+    }
+
+    public function testContextStringsGetTheMessagePatterns(): void
+    {
+        self::assertSame(['note' => 'sent Bearer [Filtered]'], SensitiveValueRedactor::redactMap(['note' => 'sent Bearer abcdefgh12345']));
+    }
 }

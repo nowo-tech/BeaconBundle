@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.18.2](#to-1182)
 - [To 1.18.1](#to-1181)
 - [To 1.18.0](#to-1180)
 - [To 1.17.2](#to-1172)
@@ -85,6 +86,12 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.18.2
+
+No change needed. Exception and log messages now have credential-shaped substrings (tokens, API keys, URL passwords,
+`password=…`) replaced with `[Filtered]` before sending. A message that used to carry a different token on every event
+now reads the same each time, so Beacon may group those events into a new issue once.
 
 ## To 1.18.1
 

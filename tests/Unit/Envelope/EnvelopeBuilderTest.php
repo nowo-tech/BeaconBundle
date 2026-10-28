@@ -80,6 +80,20 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertArrayNotHasKey('user', $payload);
     }
 
+    public function testMessagesAndExceptionValuesHideCredentials(): void
+    {
+        $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        $builder = new EnvelopeBuilder('test', '1.0.0', 'ci-host');
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'login with password=hunter2', 'error'));
+        self::assertSame('login with password=[Filtered]', $payload['message']);
+
+        $throwable     = new RuntimeException('Stripe rejected sk_live_abcdefghijklmnop');
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, '', 'error', $throwable));
+        self::assertSame('Stripe rejected [Filtered]', $payload['message']);
+        self::assertSame('Stripe rejected [Filtered]', $payload['exception']['values'][0]['value']);
+    }
+
     public function testHandlerFailedCulpritPointsAtRootCause(): void
     {
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');

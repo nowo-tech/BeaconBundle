@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.18.2] - 2026-10-28](#1182---2026-10-28)
 - [[1.18.1] - 2026-10-28](#1181---2026-10-28)
 - [[1.18.0] - 2026-10-26](#1180---2026-10-26)
 - [[1.17.2] - 2026-10-24](#1172---2026-10-24)
@@ -68,6 +69,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.18.2] - 2026-10-28
+
+### Security
+
+- **Credentials in exception and log messages are hidden before sending**: the event message and every exception
+  value in the chain, and the strings of Monolog context, console input and frame vars, have credential-shaped
+  substrings replaced with `[Filtered]` — JWTs, `Bearer` / `Basic` tokens, Stripe / AWS / GitHub / Slack / Google /
+  LLM API keys, PEM private keys, URL passwords (`scheme://user:[Filtered]@host`) and `password=…` /
+  `"api_key": "…"` pairs. The rest of the message is kept, so the issue title stays readable. Until now only
+  secret-looking keys and URLs were filtered, and a token inside an exception message reached Beacon as written.
+  New public helper: `SensitiveValueRedactor::redactMessage()`.
 
 ## [1.18.1] - 2026-10-28
 

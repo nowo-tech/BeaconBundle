@@ -6,6 +6,8 @@ namespace Nowo\BeaconBundle\Support;
 
 use Stringable;
 
+use function array_keys;
+use function array_values;
 use function explode;
 use function implode;
 use function is_array;
@@ -39,7 +41,41 @@ final class SensitiveValueRedactor
      * Not part of {@see SENSITIVE_KEY}: a `code` or `hash` key in Monolog context or console input is
      * usually not a secret.
      */
+    /**
+     * Credential-shaped substrings replaced inside free text (exception and log messages, context strings), the rest
+     * of the text kept: PEM private keys, URL passwords, JWTs, bearer / basic tokens, provider keys (Stripe, AWS,
+     * GitHub, Slack, Google, LLM APIs) and `password=…` / `"api_key": "…"` pairs.
+     *
+     * @var array<string, string> pattern => replacement
+     */
+    private const SECRET_PATTERNS = [
+        '/-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/s'                                            => self::FILTERED,
+        '#\b([a-z][a-z0-9+.-]*://[^\s:/@]+):[^\s@/]+@#i'                                                                            => '$1:' . self::FILTERED . '@',
+        '/\beyJ[\w-]{8,}\.eyJ[\w-]{8,}\.[\w-]{8,}/'                                                                                 => self::FILTERED,
+        '/\b(Bearer|Basic)\s+[\w.~+\/=-]{8,}/i'                                                                                     => '$1 ' . self::FILTERED,
+        '/\b(?:sk|rk|pk)_(?:live|test)_\w{10,}/'                                                                                    => self::FILTERED,
+        '/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/'                                                                                           => self::FILTERED,
+        '/\bgh[pousr]_[A-Za-z0-9]{30,}\b/'                                                                                          => self::FILTERED,
+        '/\bgithub_pat_\w{30,}/'                                                                                                    => self::FILTERED,
+        '/\bxox[abposr]-[\w-]{10,}/'                                                                                                => self::FILTERED,
+        '/\bAIza[\w-]{35}\b/'                                                                                                       => self::FILTERED,
+        '/\bsk-(?:ant-)?[\w-]{20,}/'                                                                                                => self::FILTERED,
+        '/\b((?:passw(?:or)?d|pwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)["\']?\s*[:=]\s*["\']?)[^\s"\'&,;}]+/i' => '$1' . self::FILTERED,
+    ];
+
     private const SENSITIVE_URL_PARAMETER = '/^(?:_?hash|sig|code)$|signature|token/i';
+
+    /**
+     * Replace credential-shaped substrings in free text (an exception or log message), keeping the rest.
+     */
+    public static function redactMessage(string $message): string
+    {
+        if ($message === '') {
+            return $message;
+        }
+
+        return preg_replace(array_keys(self::SECRET_PATTERNS), array_values(self::SECRET_PATTERNS), $message) ?? $message;
+    }
 
     /**
      * Whether `$key` looks sensitive (password, token, DSN, …).
@@ -187,6 +223,6 @@ final class SensitiveValueRedactor
             return self::FILTERED;
         }
 
-        return $value;
+        return self::redactMessage($value);
     }
 }

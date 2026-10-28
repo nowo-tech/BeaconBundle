@@ -105,7 +105,7 @@ final class EnvelopeBuilder
             'platform'  => 'php',
             'level'     => $level,
             'logger'    => 'nowo.beacon',
-            'message'   => $message,
+            'message'   => SensitiveValueRedactor::redactMessage($message),
         ];
 
         if ($this->sendOptions->serverName) {
@@ -160,7 +160,7 @@ final class EnvelopeBuilder
                 $payload['culprit'] = $this->guessCulprit($throwable);
             }
             if ($message === '') {
-                $payload['message'] = $throwable->getMessage();
+                $payload['message'] = SensitiveValueRedactor::redactMessage($throwable->getMessage());
             }
         } elseif ($this->sendOptions->stacktrace) {
             $this->attachCurrentStacktrace($payload);
@@ -614,7 +614,7 @@ final class EnvelopeBuilder
         while ($current instanceof Throwable) {
             $entry = [
                 'type'  => $current::class,
-                'value' => $current->getMessage(),
+                'value' => SensitiveValueRedactor::redactMessage($current->getMessage()),
             ];
             if ($this->sendOptions->stacktrace) {
                 $entry['stacktrace'] = [
