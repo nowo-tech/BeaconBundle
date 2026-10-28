@@ -583,7 +583,7 @@ nowo_beacon:
         http:
             enabled: true
             path: /admin/beacon/self-test   # default /_beacon/self-test
-            roles: [ROLE_ADMIN]             # any of them; [] = rely on your firewall
+            roles: [ROLE_ADMIN]             # any of them; must not be empty (use [IS_AUTHENTICATED] to rely on your firewall)
 ```
 
 ```yaml
@@ -598,7 +598,7 @@ nowo_beacon:
 | `nowo_beacon_self_test` → `{path}` | `GET` | JSON `status` (origin, project, listeners), `kinds.uncaught` / `kinds.returning`, `csrf_token_id`, `csrf_token` |
 | `nowo_beacon_self_test_trigger` → `{path}/{kind}` | `POST` | Returning kinds: JSON `{kind, run, event_id, delivery, tag}`. Uncaught kinds throw (HTTP 500 by design; reported by the `kernel.exception` listener). |
 
-Send the CSRF token (id `nowo_beacon_self_test`) as the `_token` form field or the `X-CSRF-Token` header. Errors are JSON `{"error": …}`: `403` (role or CSRF), `404` (unknown kind), `409` (not configured / kind unavailable), `500` (CSRF protection unavailable — requires `symfony/security-csrf` and `framework.csrf_protection`). Role checks use `security.authorization_checker`; when roles are configured but SecurityBundle is missing, every call is refused. The endpoint is JSON-only (no Twig / translations); build your own admin UI on top of it or of the service below.
+Send the CSRF token (id `nowo_beacon_self_test`) as the `_token` form field or the `X-CSRF-Token` header. Errors are JSON `{"error": …}`: `403` (role or CSRF), `404` (unknown kind), `409` (not configured / kind unavailable), `500` (CSRF protection unavailable — requires `symfony/security-csrf` and `framework.csrf_protection`). Role checks use `security.authorization_checker`; when SecurityBundle is missing, every call is refused. An empty `roles` list is rejected at configuration time while the endpoint is enabled. The endpoint is JSON-only (no Twig / translations); build your own admin UI on top of it or of the service below.
 
 ### Service API (custom admin pages)
 

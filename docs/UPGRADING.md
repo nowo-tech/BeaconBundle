@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.19.0](#to-1190)
 - [To 1.18.2](#to-1182)
 - [To 1.18.1](#to-1181)
 - [To 1.18.0](#to-1180)
@@ -86,6 +87,23 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.19.0
+
+From **1.18.2**. **Behaviour change (security):** `nowo_beacon.self_test.http.roles: []` with
+`self_test.http.enabled: true` is now a configuration error (an empty list denies instead of skipping the role check).
+Hosts that relied on the firewall only must list `IS_AUTHENTICATED` (or `PUBLIC_ACCESS`) explicitly:
+
+```yaml
+nowo_beacon:
+    self_test:
+        http:
+            enabled: true
+            roles: [IS_AUTHENTICATED]
+```
+
+The endpoint is disabled by default and defaults to `['ROLE_ADMIN']`; hosts that did not enable it, or kept a
+non-empty `roles`, are unaffected.
 
 ## To 1.18.2
 

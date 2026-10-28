@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.19.0] - 2026-10-28](#1190---2026-10-28)
 - [[1.18.2] - 2026-10-28](#1182---2026-10-28)
 - [[1.18.1] - 2026-10-28](#1181---2026-10-28)
 - [[1.18.0] - 2026-10-26](#1180---2026-10-26)
@@ -69,6 +70,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.19.0] - 2026-10-28
+
+Self-test endpoint: an empty role list denies (behaviour change). See [UPGRADING](UPGRADING.md#to-1190).
+
+### Security
+
+- **Self-test endpoint: an empty role list denies.** `SelfTestController` skipped the role check when
+  `self_test.http.roles` was `[]` (documented as "rely on your firewall"), so anyone reaching the path could trigger
+  real Beacon events once they fetched a CSRF token from the GET endpoint. An empty list now denies, and the
+  configuration rejects `roles: []` while `self_test.http.enabled` is `true`. To keep firewall-only access, list
+  `IS_AUTHENTICATED` (or `PUBLIC_ACCESS`) explicitly.
 
 ## [1.18.2] - 2026-10-28
 

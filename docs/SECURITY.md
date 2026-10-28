@@ -32,6 +32,7 @@
 | Outbound HTTP call | Slow or unavailable Beacon server can delay the request path | Keep `timeout` low; use `transport.mode: async` or `messenger`; the transport has no retry loop |
 | Ingest rate limit | Sustained spikes may receive HTTP 429 | Back off using `Retry-After`; fix noisy reporters; raise `BEACON_INGEST_RATE_LIMIT` only on the server if appropriate |
 | `BEACON_WORKER_KEY` (remote Messenger commands, opt-in) | Leaked key lets an attacker claim (steal) this project's commands or post fake results; with a TLS interception position it could also forge commands (HMAC signing key is derived from the same key) | Keep it only on worker hosts, rotate / revoke in Beacon (10-minute overlap); `allowed_actions: [retry]` forbids remote discards; see [Remote Messenger commands](#remote-messenger-commands-116) |
+| Self-test HTTP endpoint (opt-in, `self_test.http.enabled`) | Anyone reaching the path triggers real Beacon events (noise, quota) if the role check is skipped | Explicit CSRF token (fails closed without `security.csrf.token_manager`); `roles` must be non-empty while enabled (configuration error), an empty list denies, roles without SecurityBundle deny |
 | Dependency supply chain | Vulnerable Composer dependency included in the release | Run `composer audit` before release and triage findings |
 
 ## Bundle security measures

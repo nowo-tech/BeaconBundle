@@ -109,7 +109,7 @@ final class SelfTestControllerTest extends TestCase
         self::assertSame(403, $this->controller()->trigger(new Request([], ['_token' => 'nope']), 'captured-message')->getStatusCode());
         self::assertSame(404, $this->controller()->trigger(new Request([], ['_token' => $token]), 'bogus')->getStatusCode());
 
-        $unavailable = new SelfTestController(new BeaconSelfTest(new NullBeaconClient(), new BeaconDsnParser(), ''), [], $this->csrf);
+        $unavailable = new SelfTestController(new BeaconSelfTest(new NullBeaconClient(), new BeaconDsnParser(), ''), ['ROLE_ADMIN'], $this->csrf, $this->checker(['ROLE_ADMIN']));
         $response    = $unavailable->trigger(new Request([], ['_token' => $token]), 'captured-message');
         self::assertSame(409, $response->getStatusCode());
         self::assertStringContainsString('No Beacon DSN configured', $this->json($response)['error']);
@@ -130,8 +130,14 @@ final class SelfTestControllerTest extends TestCase
         $granted = new SelfTestController($selfTest, ['ROLE_ADMIN', 'ROLE_OPS'], $this->csrf, $this->checker(['ROLE_OPS']));
         self::assertSame(200, $granted->status()->getStatusCode());
 
+        // An empty role list denies (it used to skip the role check entirely), with or without security.
+        $emptyRoles = new SelfTestController($selfTest, [], $this->csrf, $this->checker(['ROLE_ADMIN']));
+        self::assertSame(403, $emptyRoles->status()->getStatusCode());
+        self::assertSame(403, $emptyRoles->trigger(new Request(), 'captured-message')->getStatusCode());
+        self::assertSame(403, (new SelfTestController($selfTest, [], $this->csrf))->status()->getStatusCode());
+
         // Without CSRF support every call is refused.
-        $noCsrf = new SelfTestController($selfTest, []);
+        $noCsrf = new SelfTestController($selfTest, ['ROLE_ADMIN'], null, $this->checker(['ROLE_ADMIN']));
         self::assertSame(500, $noCsrf->status()->getStatusCode());
         self::assertSame(500, $noCsrf->trigger(new Request(), 'captured-message')->getStatusCode());
     }

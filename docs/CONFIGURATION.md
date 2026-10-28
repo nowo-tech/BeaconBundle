@@ -173,7 +173,7 @@ nowo_beacon:
 | `scheduler.check_ins.catalog_refresh_hours` | `24` | Re-send the catalog from a running Scheduler worker every N hours (1 … 168). |
 | `self_test.http.enabled` | `false` | Register the JSON self-test controller and routes (import `type: nowo_beacon`). The `nowo:beacon:self-test` command is always available. See [Usage → Self-test](USAGE.md#self-test). |
 | `self_test.http.path` | `/_beacon/self-test` | Route path (must start with `/`): `GET {path}` status + CSRF token, `POST {path}/{kind}` run. |
-| `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). `[]` disables the role check (protect the path with your firewall). Without SecurityBundle and a non-empty list, access is refused. |
+| `self_test.http.roles` | `['ROLE_ADMIN']` | Roles allowed (any). Must not be empty while `enabled: true` (configuration error; an empty list denies). To rely on the firewall alone, list `IS_AUTHENTICATED` (or `PUBLIC_ACCESS`) explicitly. Without SecurityBundle, access is refused. |
 | `auto_http_transaction` | `false` | Send a performance transaction for each main HTTP request (skips `ignore_paths`, `ignore_routes` and unsampled requests). |
 | `http_transaction_sample_rate` | `1.0` | Fraction (0.0–1.0) of main HTTP requests that send an `auto_http_transaction` transaction; decided once at request start. |
 | `ignore_routes` | `[]` | Route-name prefixes (`_route`) whose `auto_http_transaction` transactions are never sent, e.g. `ingest_` or a polling API. Does not affect error capture. |

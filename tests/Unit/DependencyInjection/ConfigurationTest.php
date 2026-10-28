@@ -145,13 +145,29 @@ final class ConfigurationTest extends TestCase
         self::assertSame(['enabled' => false, 'path' => '/_beacon/self-test', 'roles' => ['ROLE_ADMIN']], $config['self_test']['http']);
 
         $custom = (new Processor())->processConfiguration(new Configuration(), [[
-            'self_test' => ['http' => ['enabled' => true, 'path' => '/admin/beacon', 'roles' => []]],
+            'self_test' => ['http' => ['enabled' => true, 'path' => '/admin/beacon', 'roles' => ['IS_AUTHENTICATED']]],
         ]]);
-        self::assertSame(['enabled' => true, 'path' => '/admin/beacon', 'roles' => []], $custom['self_test']['http']);
+        self::assertSame(['enabled' => true, 'path' => '/admin/beacon', 'roles' => ['IS_AUTHENTICATED']], $custom['self_test']['http']);
+
+        // Disabled endpoint: an empty list is harmless (no routes) and still accepted.
+        $disabled = (new Processor())->processConfiguration(new Configuration(), [[
+            'self_test' => ['http' => ['enabled' => false, 'roles' => []]],
+        ]]);
+        self::assertSame([], $disabled['self_test']['http']['roles']);
 
         $this->expectException(InvalidConfigurationException::class);
         (new Processor())->processConfiguration(new Configuration(), [[
             'self_test' => ['http' => ['path' => 'admin/beacon']],
+        ]]);
+    }
+
+    public function testSelfTestHttpRejectsEmptyRolesWhileEnabled(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('self_test.http.roles must not be empty');
+
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'self_test' => ['http' => ['enabled' => true, 'roles' => []]],
         ]]);
     }
 

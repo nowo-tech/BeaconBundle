@@ -23,7 +23,8 @@ use function is_string;
  * - POST {path}/{kind}  → run the kind (`_token` form field or `X-CSRF-Token` header).
  *   Returning kinds answer JSON; uncaught kinds throw so kernel.exception reports them (HTTP 500 by design).
  *
- * Access: the user must be granted at least one of the configured roles (empty list = rely on the firewall).
+ * Access: the user must be granted at least one of the configured roles. An empty list denies (fail closed); to rely on
+ * the firewall alone list `IS_AUTHENTICATED` (or `PUBLIC_ACCESS`) explicitly.
  * Without symfony/security-csrf (framework.csrf_protection) every call is refused.
  */
 final readonly class SelfTestController
@@ -106,10 +107,6 @@ final readonly class SelfTestController
 
     private function isGranted(): bool
     {
-        if ($this->roles === []) {
-            return true;
-        }
-
         if (!$this->authorizationChecker instanceof AuthorizationCheckerInterface) {
             return false; // Fail closed when roles are configured but security is not installed.
         }
