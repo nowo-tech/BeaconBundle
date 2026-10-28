@@ -1164,6 +1164,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     timeout?: float|Param, // HTTP timeout in seconds for ingest requests. // Default: 5.0
  *     transport?: array{ // Outbound Envelope delivery mode.
  *         mode?: "sync"|"async"|"messenger"|Param, // sync = block on HTTP; async = start HTTP and finalize on kernel/console terminate; messenger = queue via Symfony Messenger (requires symfony/messenger). // Default: "sync"
+ *         retry?: array{ // Retry an Envelope POST when Beacon answers with a server error (5xx), waiting between attempts (exponential backoff with jitter; a Retry-After header is honoured). Applies to every mode; set max_retries to 0 to disable.
+ *             max_retries?: int|Param, // Extra attempts after the first one (0 = no retry). // Default: 2
+ *             delay_ms?: int|Param, // Wait before the first retry, in milliseconds. // Default: 500
+ *             multiplier?: float|Param, // Factor applied to the wait before each further retry. // Default: 2.0
+ *             max_delay_ms?: int|Param, // Upper bound of one wait, in milliseconds (0 = no bound). // Default: 5000
+ *             jitter?: float|Param, // Random variation applied to each wait (0.0–1.0). // Default: 0.1
+ *             status_codes?: list<int|Param>,
+ *         },
  *     },
  *     register_error_listener?: bool|Param, // When true, register a kernel.exception listener that reports uncaught exceptions. // Default: true
  *     ignore_exceptions?: list<scalar|Param|null>,
