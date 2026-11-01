@@ -17,6 +17,23 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class EnvelopeTransportTest extends TestCase
 {
+    public function testARedirectToAnotherHostIsNotFollowed(): void
+    {
+        $requests   = [];
+        $httpClient = new MockHttpClient(static function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = ['url' => $url, 'max_redirects' => $options['max_redirects']];
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location: https://elsewhere.example.net/collect']]);
+        });
+        $transport = new EnvelopeTransport($httpClient, (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5'));
+
+        $result = $transport->sendDetailed("envelope\n");
+
+        self::assertFalse($result->isAccepted());
+        self::assertSame(302, $result->getStatusCode());
+        self::assertSame([['url' => 'https://beacon.example.com:9444/api/5/envelope/', 'max_redirects' => 0]], $requests);
+    }
+
     public function testSendReturnsTrueForSuccessfulResponses(): void
     {
         $dsn        = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');

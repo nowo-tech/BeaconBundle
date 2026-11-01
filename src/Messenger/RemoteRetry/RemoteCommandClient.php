@@ -146,6 +146,8 @@ final class RemoteCommandClient
             'body'         => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'timeout'      => self::TIMEOUT,
             'max_duration' => self::TIMEOUT,
+            // Never follow a redirect: it would carry the Beacon credentials to another host.
+            'max_redirects' => 0,
         ];
         if (!$this->verifyPeer) {
             $options['verify_peer'] = false;

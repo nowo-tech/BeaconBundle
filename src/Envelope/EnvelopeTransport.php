@@ -97,6 +97,8 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             'body'         => $envelopeBody,
             'timeout'      => $this->timeout,
             'max_duration' => $this->timeout,
+            // Never follow a redirect: it would carry the Beacon credentials to another host.
+            'max_redirects' => 0,
         ];
 
         if (!$this->verifyPeer) {

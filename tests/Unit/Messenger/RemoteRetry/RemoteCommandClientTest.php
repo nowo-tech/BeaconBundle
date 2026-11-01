@@ -131,6 +131,26 @@ final class RemoteCommandClientTest extends TestCase
         self::assertStringStartsWith('User-Agent: beacon-bundle/', implode("\n", array_filter($seen['headers'], static fn (string $h): bool => str_starts_with($h, 'User-Agent'))));
     }
 
+    public function testARedirectToAnotherHostIsNotFollowed(): void
+    {
+        $requests = [];
+        $http     = new MockHttpClient(static function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = $options['max_redirects'];
+
+            return new MockResponse('', ['http_code' => 307, 'response_headers' => ['Location: https://elsewhere.example.net/claim']]);
+        });
+
+        try {
+            $this->client(httpClient: $http)->claim([]);
+            self::fail('A redirect must not be treated as a claim response.');
+        } catch (RemoteCommandException $e) {
+            self::assertSame(RemoteCommandException::KIND_UNAVAILABLE, $e->kind);
+            self::assertSame(307, $e->statusCode);
+        }
+
+        self::assertSame([0], $requests);
+    }
+
     public function testBundleVersionFallsBackToTheRawUserAgent(): void
     {
         $body = '';
