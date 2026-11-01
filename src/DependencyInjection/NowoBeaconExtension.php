@@ -809,6 +809,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$authorizationChecker' => new Reference('security.authorization_checker', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
         ]);
         $controller->setAutowired(false);
+        // Never autoconfigured: on Symfony >= 7.3 that would tag the #[Route] class `routing.controller` and the host's
+        // `routing.controllers` import would expose the endpoint without the opt-in loader (REQ-SF-004 rule 7).
+        $controller->setAutoconfigured(false);
         $controller->setPublic(true);
         $controller->addTag('controller.service_arguments');
         $container->setDefinition(SelfTestController::class, $controller);

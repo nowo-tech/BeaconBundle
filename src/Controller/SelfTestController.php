@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Controller;
 
+use Nowo\BeaconBundle\Routing\BeaconRouteLoader;
 use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\SelfTestUnavailableException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
@@ -26,10 +28,26 @@ use function is_string;
  * Access: the user must be granted at least one of the configured roles. An empty list denies (fail closed); to rely on
  * the firewall alone list `IS_AUTHENTICATED` (or `PUBLIC_ACCESS`) explicitly.
  * Without symfony/security-csrf (framework.csrf_protection) every call is refused.
+ *
+ * Routes are declared with `#[Route]` under {@see self::DEFAULT_PATH} but stay **opt-in** (REQ-SF-004 rule 7): the
+ * controller service is not autoconfigured, so the host's `routing.controllers` import never loads them. They are
+ * exposed only through {@see BeaconRouteLoader} (`type: nowo_beacon`), which imports these
+ * attributes when `self_test.http.enabled` is true and moves them under `self_test.http.path`.
  */
 final readonly class SelfTestController
 {
     public const CSRF_TOKEN_ID = 'nowo_beacon_self_test';
+
+    /** Path of the attribute routes; {@see BeaconRouteLoader} replaces it with `self_test.http.path`. */
+    public const DEFAULT_PATH = '/_beacon/self-test';
+
+    /** Route requirement for `{kind}`: every {@see BeaconSelfTest::kinds()} value, in that order. */
+    public const KIND_REQUIREMENT = BeaconSelfTest::KIND_UNCAUGHT_EXCEPTION
+        . '|' . BeaconSelfTest::KIND_PHP_ERROR
+        . '|' . BeaconSelfTest::KIND_PHP_WARNING
+        . '|' . BeaconSelfTest::KIND_CAPTURED_EXCEPTION
+        . '|' . BeaconSelfTest::KIND_CAPTURED_MESSAGE
+        . '|' . BeaconSelfTest::KIND_MESSENGER_FAILURE;
 
     /**
      * @param list<string> $roles
@@ -42,6 +60,7 @@ final readonly class SelfTestController
     ) {
     }
 
+    #[Route(self::DEFAULT_PATH, name: 'nowo_beacon_self_test', methods: ['GET'])]
     public function status(): JsonResponse
     {
         $refused = $this->refuse();
@@ -64,6 +83,7 @@ final readonly class SelfTestController
         ]);
     }
 
+    #[Route(self::DEFAULT_PATH . '/{kind}', name: 'nowo_beacon_self_test_trigger', requirements: ['kind' => self::KIND_REQUIREMENT], methods: ['POST'])]
     public function trigger(Request $request, string $kind): JsonResponse
     {
         $refused = $this->refuse();
