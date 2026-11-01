@@ -142,7 +142,6 @@ The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `cla
 
 - [Installation](docs/INSTALLATION.md)
 - [Configuration](docs/CONFIGURATION.md)
-- [PSR evaluation (REQ-CS-007)](docs/PSR.md)
 - [Usage](docs/USAGE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
@@ -161,6 +160,7 @@ The bundled demo uses FrankenPHP. Default **`FRANKENPHP_MODE=worker`**; set `cla
 - [FrankenPHP worker audit (reset_kernel false)](docs/FRANKENPHP-WORKER-AUDIT.md)
 - [GitHub CI](docs/GITHUB_CI.md)
 - [Performance](docs/PERFORMANCE.md)
+- [PSR evaluation (REQ-CS-007)](docs/PSR.md)
 
 ## Tests and coverage
 

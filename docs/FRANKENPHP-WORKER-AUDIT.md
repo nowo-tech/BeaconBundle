@@ -9,6 +9,22 @@
 | **Verdict** | ✅ **Compatible with FrankenPHP worker + kernel not reset (scenario B)** — request-scoped buffers, trace id, auto HTTP transaction Request, and leftover async POSTs are cleared/drained without relying on `services_resetter` |
 | Remediation | W-01/W-02: `BeaconRequestScopeResetListener` (+ pending flush). W-03: LRU 64 in `EnvelopeBuilder`. W-04: fatal handler via `NowoBeaconBundle::boot()`. W-05 accepted. W-06: transaction listener resets on every main request. W-07: flush terminate priority `-2048` (after transaction `-1024`). |
 
+## Table of contents
+
+- [Execution model assumed](#execution-model-assumed)
+- [Summary](#summary)
+- [Services reviewed](#services-reviewed)
+- [Findings](#findings)
+  - [W-01 — Breadcrumbs, spans and scope tags leak into later requests without reset (Medium)](#w-01--breadcrumbs-spans-and-scope-tags-leak-into-later-requests-without-reset-medium)
+  - [W-02 — Same trace id reused by every request of a worker without reset (Medium)](#w-02--same-trace-id-reused-by-every-request-of-a-worker-without-reset-medium)
+  - [W-03 — `EnvelopeBuilder` source-line cache is never cleared (Low)](#w-03--envelopebuilder-source-line-cache-is-never-cleared-low)
+  - [W-04 — Fatal-error shutdown handler is never registered (Info)](#w-04--fatal-error-shutdown-handler-is-never-registered-info)
+  - [W-05 — Outbound calls block the worker thread (Low)](#w-05--outbound-calls-block-the-worker-thread-low)
+  - [W-06 — Auto HTTP transaction Request leaked across requests without reset (Medium)](#w-06--auto-http-transaction-request-leaked-across-requests-without-reset-medium)
+  - [W-07 — Async flush ran at the same terminate priority as auto HTTP transactions (Medium)](#w-07--async-flush-ran-at-the-same-terminate-priority-as-auto-http-transactions-medium)
+- [Usage recommendations in worker mode](#usage-recommendations-in-worker-mode)
+- [Re-audit triggers](#re-audit-triggers)
+
 ## Execution model assumed
 
 FrankenPHP worker mode boots the Symfony kernel once per worker and serves many requests with the same container. This audit assumes the **strict** variant: the kernel is **not** rebooted between requests, so every shared service, static property and PHP global survives from one request to the next. Two scenarios are evaluated:
@@ -103,6 +119,7 @@ Value objects (`BeaconDsn`, `SendOptions`, `TransportResult`, `ConnectionTestRes
 - **Where:** `src/Envelope/EnvelopeTransport.php:87-88` (`timeout` and `max_duration` from `nowo_beacon.timeout`, default 5 s). `src/Instrumentation/TraceableBeaconHttpClient.php:51` calls `getStatusCode()` right after `request()`.
 - **Worker impact:** with `transport.mode: sync` (the default), every captured event holds the worker thread for up to `timeout` if Beacon is slow. With `instrumentation.http_client: true`, every outbound request of the application waits for response headers inside `request()`, so HttpClient's lazy and concurrent behaviour is lost. Both are explicit and bounded; no state leaks.
 - **Recommendation:** use `transport.mode: async` (drained on `kernel.terminate`) or `messenger` in production workers, keep `timeout` low (1-2 s), and cap waiting with FrankenPHP `max_wait_time`.
+- **Retries (1.18+):** `transport.retry` retries 5xx answers. Since 1.19.2 a synchronous send never waits for a `Retry-After` longer than `transport.retry.max_delay_ms` (it gives up instead), so the worst case per event is `timeout` × (`max_retries` + 1) plus the backoff waits, each ≤ `max_delay_ms`. `async` and `messenger` sends keep honouring the full `Retry-After`.
 - **Status:** Accepted — timeouts are explicit and configurable; transport choice is a deployment decision.
 
 ### W-06 — Auto HTTP transaction Request leaked across requests without reset (Medium)

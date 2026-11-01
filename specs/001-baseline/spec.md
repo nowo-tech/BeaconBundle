@@ -1,7 +1,7 @@
 # Baseline specification — Beacon Bundle
 
-**Last audited:** 2026-10-12  
-**Aligned with:** public API / config through **v1.12.0** (Messenger observability, deploy markers, self-test)
+**Last audited:** 2026-11-01  
+**Aligned with:** public API / config through **v1.19.x** (Messenger observability, deploy markers, self-test, Scheduler check-ins, Messenger remote retry, ingest retries, bounded synchronous `Retry-After`)
 
 ## Summary
 
@@ -25,13 +25,15 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 - Real-failure self-test command, public service and optional JSON endpoint (`specs/006`)
 - Opt-in Symfony Scheduler check-ins: schedule catalog (with task descriptions) + per-run check-ins (`specs/007`)
 - Opt-in remote retry / discard of failed Messenger messages from the Beacon UI (pull model) and failure-transport ids on final failures (`specs/008`)
+- Retries with backoff when Beacon answers an Envelope POST with a server error (`transport.retry`, 1.18); synchronous sends never wait for a `Retry-After` above `max_delay_ms` (1.19.2)
 
 ## Non-goals
 
 - Full APM / session-replay feature parity with commercial SaaS products
 - Hosting the Beacon server itself
 - Client-side JS SDK
-- Automatic retries / offline queue
+- Offline queue / on-disk buffer of undelivered events (retries cover transient 5xx answers only)
+- Retrying 4xx answers or transport errors (DNS, refused connection, timeout)
 - Shipping multiple major-version demos (sample app is **Symfony 8 only**; see `specs/002-solo-symfony8-demo`)
 
 ## User stories
@@ -55,6 +57,19 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | US-14 | As a developer, I prove the whole wiring with real failures | `nowo:beacon:self-test`, `BeaconSelfTest` service, optional `self_test.http` endpoint (`specs/006-self-test`) |
 | US-15 | As an operator, Beacon tells me when a scheduled task did not run, ran too long or keeps failing | `nowo_beacon.scheduler.check_ins` + `#[BeaconCheckIn]` + `nowo:beacon:scheduler-catalog` (`specs/007-scheduler-check-ins`) |
 | US-16 | As a project admin, I retry or discard one failed Messenger message from Beacon without SSH | `nowo_beacon.messenger.remote_retry` + `nowo:beacon:messenger-commands` (`specs/008-messenger-remote-retry`) |
+
+### Acceptance scenarios
+
+1. **Given** `BEACON_DSN` is empty or `enabled: false`, **When** the container compiles and a capture is called, **Then** `NullBeaconClient` is used and no HTTP request is made (US-01, FR-CL-004, FR-DI-002).
+2. **Given** a valid DSN, **When** `captureMessage('ping', 'info')` is called, **Then** a local `event_id` is returned and one Envelope is POSTed to `{origin}/api/{projectId}/envelope/` with Content-Type `application/x-beacon-envelope` (US-02, FR-CL-001, FR-ENV-001/002).
+3. **Given** `register_error_listener: true` and an exception class listed in `ignore_exceptions`, **When** a controller throws it, **Then** no event is sent; **When** it throws another class, **Then** one `error` event with the exception tree is sent (US-03, US-04, FR-LI-001).
+4. **Given** a request path under an `ignore_paths` prefix (default `/_profiler`), **When** it throws, **Then** nothing is reported (US-04b, FR-LI-005).
+5. **Given** Beacon is unreachable or answers 4xx, **When** an event is captured, **Then** the failure is logged once, `send()` returns false and the host request continues (US-06, FR-TR-001).
+6. **Given** `transport.mode: sync` and Beacon answers 503 with `Retry-After: 300` while `transport.retry.max_delay_ms` is 5000, **When** an event is captured, **Then** no retry is made and the call returns at once with status 503; **given** `Retry-After: 1`, **Then** the send waits 1 s and retries (US-06, FR-TR-003).
+7. **Given** `transport.mode: async` or `messenger` and Beacon answers 503 with `Retry-After` above `max_delay_ms`, **When** the pending POST is flushed or the Messenger handler runs, **Then** the full `Retry-After` is honoured before the retry (FR-TR-003).
+8. **Given** breadcrumbs were added, **When** the next event is captured, **Then** they are attached and the buffer is cleared (US-07, FR-CL-005).
+9. **Given** a FrankenPHP worker without kernel reset, **When** a second request starts, **Then** breadcrumbs, spans, tags, trace id and the auto HTTP transaction Request of the first request are gone (US-11, FR-WK-001/002).
+10. **Given** `self_test.http.enabled: true` and a host whose routing is only `routing.controllers`, **When** the router loads, **Then** no `nowo_beacon_*` route exists; **given** the documented `type: nowo_beacon` import, **Then** `nowo_beacon_self_test` (GET) and `nowo_beacon_self_test_trigger` (POST) exist under `self_test.http.path` (US-14, FR-ST-006).
 
 ## Functional requirements
 
@@ -87,6 +102,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-ENV-006 | `send.*` may attach environment, release, server_name, user, and `contexts` (runtime / framework / os) |
 | FR-TR-001 | Non-2xx and transport errors are logged; `send()` returns false; no exception to caller. HTTP uses configured `timeout` / `max_duration` |
 | FR-TR-002 | `transport.mode` `sync` \| `async` \| `messenger`; async/messenger finalize via flush listener or Messenger handler |
+| FR-TR-003 | `transport.retry`: an Envelope POST answered with one of `status_codes` (default 500 / 502 / 503 / 504) is retried up to `max_retries` times with exponential backoff (`delay_ms` × `multiplier`ⁿ, bounded by `max_delay_ms`, `jitter`); 4xx and transport errors are not retried; a `Retry-After` header takes precedence over the backoff. **Synchronous sends** (`transport.mode: sync`) do not retry when `Retry-After` asks for more than `max_delay_ms` (0 = no bound), so they never stall the caller (REQ-RUNTIME-001). **Background sends** (`async` flush, the Messenger handler of `messenger` mode) honour the full `Retry-After` |
 | FR-INS-001 | Opt-in `instrumentation.*` records Doctrine SQL and HttpClient spans/breadcrumbs |
 | FR-ENV-007 | Database exceptions in the throwable chain add `contexts.db` (SQLSTATE / driver code, best-effort SQL) |
 | FR-ENV-008 | Envelope item types: `event`, `transaction`, `queue_snapshot`, `deploy`; `before_send` applies to events only; shapes pinned by golden fixtures in `tests/Contract/fixtures/envelope/` |
@@ -113,6 +129,27 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-WK-003 | `FlushPendingTransportsListener` terminate priority MUST be lower than the auto HTTP transaction listener so async POSTs enqueued on terminate are drained in the same cycle; leftover pending MAY also flush at the next main request start |
 | FR-WK-004 | `EnvelopeBuilder` source-line cache MUST be bounded (LRU); workers SHOULD still be recycled on deploy |
 | FR-WK-005 | When `register_fatal_handler` is true, `BeaconFatalErrorHandler` MUST be registered once per process (`Bundle::boot()`); in worker mode the shutdown function runs when the worker exits |
+
+## Success criteria
+
+| ID | Criterion |
+|----|-----------|
+| SC-001 | Every production file under `src/` is mapped in [`code-inventory.md`](code-inventory.md): **97/97** (96 PHP + `services.yaml`), no placeholder IDs |
+| SC-002 | PHPUnit line coverage of `src/` is **100%** (`make test-coverage-100`) on the CI matrix (PHP 8.2–8.5 × Symfony 7.4 / 8.x) |
+| SC-003 | PHPStan, PHP-CS-Fixer, Rector (dry run) and Igor report no errors |
+| SC-004 | Envelope shapes match the golden fixtures in `tests/Contract/fixtures/envelope/` (`make check-envelope-goldens` against Symfony Beacon) |
+| SC-005 | No capture path throws into the host: transport failures and rejected ingest are logged and return false (FR-TR-001) |
+| SC-006 | A synchronous send waits at most `max_delay_ms` per retry, whatever `Retry-After` Beacon sends (FR-TR-003) |
+| SC-007 | With `self_test.http.enabled: true`, a `routing.controllers`-only host exposes no bundle route (FR-ST-006, REQ-SF-004) |
+
+## Validation
+
+```bash
+make qa                 # cs-check + phpstan + PHPUnit
+make test-coverage-100  # 100% line coverage gate
+make igor               # worker-state audit
+make release-check      # full pre-release chain
+```
 
 ## Sample application
 

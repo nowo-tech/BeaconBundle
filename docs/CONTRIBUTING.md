@@ -10,6 +10,8 @@ Thanks for contributing to BeaconBundle.
 - [Demo checks](#demo-checks)
 - [Git hygiene](#git-hygiene)
 - [Pull requests](#pull-requests)
+- [AI co-author trailers](#ai-co-author-trailers)
+- [Cursor Agent (REQ-IDE-006)](#cursor-agent-req-ide-006)
 
 ## Code of Conduct
 
@@ -115,3 +117,18 @@ Questions and support requests are welcome through the [issue tracker](https://g
 ## AI co-author trailers
 
 Do **not** add AI co-author trailers to commit messages: neither `Co-authored-by: Cursor` / `cursoragent@cursor.com` nor `Co-Authored-By: Claude …` / `noreply@anthropic.com` (REQ-GIT-001). Run `make setup-hooks` so the `commit-msg` hook strips them.
+
+## Cursor Agent (REQ-IDE-006)
+
+Contributors using Cursor Agent on this repository should set two user-level Cursor settings:
+
+1. **Submit with Ctrl + Enter** (macOS: **⌘ + Enter**). **Enter** inserts a newline; **Ctrl+Enter** / **⌘+Enter** submits the prompt. UI: **Cursor Settings → Agents / Chat → Submit with Ctrl + Enter** (stored by Cursor as `chatSubmitOnCmdEnter`, not in the repository).
+2. **Queue follow-ups while the agent is running** — in your user `settings.json`:
+
+   ```json
+   {
+     "cursor.composer.queueMessageDefaultBehavior": "queue"
+   }
+   ```
+
+   With `"queue"` the next message waits until the current agent turn finishes. Do not use `"steer"` as your default: it interrupts the running agent as soon as a follow-up is sent. Paths: Linux `~/.config/Cursor/User/settings.json`, Windows `%APPDATA%\Cursor\User\settings.json`, macOS `~/Library/Application Support/Cursor/User/settings.json`.

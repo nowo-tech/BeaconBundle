@@ -72,6 +72,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Synchronous sends no longer stall on a long `Retry-After`** (REQ-RUNTIME-001): with `transport.mode: sync`, a 5xx answer whose `Retry-After` is above `transport.retry.max_delay_ms` (default 5000 ms) is not retried — the send returns at once and the rejection is logged, instead of holding the request or worker thread for the whole `Retry-After` per retry. A `Retry-After` within the bound is still honoured, and `max_delay_ms: 0` keeps the previous behaviour. `async` and `messenger` sends keep honouring the full `Retry-After`. New private service `nowo.beacon.ingest_http_client.sync`; no new configuration key. See [CONFIGURATION](CONFIGURATION.md#retries-on-beacon-server-errors).
+
+### Changed
+
+- **Self-test routes are `#[Route]` attributes** on `SelfTestController` (REQ-SF-004). They stay opt-in: `BeaconRouteLoader` (`type: nowo_beacon`) imports them only when `self_test.http.enabled` is true and applies `self_test.http.path`; the controller is never autoconfigured, so the host's `routing.controllers` import does not expose them. Route names, paths, methods and the `kind` requirement are unchanged.
+- Documentation: Spec Kit manual rewritten, spec-driven development document with scope / non-goals and a `REQ-*` table, baseline spec success criteria and acceptance scenarios, code inventory refreshed (97/97), Cursor Agent settings in CONTRIBUTING, canonical issue templates, worker audit table of contents.
+- Demo: PHPUnit 13.4.5 in `demo/symfony8` (CVE-2026-119193, development only).
+
 ## [1.19.1] - 2026-10-28
 
 Dependency update
