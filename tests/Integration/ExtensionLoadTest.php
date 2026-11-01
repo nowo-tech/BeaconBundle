@@ -153,6 +153,16 @@ final class ExtensionLoadTest extends TestCase
             [new Reference('http_client'), 2, 500, 2.0, 5000, 0.1, [500, 502, 503, 504]],
             $ingestClient->getArguments(),
         );
+        self::assertEquals(
+            new Reference('nowo.beacon.ingest_http_client.sync'),
+            $container->getDefinition(BeaconClientFactory::class)->getArgument('$syncHttpClient'),
+        );
+        $syncIngestClient = $container->getDefinition('nowo.beacon.ingest_http_client.sync');
+        self::assertSame([IngestHttpClientFactory::class, 'create'], $syncIngestClient->getFactory());
+        self::assertEquals(
+            [new Reference('http_client'), 2, 500, 2.0, 5000, 0.1, [500, 502, 503, 504], true],
+            $syncIngestClient->getArguments(),
+        );
     }
 
     public function testTransportRetryOptionsReachTheIngestClient(): void
@@ -174,6 +184,10 @@ final class ExtensionLoadTest extends TestCase
         self::assertEquals(
             [new Reference('http_client'), 4, 250, 3.0, 2000, 0.0, [503]],
             $container->getDefinition('nowo.beacon.ingest_http_client')->getArguments(),
+        );
+        self::assertEquals(
+            [new Reference('http_client'), 4, 250, 3.0, 2000, 0.0, [503], true],
+            $container->getDefinition('nowo.beacon.ingest_http_client.sync')->getArguments(),
         );
     }
 

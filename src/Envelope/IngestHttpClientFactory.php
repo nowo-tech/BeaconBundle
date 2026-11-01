@@ -15,7 +15,9 @@ use function array_values;
  *
  * A server error from Beacon (by default 500, 502, 503, 504) is retried after a wait that grows with each attempt
  * (`delay_ms` × `multiplier`ⁿ, bounded by `max_delay_ms`, varied by `jitter`); a `Retry-After` header takes
- * precedence. Transport errors (DNS, refused connection, timeout) are not retried, so a receiver that is down does
+ * precedence. With `$boundRetryAfter` (synchronous sends only) a `Retry-After` longer than `max_delay_ms` ends the
+ * retries instead of blocking the request ({@see BoundedRetryAfterStrategy}); background sends keep honouring the full
+ * `Retry-After`. Transport errors (DNS, refused connection, timeout) are not retried, so a receiver that is down does
  * not multiply the request time. Beacon stores one event per `event_id`, so a retried POST does not duplicate events.
  */
 final class IngestHttpClientFactory
@@ -24,6 +26,7 @@ final class IngestHttpClientFactory
      * Wrap the client in a {@see RetryableHttpClient}, or return it unchanged when retries are disabled.
      *
      * @param list<int> $statusCodes
+     * @param bool $boundRetryAfter True for the client of synchronous sends: decline a retry whose `Retry-After` exceeds `$maxDelayMs`
      */
     public static function create(
         HttpClientInterface $httpClient,
@@ -33,6 +36,7 @@ final class IngestHttpClientFactory
         int $maxDelayMs = 5000,
         float $jitter = 0.1,
         array $statusCodes = [500, 502, 503, 504],
+        bool $boundRetryAfter = false,
     ): HttpClientInterface {
         if ($maxRetries <= 0 || $statusCodes === []) {
             return $httpClient;
@@ -40,6 +44,9 @@ final class IngestHttpClientFactory
 
         // A plain list of codes retries them for every method (POST included).
         $strategy = new GenericRetryStrategy(array_values($statusCodes), $delayMs, $multiplier, $maxDelayMs, $jitter);
+        if ($boundRetryAfter && $maxDelayMs > 0) {
+            $strategy = new BoundedRetryAfterStrategy($strategy, $maxDelayMs);
+        }
 
         return new RetryableHttpClient($httpClient, $strategy, $maxRetries);
     }
