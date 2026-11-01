@@ -205,6 +205,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $container->setDefinition(SecurityUserContextProvider::class, $userProvider);
         $container->setAlias(UserContextProviderInterface::class, SecurityUserContextProvider::class);
 
+        // Before the early return: prepend() adds the middleware to the default bus in every configuration.
+        $this->registerTraceMiddleware($container, $enabledFlag && $dsn !== '');
+
         if (!$enabledFlag || $dsn === '') {
             $this->registerNullClient($container);
 
@@ -397,14 +400,6 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         }
 
         $this->registerMessengerObservability($container, $config);
-
-        if (interface_exists(MessageBusInterface::class)) {
-            $traceMiddleware = new Definition(BeaconTraceMiddleware::class, [
-                '$traceIdProvider' => new Reference(TraceIdProvider::class),
-            ]);
-            $traceMiddleware->setPublic(false);
-            $container->setDefinition(BeaconTraceMiddleware::class, $traceMiddleware);
-        }
 
         if ((bool) ($config['auto_http_transaction'] ?? false)) {
             $tx = new Definition(BeaconRequestTransactionListener::class, [
@@ -815,6 +810,22 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $controller->setPublic(true);
         $controller->addTag('controller.service_arguments');
         $container->setDefinition(SelfTestController::class, $controller);
+    }
+
+    /**
+     * Registers {@see BeaconTraceMiddleware} whenever Messenger is installed (the same condition as the bus middleware
+     * prepended in {@see prepend()}), as a pass-through when the bundle is disabled or the DSN is empty.
+     */
+    private function registerTraceMiddleware(ContainerBuilder $container, bool $enabled): void
+    {
+        if (interface_exists(MessageBusInterface::class)) {
+            $traceMiddleware = new Definition(BeaconTraceMiddleware::class, [
+                '$traceIdProvider' => new Reference(TraceIdProvider::class),
+                '$enabled'         => $enabled,
+            ]);
+            $traceMiddleware->setPublic(false);
+            $container->setDefinition(BeaconTraceMiddleware::class, $traceMiddleware);
+        }
     }
 
     /**

@@ -89,6 +89,10 @@
 
 ## Unreleased
 
+From **1.19.2**: no change needed. If your Beacon URL answers with a redirect (for example `http://` → `https://`), put
+the final URL in `BEACON_DSN`: the bundle no longer follows redirects. Hosts that disable the bundle with Messenger
+installed no longer need any workaround for the `BeaconTraceMiddleware` compile error.
+
 From **1.19.1**: no change needed. With `transport.mode: sync`, a Beacon 5xx answer whose `Retry-After` exceeds
 `transport.retry.max_delay_ms` is no longer retried (the send returns at once and is logged). To wait for any
 `Retry-After` again, set `transport.retry.max_delay_ms: 0` (this also removes the backoff bound) or use

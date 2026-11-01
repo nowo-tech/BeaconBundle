@@ -74,6 +74,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Container compiles when the bundle is disabled and Messenger is installed.** With `enabled: false`, a literal empty DSN, no DSN, or a `when@test` override that disables the bundle, the build failed with `Invalid middleware: service "Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware" not found`: the middleware was always prepended to `messenger.bus.default`, but its service was only registered when the bundle was enabled. The service is now registered whenever Messenger is installed (the same condition as the prepend), as a pass-through while the bundle is disabled. `%env()%` DSNs are unchanged.
+
+### Security
+
+- **Outbound requests never follow redirects** (`max_redirects: 0`) for Envelope ingest (`EnvelopeTransport`, all transport modes and `nowo:beacon:test`) and remote Messenger commands (`RemoteCommandClient`). Before, a 3xx from the Beacon origin was followed up to 20 times, and Symfony HttpClient only drops `Authorization` / `Cookie` on a cross-host redirect, so `X-Beacon-Auth` (DSN key and secret) and the Envelope body could reach another host. A 3xx is now a failed send (logged; not retried) / an unavailable poll (backoff).
+
+### Fixed
+
 - **Synchronous sends no longer stall on a long `Retry-After`** (REQ-RUNTIME-001): with `transport.mode: sync`, a 5xx answer whose `Retry-After` is above `transport.retry.max_delay_ms` (default 5000 ms) is not retried — the send returns at once and the rejection is logged, instead of holding the request or worker thread for the whole `Retry-After` per retry. A `Retry-After` within the bound is still honoured, and `max_delay_ms: 0` keeps the previous behaviour. `async` and `messenger` sends keep honouring the full `Retry-After`. New private service `nowo.beacon.ingest_http_client.sync`; no new configuration key. See [CONFIGURATION](CONFIGURATION.md#retries-on-beacon-server-errors).
 
 ### Changed
