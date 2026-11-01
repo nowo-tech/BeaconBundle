@@ -35,6 +35,7 @@ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Symfony\Component\Messenger\Middleware\StackMiddleware;
 use Symfony\Component\Messenger\Stamp\BusNameStamp;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
@@ -138,6 +139,19 @@ final class CoverageCompletionTest extends TestCase
         $envelope = new Envelope(new stdClass(), [new BeaconTraceStamp('trace-from-stamp-12345678')]);
         $middleware->handle($envelope, $stack);
         self::assertSame('trace-from-stamp-12345678', $provider->get());
+    }
+
+    public function testDisabledTraceMiddlewareOnlyPassesTheEnvelopeOn(): void
+    {
+        $provider   = new TraceIdProvider();
+        $stack      = new StackMiddleware();
+        $middleware = new BeaconTraceMiddleware($provider, false);
+
+        $result = $middleware->handle(new Envelope(new stdClass()), $stack);
+        self::assertNull($result->last(BeaconTraceStamp::class));
+
+        $middleware->handle(new Envelope(new stdClass(), [new BeaconTraceStamp('trace-from-stamp-12345678')]), $stack);
+        self::assertNull($provider->get());
     }
 
     public function testMessengerListenerAddsHandlerTransportAndFirstFailureMetadata(): void
