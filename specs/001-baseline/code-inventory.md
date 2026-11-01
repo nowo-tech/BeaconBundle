@@ -52,7 +52,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events, transactions, `queue_snapshot`, `deploy`, `schedule_catalog`, `check_in`) | FR-ENV-001..007, FR-WK-004, FR-MQ-005, FR-DEP-001, FR-SCI-006 |
 | `src/Envelope/EnvelopeTransportInterface.php` | Transport contract | FR-TR-001 |
 | `src/Envelope/FlushableEnvelopeTransportInterface.php` | Async flush contract | FR-TR-002 |
-| `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest | FR-TR-001, FR-ENV-002 |
+| `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest (no redirects) | FR-TR-001, FR-ENV-002 |
 | `src/Envelope/IngestHttpClientFactory.php` | `transport.retry` client (`RetryableHttpClient` + `GenericRetryStrategy`); bounded variant for sync sends | FR-TR-003 |
 | `src/Envelope/BoundedRetryAfterStrategy.php` | Sync-only retry strategy: declines a retry whose `Retry-After` exceeds `max_delay_ms` | FR-TR-003 |
 | `src/Envelope/AsyncEnvelopeTransport.php` | Defer send until terminate | FR-TR-002 |
@@ -109,7 +109,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Messenger/RemoteRetry/RemoteCommandPoller.php` | `WorkerRunningEvent` poller (schedule, backoff, pause, pending results) | FR-MRR-003, FR-MRR-007 |
 | `src/Messenger/RemoteRetry/PollReport.php` | Poll outcome VO (command / tests) | FR-MRR-004 |
 | `src/Messenger/MessengerContext.php` | Shared `extra.messenger` builder (no message body) | FR-LI-003, FR-MQ-003 |
-| `src/Messenger/BeaconTraceMiddleware.php` | Trace id propagation across Messenger hops | FR-WK-001 |
+| `src/Messenger/BeaconTraceMiddleware.php` | Trace id propagation across Messenger hops (pass-through while the bundle is disabled) | FR-WK-001, FR-WK-006 |
 | `src/Messenger/BeaconTraceStamp.php` | Trace id stamp | FR-WK-001 |
 
 ### Scheduler check-ins (5)
