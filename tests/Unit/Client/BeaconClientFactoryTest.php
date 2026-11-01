@@ -56,6 +56,43 @@ final class BeaconClientFactoryTest extends TestCase
         $factory->create(true, 'https://pubkey:secret@beacon.example.com/not-a-number', 'test', null, 'h', true, 5.0);
     }
 
+    public function testSyncModeUsesTheBoundedClientAndBackgroundModesTheFullOne(): void
+    {
+        $background = new MockHttpClient([
+            new MockResponse('', ['http_code' => 202]),
+            new MockResponse('', ['http_code' => 202]),
+        ]);
+        $sync     = new MockHttpClient(new MockResponse('', ['http_code' => 202]));
+        $registry = new PendingTransportRegistry();
+        $factory  = new BeaconClientFactory(
+            new BeaconDsnParser(),
+            $background,
+            pendingRegistry: $registry,
+            syncHttpClient: $sync,
+        );
+        $dsn = 'https://pubkey:secret@beacon.example.com/5';
+
+        $factory->create(true, $dsn, 'test', null, 'h', true, 5.0, [], null, 'sync')->captureMessage('sync', 'info');
+        self::assertSame(1, $sync->getRequestsCount());
+        self::assertSame(0, $background->getRequestsCount());
+
+        $factory->create(true, $dsn, 'test', null, 'h', true, 5.0, [], null, 'async')->captureMessage('async', 'info');
+        $registry->flush();
+        $factory->createSyncTransport(true, $dsn)->send("envelope\n");
+        self::assertSame(1, $sync->getRequestsCount());
+        self::assertSame(2, $background->getRequestsCount());
+    }
+
+    public function testSyncModeFallsBackToTheMainClientWithoutABoundedOne(): void
+    {
+        $httpClient = new MockHttpClient(new MockResponse('', ['http_code' => 202]));
+        $factory    = new BeaconClientFactory(new BeaconDsnParser(), $httpClient);
+
+        $factory->create(true, 'https://pubkey:secret@beacon.example.com/5', 'test', null, 'h', true, 5.0)->captureMessage('sync', 'info');
+
+        self::assertSame(1, $httpClient->getRequestsCount());
+    }
+
     public function testCreateSyncTransportReturnsEnvelopeTransport(): void
     {
         $factory   = new BeaconClientFactory(new BeaconDsnParser(), new MockHttpClient());

@@ -89,6 +89,11 @@
 
 ## Unreleased
 
+From **1.19.1**: no change needed. With `transport.mode: sync`, a Beacon 5xx answer whose `Retry-After` exceeds
+`transport.retry.max_delay_ms` is no longer retried (the send returns at once and is logged). To wait for any
+`Retry-After` again, set `transport.retry.max_delay_ms: 0` (this also removes the backoff bound) or use
+`transport.mode: async` / `messenger`. Self-test routes keep their names and paths; keep the `type: nowo_beacon` import.
+
 ## To 1.19.1
 
 From **1.19.0**: no change needed (development dependencies updated).

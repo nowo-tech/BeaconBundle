@@ -52,7 +52,7 @@ As an administrator, I trigger the same kinds from a protected JSON endpoint or 
 - **FR-ST-003**: `BeaconSelfTest::assertReady()` validates enabled flag, non-empty DSN (`BeaconDsnParser`), and live client; `run()` calls it and checks kind prerequisites (`register_php_warning_handler`, Messenger bus).
 - **FR-ST-004**: `BeaconSelfTestException` extends `\Exception` (not RuntimeException) so common `ignore_exceptions` entries do not hide it.
 - **FR-ST-005**: Command, service and route loader are always registered (also with `NullBeaconClient`); the fail handler only with `symfony/messenger`; the controller only when `self_test.http.enabled`.
-- **FR-ST-006**: Config `self_test.http.{enabled=false, path=/_beacon/self-test (must start with /), roles=[ROLE_ADMIN]}`; routes `nowo_beacon_self_test` (GET) and `nowo_beacon_self_test_trigger` (POST, `kind` requirement = known kinds).
+- **FR-ST-006**: Config `self_test.http.{enabled=false, path=/_beacon/self-test (must start with /), roles=[ROLE_ADMIN]}`; routes `nowo_beacon_self_test` (GET) and `nowo_beacon_self_test_trigger` (POST, `kind` requirement = known kinds). Since 1.19.2 the routes are `#[Route]` attributes on `SelfTestController` (under `/_beacon/self-test`); `BeaconRouteLoader` (`type: nowo_beacon`) imports them only when enabled and moves them to `path`. The controller is never autoconfigured, so a host's `routing.controllers` import does not expose them (REQ-SF-004 rule 7). Names, paths, methods and the requirement are unchanged.
 - **FR-ST-007**: JSON-only endpoint (no Twig, no translations); hosts build UI on the service.
 - **FR-ST-008**: Worker-safe: services are stateless (`readonly`); igor clean.
 

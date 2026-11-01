@@ -231,6 +231,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $ingestClient->setPublic(false);
         $container->setDefinition('nowo.beacon.ingest_http_client', $ingestClient);
 
+        // Synchronous sends: same retries, but a Retry-After above max_delay_ms ends them (REQ-RUNTIME-001).
+        $syncIngestClient = new Definition(HttpClientInterface::class, [...$ingestClient->getArguments(), true]);
+        $syncIngestClient->setFactory([IngestHttpClientFactory::class, 'create']);
+        $syncIngestClient->setPublic(false);
+        $container->setDefinition('nowo.beacon.ingest_http_client.sync', $syncIngestClient);
+
         $factory = new Definition(BeaconClientFactory::class, [
             '$parser'              => new Reference(BeaconDsnParser::class),
             '$httpClient'          => new Reference('nowo.beacon.ingest_http_client'),
@@ -244,6 +250,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$messageBus'          => new Reference('messenger.default_bus', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$clock'               => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$traceIdProvider'     => new Reference(TraceIdProvider::class),
+            '$syncHttpClient'      => new Reference('nowo.beacon.ingest_http_client.sync'),
         ]);
         $factory->setAutowired(false);
         $factory->setPublic(false);
@@ -802,6 +809,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$authorizationChecker' => new Reference('security.authorization_checker', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
         ]);
         $controller->setAutowired(false);
+        // Never autoconfigured: on Symfony >= 7.3 that would tag the #[Route] class `routing.controller` and the host's
+        // `routing.controllers` import would expose the endpoint without the opt-in loader (REQ-SF-004 rule 7).
+        $controller->setAutoconfigured(false);
         $controller->setPublic(true);
         $controller->addTag('controller.service_arguments');
         $container->setDefinition(SelfTestController::class, $controller);

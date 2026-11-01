@@ -1168,7 +1168,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             max_retries?: int|Param, // Extra attempts after the first one (0 = no retry). // Default: 2
  *             delay_ms?: int|Param, // Wait before the first retry, in milliseconds. // Default: 500
  *             multiplier?: float|Param, // Factor applied to the wait before each further retry. // Default: 2.0
- *             max_delay_ms?: int|Param, // Upper bound of one wait, in milliseconds (0 = no bound). // Default: 5000
+ *             max_delay_ms?: int|Param, // Upper bound of one wait, in milliseconds (0 = no bound). In sync mode a Retry-After above it ends the retries instead of being waited for. // Default: 5000
  *             jitter?: float|Param, // Random variation applied to each wait (0.0–1.0). // Default: 0.1
  *             status_codes?: list<int|Param>,
  *         },

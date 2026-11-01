@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Routing;
 
 use Nowo\BeaconBundle\Controller\SelfTestController;
-use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Symfony\Component\Config\Loader\Loader;
-use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
-use function implode;
 use function rtrim;
+use function strlen;
+use function substr;
 
 /**
  * Route loader for optional BeaconBundle endpoints (`type: nowo_beacon`).
@@ -23,6 +22,11 @@ use function rtrim;
  *         type: nowo_beacon
  *
  * Returns an empty collection unless `nowo_beacon.self_test.http.enabled` is true, so the import is safe to keep.
+ * When enabled it imports the `#[Route]` attributes of {@see SelfTestController} (type `attribute`) and moves them from
+ * {@see SelfTestController::DEFAULT_PATH} to `self_test.http.path`. Route names and paths are unchanged from 1.12.
+ *
+ * The loader stays the only way to expose these routes (REQ-SF-004 rule 7): the controller is not autoconfigured, so
+ * the host's `routing.controllers` import does not see it, and the configurable path and the enabled flag live here.
  */
 final class BeaconRouteLoader extends Loader
 {
@@ -48,19 +52,15 @@ final class BeaconRouteLoader extends Loader
         }
 
         $path = rtrim($this->selfTestPath, '/');
-        $path = $path === '' ? '/_beacon/self-test' : $path;
+        $path = $path === '' ? SelfTestController::DEFAULT_PATH : $path;
 
-        $collection->add(self::ROUTE_SELF_TEST, new Route(
-            $path,
-            ['_controller' => SelfTestController::class . '::status'],
-            methods: ['GET'],
-        ));
-        $collection->add(self::ROUTE_SELF_TEST_TRIGGER, new Route(
-            $path . '/{kind}',
-            ['_controller' => SelfTestController::class . '::trigger'],
-            ['kind' => implode('|', BeaconSelfTest::kinds())],
-            methods: ['POST'],
-        ));
+        /** @var RouteCollection $routes every SelfTestController route starts with DEFAULT_PATH */
+        $routes = $this->import(SelfTestController::class, 'attribute');
+        foreach ($routes->all() as $route) {
+            $route->setPath($path . substr($route->getPath(), strlen(SelfTestController::DEFAULT_PATH)));
+        }
+
+        $collection->addCollection($routes);
 
         return $collection;
     }

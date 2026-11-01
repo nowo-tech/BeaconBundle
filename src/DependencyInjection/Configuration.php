@@ -93,7 +93,7 @@ final class Configuration implements ConfigurationInterface
                                     ->min(1.0)
                                 ->end()
                                 ->integerNode('max_delay_ms')
-                                    ->info('Upper bound of one wait, in milliseconds (0 = no bound).')
+                                    ->info('Upper bound of one wait, in milliseconds (0 = no bound). In sync mode a Retry-After above it ends the retries instead of being waited for.')
                                     ->defaultValue(5000)
                                     ->min(0)
                                 ->end()

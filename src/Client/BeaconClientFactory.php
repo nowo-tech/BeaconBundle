@@ -44,6 +44,7 @@ final class BeaconClientFactory
         private readonly ?object $messageBus = null,
         private readonly ?ClockInterface $clock = null,
         private readonly ?TraceIdProvider $traceIdProvider = null,
+        private readonly ?HttpClientInterface $syncHttpClient = null,
     ) {
     }
 
@@ -116,8 +117,10 @@ final class BeaconClientFactory
             $this->traceIdProvider,
             $this->clock,
         );
+        // `sync` blocks the caller, so it uses the client whose Retry-After wait is bounded (REQ-RUNTIME-001);
+        // `async` and `messenger` send in the background and keep honouring the full Retry-After.
         $sync = new EnvelopeTransport(
-            $this->httpClient,
+            $transportMode === 'sync' ? ($this->syncHttpClient ?? $this->httpClient) : $this->httpClient,
             $parsed,
             $verifyPeer,
             $timeout,

@@ -140,7 +140,7 @@ nowo_beacon:
 | `transport.retry.max_retries` | `2` | Extra attempts when Beacon answers with one of `transport.retry.status_codes` (0 … 10; `0` disables retries). Applies to `sync`, `async` and the Messenger handler. See [Retries](#retries-on-beacon-server-errors). |
 | `transport.retry.delay_ms` | `500` | Wait before the first retry, in milliseconds. |
 | `transport.retry.multiplier` | `2.0` | Factor applied to the wait before each further retry (≥ 1.0): 500 ms, 1 s, 2 s, … |
-| `transport.retry.max_delay_ms` | `5000` | Upper bound of a single wait (`0` = no bound). |
+| `transport.retry.max_delay_ms` | `5000` | Upper bound of a single wait (`0` = no bound). In `sync` mode a `Retry-After` above it ends the retries instead of being waited for. |
 | `transport.retry.jitter` | `0.1` | Random variation of each wait (0.0–1.0), so many apps do not retry in lockstep after a Beacon restart. |
 | `transport.retry.status_codes` | `[500, 502, 503, 504]` | Beacon responses (500 … 599) that are retried. 4xx (bad DSN, 401/403, 413, 429) are never retried. |
 | `register_error_listener` | `true` | Registers the automatic `kernel.exception` listener. |
@@ -203,9 +203,10 @@ When Beacon answers an Envelope POST with a server error (`transport.retry.statu
 
 - Not retried: 4xx responses and transport errors (DNS, refused connection, timeout) — a Beacon that is down does not multiply the time spent per send.
 - Safe to repeat: Beacon stores one event per `event_id` and project, so a retry after a 500 that was in fact stored does not duplicate the event.
+- Long `Retry-After` in `sync` mode: a synchronous send never waits longer than `max_delay_ms` for one retry. When `Retry-After` asks for more (for example a 503 with `Retry-After: 300`), the send is not retried — it returns at once and the rejection is logged — so a struggling Beacon cannot stall the request or worker thread. A `Retry-After` within the bound is honoured. `max_delay_ms: 0` removes the bound (and waits for any `Retry-After`). In `async` and `messenger` mode the full `Retry-After` is honoured, since the wait happens after the response or in the worker.
 - Where the wait happens: in `sync` mode inside the request that reports; in `async` mode on `kernel.terminate` / `console.terminate` (after the response is sent); in `messenger` mode in the worker. Worst case per send with the defaults: 3 × `timeout` + 0.5 s + 1 s. In `sync` mode under FrankenPHP / FPM keep that sum inside the [timeout hierarchy](#timeout-hierarchy-req-runtime-001), or lower `max_retries`.
 
-Built with Symfony's `RetryableHttpClient` + `GenericRetryStrategy` around `http_client` (service `nowo.beacon.ingest_http_client`), used only for Envelope ingest; `nowo:beacon:test` and remote Messenger commands keep the plain client.
+Built with Symfony's `RetryableHttpClient` + `GenericRetryStrategy` around `http_client` (service `nowo.beacon.ingest_http_client` for `async` / `messenger`, `nowo.beacon.ingest_http_client.sync` with the bounded `Retry-After` for `sync`), used only for Envelope ingest; `nowo:beacon:test` and remote Messenger commands keep the plain client.
 
 ### `send.*` context switches
 
