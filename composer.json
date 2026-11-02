@@ -93,6 +93,7 @@
             "phpstan/extension-installer": true
         },
         "platform": {
+            "php": "8.2.0"
         }
     },
     "minimum-stability": "stable",

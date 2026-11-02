@@ -72,6 +72,9 @@ jobs:
       # Do not set platform.php to "8.4" — Composer treats it as 8.4.0, but Symfony 8.1 requires >=8.4.1.
       # Matrix already runs Symfony 8 only on PHP 8.4 / 8.5 via setup-php.
 
+      - name: Override Composer platform PHP (composer.json pins the minimum PHP for the lock)
+        run: composer config platform.php "${{ matrix.php }}.99"
+
       - name: Install dependencies with Symfony ${{ matrix.symfony }}
         run: |
           # REQ-SF-002: pin every symfony/* package of composer.json to the cell's minor (no caret drift to 8.x).
