@@ -13,9 +13,11 @@ use stdClass;
 use function bin2hex;
 use function ini_set;
 use function json_encode;
+use function microtime;
 use function random_bytes;
 use function str_contains;
 use function str_repeat;
+use function strlen;
 
 final class SensitiveValueRedactorTest extends TestCase
 {
@@ -281,5 +283,34 @@ final class SensitiveValueRedactorTest extends TestCase
         self::assertSame(['user' => SensitiveValueRedactor::FILTERED], SensitiveValueRedactor::redactMap(['user' => $secret]));
         self::assertSame(SensitiveValueRedactor::REDACTION_FAILED, SensitiveValueRedactor::redactValue('mysql://app:' . $secret . '@db/app'));
         self::assertStringNotContainsString($secret, SensitiveValueRedactor::redactQueryString('page=' . $secret));
+    }
+
+    /**
+     * Re-check of PR #28, N5: repeated secret-like names must not make redaction quadratic.
+     */
+    public function testRepeatedSecretNamesRedactInLinearTime(): void
+    {
+        foreach (['aPassword=', 'aPassword ', '_password', 'aToken', '-secret', 'a.'] as $unit) {
+            $first  = 'Fk' . bin2hex(random_bytes(8));
+            $second = 'Fk' . bin2hex(random_bytes(8));
+            $prefix = 'DB_PASSWORD=' . $first . ' ' . str_repeat($unit, intdiv(30000, strlen($unit))) . ' token=' . $second . ' ';
+            $start  = microtime(true);
+            $out    = SensitiveValueRedactor::redactMessage($prefix . str_repeat($unit, intdiv(1 << 20, strlen($unit))));
+
+            self::assertLessThan(1.0, microtime(true) - $start, $unit);
+            self::assertFalse(str_contains($out, $first), $unit . ': first secret leaked');
+            self::assertFalse(str_contains($out, $second), $unit . ': second secret leaked');
+            self::assertStringEndsWith(SensitiveValueRedactor::TRUNCATED, $out);
+        }
+    }
+
+    public function testLongMessagesAreCutOnAUtf8BoundaryAndTheTailDropped(): void
+    {
+        $tail    = 'Fk' . bin2hex(random_bytes(8));
+        $message = str_repeat('a', SensitiveValueRedactor::MAX_MESSAGE_LENGTH - 1) . 'é' . $tail;
+        $out     = SensitiveValueRedactor::redactMessage($message);
+
+        self::assertSame(str_repeat('a', SensitiveValueRedactor::MAX_MESSAGE_LENGTH - 1) . SensitiveValueRedactor::TRUNCATED, $out);
+        self::assertSame($message = str_repeat('b', SensitiveValueRedactor::MAX_MESSAGE_LENGTH), SensitiveValueRedactor::redactMessage($message));
     }
 }

@@ -16,6 +16,7 @@ use function is_float;
 use function is_int;
 use function is_object;
 use function is_string;
+use function ord;
 use function preg_match;
 use function preg_replace;
 use function preg_replace_callback;
@@ -38,6 +39,12 @@ final class SensitiveValueRedactor
     /** Returned instead of the original text when a PCRE limit makes redaction fail (fail closed). */
     public const REDACTION_FAILED = '[Filtered: redaction failed]';
 
+    /** Longest free text redacted, in bytes; the rest is dropped (never returned unredacted). */
+    public const MAX_MESSAGE_LENGTH = 65536;
+
+    /** Appended to a message cut at {@see MAX_MESSAGE_LENGTH}. */
+    public const TRUNCATED = ' [truncated]';
+
     /**
      * Sensitive key names. Long words match anywhere (`db_password`, `X-Api-Key`, `session_id`); short ones (`pass`,
      * `pwd`, `pin`, `otp`, `cvv`, `card`) only as a whole token, delimited by non-alphanumerics or a camelCase hump
@@ -46,7 +53,7 @@ final class SensitiveValueRedactor
     private const SENSITIVE_KEY = '/(?:password|passwd|passphrase|secret|token|api[_-]?key|private|access[_-]?key|auth|credential|bearer|dsn|connection[_-]?string|salt|nonce|cookie|session|signature|iban)|(?:(?<![A-Za-z0-9])|(?-i:(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])))(?:pass|pwd|pin|otp|cvv|cvc|card)(?:(?![A-Za-z0-9])|(?-i:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])))/i';
 
     /** Secret-looking names in free text (see {@see SECRET_PATTERNS}). */
-    private const SECRET_NAME = '(?:(?:passw(?:or)?d|passphrase|client[_-]?secret|secret|token|api[_-]?key|access[_-]?key|private[_-]?key)[A-Za-z0-9_-]*|(?:pass|pwd|pin|otp|cvv|cvc))';
+    private const SECRET_NAME = '(?:(?:passw(?:or)?d|passphrase|client[_-]?secret|secret|token|api[_-]?key|access[_-]?key|private[_-]?key)[A-Za-z0-9_-]{0,64}+|(?:pass|pwd|pin|otp|cvv|cvc))';
 
     /**
      * Credential-shaped substrings replaced inside free text (exception and log messages, context strings), the rest
@@ -59,28 +66,28 @@ final class SensitiveValueRedactor
     private const NAME_START = '(?:(?<![A-Za-z0-9])|(?-i:(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])))';
 
     private const SECRET_PATTERNS = [
-        '/-----BEGIN [A-Z ]*PRIVATE KEY-----(?:[^-]++|-(?!----END ))*+(?:-----END [A-Z ]*PRIVATE KEY-----)?/' => self::FILTERED,
+        '/-----BEGIN [A-Z ]{0,32}?PRIVATE KEY-----(?:[^-]++|-(?!----END ))*+(?:-----END [A-Z ]{0,32}?PRIVATE KEY-----)?/' => self::FILTERED,
         // scheme://user:password@host — the password may contain `/` or `@` (up to the last `@` of the word); a port
         // followed by a path (`host:8080/…`) is not a password.
-        '#\b([a-z][a-z0-9+.-]*://[^\s:/@]*):(?!\d{1,5}/)(?:[^\s@]++@)++#i' => '$1:' . self::FILTERED . '@',
-        '/\beyJ[\w-]{8,}\.eyJ[\w-]{8,}\.[\w-]{8,}/'                        => self::FILTERED,
-        '/\b(Bearer|Basic)\s+[\w.~+\/=-]{8,}/i'                            => '$1 ' . self::FILTERED,
-        '/\b(?:sk|rk|pk)_(?:live|test)_\w{10,}/'                           => self::FILTERED,
-        '/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/'                                  => self::FILTERED,
-        '/\bgh[pousr]_[A-Za-z0-9]{30,}\b/'                                 => self::FILTERED,
-        '/\bgithub_pat_\w{30,}/'                                           => self::FILTERED,
-        '/\bxox[abposr]-[\w-]{10,}/'                                       => self::FILTERED,
-        '/\bAIza[\w-]{35}\b/'                                              => self::FILTERED,
-        '/\bsk-(?:ant-)?[\w-]{20,}/'                                       => self::FILTERED,
+        '#\b([a-z][a-z0-9+.-]{0,31}+://[^\s:/@]*+):(?!\d{1,5}/)(?:[^\s@]++@)++#i' => '$1:' . self::FILTERED . '@',
+        '/\beyJ[\w-]{8,}+\.eyJ[\w-]{8,}+\.[\w-]{8,}/'                             => self::FILTERED,
+        '/\b(Bearer|Basic)\s+[\w.~+\/=-]{8,}/i'                                   => '$1 ' . self::FILTERED,
+        '/\b(?:sk|rk|pk)_(?:live|test)_\w{10,}/'                                  => self::FILTERED,
+        '/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/'                                         => self::FILTERED,
+        '/\bgh[pousr]_[A-Za-z0-9]{30,}\b/'                                        => self::FILTERED,
+        '/\bgithub_pat_\w{30,}/'                                                  => self::FILTERED,
+        '/\bxox[abposr]-[\w-]{10,}/'                                              => self::FILTERED,
+        '/\bAIza[\w-]{35}\b/'                                                     => self::FILTERED,
+        '/\bsk-(?:ant-)?[\w-]{20,}/'                                              => self::FILTERED,
         // Beacon worker keys (remote Messenger commands).
         '/(?<![A-Za-z0-9])bwk_[A-Za-z0-9_-]{20,}/' => self::FILTERED,
         // name=value / name: value / 'name' => 'value' / "name": "value with spaces". The name may be part of a
         // longer identifier (`DB_PASSWORD`, `AWS_SECRET_ACCESS_KEY`, `beacon_secret`, `smtp_pass`); short names
         // (`pass`, `pwd`, `pin`, `otp`, `cvv`) must end there. Quoted values are filtered whole (quotes kept);
         // unquoted values run to whitespace, a quote, `&`, `,`, `}` or `]`.
-        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*")(?:[^"\\\\]++|\\\\.)*+"/i'       => '$1' . self::FILTERED . '"',
-        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*\')(?:[^\'\\\\]++|\\\\.)*+\'/i'    => '$1' . self::FILTERED . "'",
-        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*)(?!\[Filtered\])[^\s"\'&,}\]]+/i' => '$1' . self::FILTERED,
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*+(?:=>|[:=])\s*+")(?:[^"\\\\]++|\\\\.)*+"/i'       => '$1' . self::FILTERED . '"',
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*+(?:=>|[:=])\s*+\')(?:[^\'\\\\]++|\\\\.)*+\'/i'    => '$1' . self::FILTERED . "'",
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*+(?:=>|[:=])\s*+)(?!\[Filtered\])[^\s"\'&,}\]]+/i' => '$1' . self::FILTERED,
     ];
 
     /**
@@ -98,6 +105,15 @@ final class SensitiveValueRedactor
     {
         if ($message === '') {
             return $message;
+        }
+
+        if (strlen($message) > self::MAX_MESSAGE_LENGTH) {
+            // Bound the regex cost on huge messages: redact only the head (cut on a UTF-8 boundary), drop the tail.
+            $cut = self::MAX_MESSAGE_LENGTH;
+            while ($cut > 0 && (ord($message[$cut]) & 0xC0) === 0x80) {
+                --$cut;
+            }
+            $message = substr($message, 0, $cut) . self::TRUNCATED;
         }
 
         $redacted = preg_replace(array_keys(self::SECRET_PATTERNS), array_values(self::SECRET_PATTERNS), $message);
