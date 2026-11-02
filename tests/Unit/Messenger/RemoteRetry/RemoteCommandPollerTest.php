@@ -196,6 +196,29 @@ final class RemoteCommandPollerTest extends TestCase
         self::assertCount(1, $this->async->sent, 'the command ran once');
     }
 
+    public function testNonHttpClientErrorsOnTheResultPathNeverReachTheWorker(): void
+    {
+        // SEC-004 Appendix CH, L2: a decorated http_client throwing something other than an HttpClient exception.
+        $broken          = static fn (): never => throw new LogicException('decorator failure');
+        $poller          = $this->poller();
+        $this->responses = [$this->claimResponse([RemoteRetryFixtures::commandData()], 30), $broken];
+
+        $report = $poller->poll();
+        self::assertSame(PollReport::STATUS_OK, $report->status);
+        self::assertFalse($report->commands[0]['reported'], 'the result stays pending');
+
+        // The pending-results flush fails the same way: reported as unavailable, not thrown.
+        $this->now += 600;
+        $this->responses = [$broken];
+        self::assertSame(PollReport::STATUS_UNAVAILABLE, $poller->poll()->status);
+
+        $this->now += 600;
+        $this->responses = [new MockResponse('{}'), $this->claimResponse([], 30)];
+        self::assertSame(PollReport::STATUS_OK, $poller->poll()->status);
+        self::assertStringEndsWith('/result', $this->requests[3]['url']);
+        self::assertCount(1, $this->async->sent, 'the command ran once');
+    }
+
     public function testRejectedResultsAreDroppedAndAuthOnResultPauses(): void
     {
         $poller          = $this->poller();

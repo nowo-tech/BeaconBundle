@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Dsn;
 
+use SensitiveParameter;
+
 use function ctype_digit;
 use function in_array;
 use function is_string;
@@ -25,7 +27,7 @@ final class BeaconDsnParser
      *
      * @throws InvalidBeaconDsnException
      */
-    public function parse(string $dsn): BeaconDsn
+    public function parse(#[SensitiveParameter] string $dsn): BeaconDsn
     {
         $dsn = trim($dsn);
         if ($dsn === '') {

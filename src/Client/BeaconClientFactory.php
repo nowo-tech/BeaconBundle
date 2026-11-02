@@ -21,6 +21,7 @@ use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
+use SensitiveParameter;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -53,6 +54,7 @@ final class BeaconClientFactory
      */
     public function createSyncTransport(
         bool $enabled,
+        #[SensitiveParameter]
         ?string $dsn,
         bool $verifyPeer = true,
         float $timeout = 5.0,
@@ -87,6 +89,7 @@ final class BeaconClientFactory
      */
     public function create(
         bool $enabled,
+        #[SensitiveParameter]
         ?string $dsn,
         string $environment,
         ?string $release,
@@ -178,7 +181,7 @@ final class BeaconClientFactory
         return new MessengerEnvelopeTransport($this->messageBus, $sync->getDsn());
     }
 
-    private function requireParsedDsn(bool $enabled, ?string $dsn): BeaconDsn
+    private function requireParsedDsn(bool $enabled, #[SensitiveParameter] ?string $dsn): BeaconDsn
     {
         $dsn = trim((string) $dsn);
         if (!$enabled || $dsn === '') {

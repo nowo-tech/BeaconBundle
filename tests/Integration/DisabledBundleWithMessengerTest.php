@@ -14,7 +14,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * The trace middleware is prepended to `messenger.bus.default` in every configuration, so its service must exist
- * even when the bundle is disabled; before 1.19.3 such a container failed to compile
+ * even when the bundle is disabled; before 1.19.2 such a container failed to compile
  * ("Invalid middleware: service BeaconTraceMiddleware not found").
  */
 final class DisabledBundleWithMessengerTest extends TestCase

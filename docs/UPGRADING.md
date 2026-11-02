@@ -89,6 +89,11 @@
 
 ## Unreleased
 
+**Security fixes (SEC-004 Appendix CH).** No configuration change. Behaviour notes:
+- More values are `[Filtered]` in events (env-style `*_PASSWORD=`, `pass` / `pwd` / `pin` / `session` / `cookie` / `signature` keys, card numbers, …). If a dashboard relied on one of these values, send it under another name or through `before_send`.
+- `BeaconDsn`, `WorkerKey` and `RemoteRetryCredentials` can no longer be serialized; `BeaconDsn::getSecretKey()` is unchanged.
+- `verify_peer: true` (the default) now also overrides a host-wide `framework.http_client` `verify_peer: false` for Beacon requests; set `nowo_beacon.verify_peer: false` explicitly for a self-signed local Beacon.
+
 From **1.19.2**: no change needed. If your Beacon URL answers with a redirect (for example `http://` → `https://`), put
 the final URL in `BEACON_DSN`: the bundle no longer follows redirects. Hosts that disable the bundle with Messenger
 installed no longer need any workaround for the `BeaconTraceMiddleware` compile error.

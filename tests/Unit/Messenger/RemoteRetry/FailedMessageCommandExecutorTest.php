@@ -127,6 +127,12 @@ final class FailedMessageCommandExecutorTest extends TestCase
         yield 'other project' => [['project' => '019fea2d-507b-7890-8b33-000000000000'], true, CommandResult::REASON_SIGNATURE_INVALID];
         yield 'expired beyond skew' => [['expires_at' => '2026-10-17T10:01:59Z'], true, CommandResult::REASON_EXPIRED];
         yield 'unparseable expiry' => [['expires_at' => 'tomorrow-ish?'], true, CommandResult::REASON_EXPIRED];
+        // SEC-004 Appendix CH, L3: the 15-minute lifetime is enforced client-side too (now = 10:03:00, skew 60 s).
+        yield 'issued in the future beyond skew' => [['issued_at' => '2026-10-17T10:04:01Z'], true, CommandResult::REASON_EXPIRED];
+        yield 'lifetime above 15 min + skew' => [['issued_at' => '2026-10-17T10:02:11Z', 'expires_at' => '2026-10-17T10:18:12Z'], true, CommandResult::REASON_EXPIRED];
+        yield 'expires too far ahead' => [['issued_at' => '2026-10-17T10:04:00Z', 'expires_at' => '2026-10-17T10:19:01Z'], true, CommandResult::REASON_EXPIRED];
+        yield 'issued and expiring in 2099' => [['issued_at' => '2099-01-01T00:00:00Z', 'expires_at' => '2099-01-01T00:15:00Z'], true, CommandResult::REASON_EXPIRED];
+        yield 'unparseable issued_at' => [['issued_at' => 'yesterday-ish?'], true, CommandResult::REASON_EXPIRED];
         yield 'unknown action' => [['action' => 'purge'], true, CommandResult::REASON_ACTION_NOT_ALLOWED];
         yield 'discard not allowed' => [['action' => 'discard'], true, CommandResult::REASON_ACTION_NOT_ALLOWED];
         yield 'transport not allowed' => [['failure_transport' => 'failed_high'], true, CommandResult::REASON_TRANSPORT_NOT_ALLOWED];
@@ -166,6 +172,22 @@ final class FailedMessageCommandExecutorTest extends TestCase
         self::assertNotNull($command);
 
         self::assertSame('done (requeued)', $this->executor()->execute($command)->summary());
+    }
+
+    public function testBeaconIssuedLifetimeIsAcceptedAtBothSkewEdges(): void
+    {
+        // Symfony Beacon 1.113 / 1.114: expires_at = requested_at + 900 s; a Beacon clock up to 60 s ahead is tolerated.
+        foreach ([
+            ['issued_at' => '2026-10-17T10:02:11Z', 'expires_at' => '2026-10-17T10:17:11Z'],
+            ['issued_at' => '2026-10-17T10:04:00Z', 'expires_at' => '2026-10-17T10:19:00Z'],
+            ['issued_at' => '2026-10-17T09:48:00Z', 'expires_at' => '2026-10-17T10:03:00Z'],
+        ] as $index => $times) {
+            $command = RemoteCommand::fromArray(RemoteRetryFixtures::commandData([...$times, 'id' => '0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e60' . $index]));
+            self::assertNotNull($command);
+
+            self::assertSame('done (requeued)', $this->executor()->execute($command)->summary(), $times['issued_at']);
+            $this->failed->messages['8812'] = new Envelope(new InvoiceMessage(), [new SentToFailureTransportStamp('async')]);
+        }
     }
 
     public function testCredentialProblemIsAnInternalError(): void
@@ -265,7 +287,7 @@ final class FailedMessageCommandExecutorTest extends TestCase
         // Entries expire after 24 h.
         $this->clock->modify('+25 hours');
         $this->failed->messages['8812'] = new Envelope(new InvoiceMessage(), [new SentToFailureTransportStamp('async')]);
-        $fresh                          = RemoteRetryFixtures::command(['id' => 'b1', 'expires_at' => '2026-10-18T12:00:00Z']);
+        $fresh                          = RemoteRetryFixtures::command(['id' => 'b1', 'issued_at' => '2026-10-18T11:02:00Z', 'expires_at' => '2026-10-18T11:17:00Z']);
         self::assertSame('done (requeued)', $executor->execute($fresh)->summary());
         self::assertCount(3, $this->async->sent);
     }

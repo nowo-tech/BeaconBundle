@@ -53,6 +53,12 @@ final class FailedMessageCommandExecutor
 
     public const CLOCK_SKEW = 60;
 
+    /**
+     * Longest lifetime of a command (`expires_at` − `issued_at`), in seconds. Symfony Beacon issues commands that
+     * expire 900 s after they were requested (`MessengerCommandPolicy::REQUEST_TTL_SECONDS`).
+     */
+    public const MAX_LIFETIME = 900;
+
     private const CACHE_PREFIX = 'nowo_beacon.remote_command.';
 
     private const IN_PROGRESS = 'in_progress';
@@ -161,7 +167,7 @@ final class FailedMessageCommandExecutor
             return CommandResult::failed(CommandResult::REASON_SIGNATURE_INVALID, $this->now());
         }
 
-        if ($this->isExpired($command->expiresAt)) {
+        if (!$this->isWithinLifetime($command->issuedAt, $command->expiresAt)) {
             return CommandResult::failed(CommandResult::REASON_EXPIRED, $this->now());
         }
 
@@ -246,15 +252,25 @@ final class FailedMessageCommandExecutor
         return CommandResult::done(CommandResult::OUTCOME_REMOVED, $this->now());
     }
 
-    private function isExpired(string $expiresAt): bool
+    /**
+     * Client-side lifetime check (SEC-004 Appendix CH, L3), each bound with {@see CLOCK_SKEW}: not expired, not issued
+     * in the future, not valid for longer than {@see MAX_LIFETIME} and not expiring later than that from now. A
+     * re-delivered command therefore always falls inside the 24 h executed-ids window.
+     */
+    private function isWithinLifetime(string $issuedAt, string $expiresAt): bool
     {
         try {
-            $expires = new DateTimeImmutable($expiresAt);
+            $issued  = (new DateTimeImmutable($issuedAt))->getTimestamp();
+            $expires = (new DateTimeImmutable($expiresAt))->getTimestamp();
         } catch (Exception) {
-            return true;
+            return false;
         }
+        $now = $this->now()->getTimestamp();
 
-        return $expires->getTimestamp() <= $this->now()->getTimestamp() - self::CLOCK_SKEW;
+        return $expires > $now - self::CLOCK_SKEW
+            && $issued <= $now + self::CLOCK_SKEW
+            && $expires - $issued <= self::MAX_LIFETIME + self::CLOCK_SKEW
+            && $expires <= $now + self::MAX_LIFETIME + self::CLOCK_SKEW;
     }
 
     private function listableReceiver(string $name): ?ListableReceiverInterface

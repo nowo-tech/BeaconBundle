@@ -99,12 +99,10 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             'max_duration' => $this->timeout,
             // Never follow a redirect: it would carry the Beacon credentials to another host.
             'max_redirects' => 0,
+            // Always explicit, so a host-wide framework.http_client `verify_peer: false` cannot weaken TLS here.
+            'verify_peer' => $this->verifyPeer,
+            'verify_host' => $this->verifyPeer,
         ];
-
-        if (!$this->verifyPeer) {
-            $options['verify_peer'] = false;
-            $options['verify_host'] = false;
-        }
 
         try {
             return $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);

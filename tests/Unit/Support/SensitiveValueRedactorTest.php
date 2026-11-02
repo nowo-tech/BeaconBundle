@@ -5,8 +5,14 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\Support;
 
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+
+use function bin2hex;
+use function json_encode;
+use function random_bytes;
+use function str_contains;
 
 final class SensitiveValueRedactorTest extends TestCase
 {
@@ -86,9 +92,11 @@ final class SensitiveValueRedactorTest extends TestCase
 
     public function testUrlOnlyParameterNamesAreNotFilteredInMaps(): void
     {
-        $out = SensitiveValueRedactor::redactMap(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'signature' => 'Jane']);
+        $out = SensitiveValueRedactor::redactMap(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'key' => 'k', 'reset' => 'r']);
 
-        self::assertSame(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'signature' => 'Jane'], $out);
+        self::assertSame(['hash' => 'abc', 'code' => 'E42', 'sig' => 'v1', 'key' => 'k', 'reset' => 'r'], $out);
+        // `signature` is a credential key everywhere since 1.19.2 (SEC-004 Appendix CH, L1).
+        self::assertSame(['signature' => SensitiveValueRedactor::FILTERED], SensitiveValueRedactor::redactMap(['signature' => 'Jane']));
     }
 
     public function testRedactMessageReplacesCredentialShapedSubstrings(): void
@@ -109,5 +117,106 @@ final class SensitiveValueRedactorTest extends TestCase
     public function testContextStringsGetTheMessagePatterns(): void
     {
         self::assertSame(['note' => 'sent Bearer [Filtered]'], SensitiveValueRedactor::redactMap(['note' => 'sent Bearer abcdefgh12345']));
+    }
+
+    /**
+     * SEC-004 Appendix CH, L1: inputs that leaked before 1.19.2 (all values fake).
+     *
+     * @return iterable<string, array{string, list<string>}>
+     */
+    public static function leakingMessages(): iterable
+    {
+        // Secret-shaped values are generated at runtime so no credential-looking literal is committed.
+        $v = static fn (string $prefix = 'Fk'): string => $prefix . bin2hex(random_bytes(8));
+        $a = $v();
+        yield 'env-style DB_PASSWORD' => ['Failed to boot: DB_PASSWORD=' . $a . ' is wrong', [$a]];
+        $a = $v();
+        yield 'env-style AWS_SECRET_ACCESS_KEY' => ['AWS_SECRET_ACCESS_KEY=' . $a . ' rejected', [$a]];
+        $a = $v();
+        yield 'env-style STRIPE_API_KEY' => ['STRIPE_API_KEY=' . $a . ' invalid', [$a]];
+        $a = $v();
+        yield 'PHP array export' => ["Options were ['password' => '" . $a . "', 'user' => 'app']", [$a]];
+        $a = $v('horse');
+        $b = $v('battery');
+        yield 'JSON pair with spaces' => ['Payload {"password": "correct ' . $a . ' ' . $b . '"}', [$a, $b]];
+        $a = $v();
+        yield 'password with ;' => ['login failed for password=Fa;' . $a, [$a]];
+        $a = $v();
+        yield 'passphrase' => ['passphrase=' . $a, [$a]];
+        $a = $v();
+        yield 'pass=' => ['smtp pass=' . $a . ' refused', [$a]];
+        $a = $v();
+        yield 'pwd / pin / otp / cvv' => ['pwd=' . $a . ' pin: 4321 otp=987654 cvv=123', [$a, '4321', '987654', '=123']];
+        $a = $v();
+        yield 'URL password with /' => ['Cannot connect to mysql://app:Fk/' . $a . '@db.internal:3306/app', [$a]];
+        $a = $v();
+        yield 'URL password with @' => ['Cannot connect to redis://default:Fk@' . $a . '@cache:6379', [$a]];
+        $a = $v();
+        yield 'Beacon DSN' => ['Bad DSN https://pubFAKEkey:' . $a . '@errors.example/1', [$a]];
+        $a = 'bwk_' . bin2hex(random_bytes(24));
+        yield 'Beacon worker key' => ['Header was ' . $a, [$a]];
+        $a = $v();
+        yield 'X-Beacon-Auth value' => ['Beacon beacon_key=pubFAKE, beacon_secret=' . $a, [$a]];
+    }
+
+    /**
+     * @param list<string> $secrets
+     */
+    #[DataProvider('leakingMessages')]
+    public function testRedactMessageCoversEnvStyleQuotedAndBeaconCredentials(string $message, array $secrets): void
+    {
+        $out = SensitiveValueRedactor::redactMessage($message);
+
+        foreach ($secrets as $secret) {
+            self::assertFalse(str_contains($out, $secret), $secret . ' leaked in ' . $out);
+        }
+        self::assertStringContainsString(SensitiveValueRedactor::FILTERED, $out);
+    }
+
+    public function testRedactMessageKeepsHarmlessText(): void
+    {
+        foreach ([
+            'passenger=Bob shipping=fast discard=yes',
+            'GET https://example.com:8443/users/@me failed',
+            'Order 42 failed: stock=0',
+            'beacon_key=pubFAKE is the public key',
+        ] as $message) {
+            self::assertSame($message, SensitiveValueRedactor::redactMessage($message));
+        }
+
+        self::assertSame('Cannot connect to postgresql://app:[Filtered]@db:5432/app', SensitiveValueRedactor::redactMessage('Cannot connect to postgresql://app:FAKEpgpw@db:5432/app'));
+    }
+
+    public function testRedactMessageFiltersLuhnValidCardNumbersOnly(): void
+    {
+        self::assertSame('Charge failed for card [Filtered] cvv=[Filtered]', SensitiveValueRedactor::redactMessage('Charge failed for card 4111111111111111 cvv=123'));
+        self::assertSame('Card [Filtered] declined', SensitiveValueRedactor::redactMessage('Card 5500-0000-0000-0004 declined'));
+        // Not Luhn-valid, or not a card prefix (millisecond timestamps, order ids): kept.
+        foreach (['Order 4111111111111112 failed', 'at 1793553024389 ms', 'id 9111111111111111'] as $message) {
+            self::assertSame($message, SensitiveValueRedactor::redactMessage($message));
+        }
+    }
+
+    public function testRedactMapCoversShortCredentialKeys(): void
+    {
+        $out = SensitiveValueRedactor::redactMap([
+            'db_pass'     => 'FAKE-2', 'pwd' => 'FAKE-3', 'pass' => 'FAKE-4', 'pin' => '4321', 'otp' => '987654', 'cvv' => '123',
+            'card_number' => '4111111111111111', 'iban' => 'ES9121000418450200051332', 'cookie' => 'PHPSESSID=FAKEsess',
+            'session_id'  => 'FAKEsess2', 'signature' => 'FAKEsig', 'private' => 'FAKE-5', 'passphrase' => 'FAKE-6',
+            'passenger'   => 'Bob', 'shipping' => 'fast', 'discard' => 'yes', 'mapping' => 'm',
+        ]);
+
+        foreach (['db_pass', 'pwd', 'pass', 'pin', 'otp', 'cvv', 'card_number', 'iban', 'cookie', 'session_id', 'signature', 'private', 'passphrase'] as $key) {
+            self::assertSame(SensitiveValueRedactor::FILTERED, $out[$key], $key);
+        }
+        self::assertSame(['Bob', 'fast', 'yes', 'm'], [$out['passenger'], $out['shipping'], $out['discard'], $out['mapping']]);
+    }
+
+    public function testRedactQueryStringCoversShortCredentialParameters(): void
+    {
+        $out = SensitiveValueRedactor::redactQueryString('pass=FAKEqp&user=bob&pwd=FAKEqp2&key=FAKEgmapskey&session=FAKEsessq&reset=FAKEreset&sid=FAKEsid&page=2');
+
+        self::assertSame('pass=[Filtered]&user=bob&pwd=[Filtered]&key=[Filtered]&session=[Filtered]&reset=[Filtered]&sid=[Filtered]&page=2', $out);
+        self::assertFalse(str_contains((string) json_encode($out), 'FAKE'));
     }
 }

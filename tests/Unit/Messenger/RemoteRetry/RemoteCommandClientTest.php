@@ -151,6 +151,20 @@ final class RemoteCommandClientTest extends TestCase
         self::assertSame([0], $requests);
     }
 
+    public function testTlsVerificationIsExplicitAndWinsOverHostWideDefaults(): void
+    {
+        $seen = [];
+        $http = (new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen[] = [$options['verify_peer'], $options['verify_host']];
+
+            return new MockResponse('{}');
+        }))->withOptions(['verify_peer' => false, 'verify_host' => false]);
+
+        (new RemoteCommandClient($http, RemoteRetryFixtures::credentials(), 'w', 'prod'))->claim([]);
+
+        self::assertSame([[true, true]], $seen);
+    }
+
     public function testBundleVersionFallsBackToTheRawUserAgent(): void
     {
         $body = '';

@@ -17,6 +17,23 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class EnvelopeTransportTest extends TestCase
 {
+    public function testTlsVerificationIsExplicitAndWinsOverHostWideDefaults(): void
+    {
+        // SEC-004 Appendix CH, L6: framework.http_client.default_options.verify_peer: false must not leak into ingest.
+        $seen       = [];
+        $httpClient = (new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen[] = [$options['verify_peer'], $options['verify_host']];
+
+            return new MockResponse('', ['http_code' => 202]);
+        }))->withOptions(['verify_peer' => false, 'verify_host' => false]);
+        $dsn = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com:9444/5');
+
+        (new EnvelopeTransport($httpClient, $dsn))->send("envelope\n");
+        (new EnvelopeTransport($httpClient, $dsn, false))->send("envelope\n");
+
+        self::assertSame([[true, true], [false, false]], $seen);
+    }
+
     public function testARedirectToAnotherHostIsNotFollowed(): void
     {
         $requests   = [];
