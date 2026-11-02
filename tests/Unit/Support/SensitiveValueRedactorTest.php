@@ -157,6 +157,22 @@ final class SensitiveValueRedactorTest extends TestCase
         yield 'Beacon worker key' => ['Header was ' . $a, [$a]];
         $a = $v();
         yield 'X-Beacon-Auth value' => ['Beacon beacon_key=pubFAKE, beacon_secret=' . $a, [$a]];
+        // Re-verification of PR #28: N1 regression (filtered on 1.19.1) and camelCase names.
+        $a = $v();
+        yield 'clientSecret=' => ['OAuth error, clientSecret=' . $a . ' rejected', [$a]];
+        $a = $v();
+        yield 'clientsecret:' => ['clientsecret: ' . $a, [$a]];
+        $a = $v();
+        yield 'JSON clientSecret' => ['Body {"clientSecret":"' . $a . '"}', [$a]];
+        $a = $v();
+        yield 'camelCase dbPassword' => ['Config dbPassword=' . $a, [$a]];
+        $a = $v();
+        yield 'camelCase JSON apiToken' => ['Body {"apiToken":"' . $a . '"}', [$a]];
+        $a = $v();
+        yield 'URL password, empty user' => ['Cannot connect to redis://:' . $a . '@cache:6379', [$a]];
+        $a = $v();
+        yield 'JSON value with an escaped quote' => ['Body {"password":"ab\\"' . $a . '"}', [$a]];
+        yield 'Amex, 15 digits' => ['Card 378282246310005 declined', ['378282246310005']];
     }
 
     /**
@@ -204,12 +220,14 @@ final class SensitiveValueRedactorTest extends TestCase
             'card_number' => '4111111111111111', 'iban' => 'ES9121000418450200051332', 'cookie' => 'PHPSESSID=FAKEsess',
             'session_id'  => 'FAKEsess2', 'signature' => 'FAKEsig', 'private' => 'FAKE-5', 'passphrase' => 'FAKE-6',
             'passenger'   => 'Bob', 'shipping' => 'fast', 'discard' => 'yes', 'mapping' => 'm',
+            'cardNumber'  => '4111111111111111', 'userPin' => '4321', 'dbPass' => 'FAKE-7', 'creditCard' => 'FAKE-8',
+            'isPinned'    => true, 'PASSENGER' => 'Ann',
         ]);
 
-        foreach (['db_pass', 'pwd', 'pass', 'pin', 'otp', 'cvv', 'card_number', 'iban', 'cookie', 'session_id', 'signature', 'private', 'passphrase'] as $key) {
+        foreach (['db_pass', 'pwd', 'pass', 'pin', 'otp', 'cvv', 'card_number', 'iban', 'cookie', 'session_id', 'signature', 'private', 'passphrase', 'cardNumber', 'userPin', 'dbPass', 'creditCard'] as $key) {
             self::assertSame(SensitiveValueRedactor::FILTERED, $out[$key], $key);
         }
-        self::assertSame(['Bob', 'fast', 'yes', 'm'], [$out['passenger'], $out['shipping'], $out['discard'], $out['mapping']]);
+        self::assertSame(['Bob', 'fast', 'yes', 'm', true, 'Ann'], [$out['passenger'], $out['shipping'], $out['discard'], $out['mapping'], $out['isPinned'], $out['PASSENGER']]);
     }
 
     public function testRedactQueryStringCoversShortCredentialParameters(): void

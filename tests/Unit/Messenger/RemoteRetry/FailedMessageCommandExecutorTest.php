@@ -133,6 +133,13 @@ final class FailedMessageCommandExecutorTest extends TestCase
         yield 'expires too far ahead' => [['issued_at' => '2026-10-17T10:04:00Z', 'expires_at' => '2026-10-17T10:19:01Z'], true, CommandResult::REASON_EXPIRED];
         yield 'issued and expiring in 2099' => [['issued_at' => '2099-01-01T00:00:00Z', 'expires_at' => '2099-01-01T00:15:00Z'], true, CommandResult::REASON_EXPIRED];
         yield 'unparseable issued_at' => [['issued_at' => 'yesterday-ish?'], true, CommandResult::REASON_EXPIRED];
+        // Re-verification of PR #28, N2: only Beacon's exact `Y-m-d\TH:i:sZ` UTC format is accepted.
+        yield 'relative timestamps now / +15 minutes' => [['issued_at' => 'now', 'expires_at' => '+15 minutes'], true, CommandResult::REASON_EXPIRED];
+        yield 'relative expires_at +900 seconds' => [['expires_at' => '+900 seconds'], true, CommandResult::REASON_EXPIRED];
+        yield 'empty timestamps' => [['issued_at' => '', 'expires_at' => ''], true, CommandResult::REASON_EXPIRED];
+        yield 'offset instead of Z' => [['expires_at' => '2026-10-17T10:17:11+00:00'], true, CommandResult::REASON_EXPIRED];
+        yield 'overflowing seconds' => [['expires_at' => '2026-10-17T10:16:71Z'], true, CommandResult::REASON_EXPIRED];
+        yield 'issued after it expires' => [['issued_at' => '2026-10-17T10:03:00Z', 'expires_at' => '2026-10-17T10:02:30Z'], true, CommandResult::REASON_EXPIRED];
         yield 'unknown action' => [['action' => 'purge'], true, CommandResult::REASON_ACTION_NOT_ALLOWED];
         yield 'discard not allowed' => [['action' => 'discard'], true, CommandResult::REASON_ACTION_NOT_ALLOWED];
         yield 'transport not allowed' => [['failure_transport' => 'failed_high'], true, CommandResult::REASON_TRANSPORT_NOT_ALLOWED];

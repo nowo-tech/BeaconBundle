@@ -37,13 +37,13 @@ final class SensitiveValueRedactor
 
     /**
      * Sensitive key names. Long words match anywhere (`db_password`, `X-Api-Key`, `session_id`); short ones (`pass`,
-     * `pwd`, `pin`, `otp`, `cvv`, `card`) only as a whole token between non-alphanumerics (`db_pass`, `card_number`),
-     * so `passenger`, `shipping` or `discard` are kept.
+     * `pwd`, `pin`, `otp`, `cvv`, `card`) only as a whole token, delimited by non-alphanumerics or a camelCase hump
+     * (`db_pass`, `card_number`, `cardNumber`, `userPin`), so `passenger`, `shipping`, `isPinned` or `PASSENGER` are kept.
      */
-    private const SENSITIVE_KEY = '/(?:password|passwd|passphrase|secret|token|api[_-]?key|private|access[_-]?key|auth|credential|bearer|dsn|connection[_-]?string|salt|nonce|cookie|session|signature|iban)|(?<![a-z0-9])(?:pass|pwd|pin|otp|cvv|cvc|card)(?![a-z0-9])/i';
+    private const SENSITIVE_KEY = '/(?:password|passwd|passphrase|secret|token|api[_-]?key|private|access[_-]?key|auth|credential|bearer|dsn|connection[_-]?string|salt|nonce|cookie|session|signature|iban)|(?:(?<![A-Za-z0-9])|(?-i:(?<=[a-z0-9])(?=[A-Z])))(?:pass|pwd|pin|otp|cvv|cvc|card)(?:(?![A-Za-z0-9])|(?-i:(?<=[a-z])(?=[A-Z])))/i';
 
     /** Secret-looking names in free text (see {@see SECRET_PATTERNS}). */
-    private const SECRET_NAME = '(?:(?:passw(?:or)?d|passphrase|secret|token|api[_-]?key|access[_-]?key|private[_-]?key)[A-Za-z0-9_-]*|(?:pass|pwd|pin|otp|cvv|cvc))';
+    private const SECRET_NAME = '(?:(?:passw(?:or)?d|passphrase|client[_-]?secret|secret|token|api[_-]?key|access[_-]?key|private[_-]?key)[A-Za-z0-9_-]*|(?:pass|pwd|pin|otp|cvv|cvc))';
 
     /**
      * Credential-shaped substrings replaced inside free text (exception and log messages, context strings), the rest
@@ -52,11 +52,14 @@ final class SensitiveValueRedactor
      *
      * @var array<string, string> pattern => replacement
      */
+    /** Start of a secret name: a non-alphanumeric (or the start) before it, or a camelCase hump (`dbPassword`, `apiToken`). */
+    private const NAME_START = '(?:(?<![A-Za-z0-9])|(?-i:(?<=[a-z0-9])(?=[A-Z])))';
+
     private const SECRET_PATTERNS = [
         '/-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/s' => self::FILTERED,
         // scheme://user:password@host — the password may contain `/` or `@` (up to the last `@` of the word); a port
         // followed by a path (`host:8080/…`) is not a password.
-        '#\b([a-z][a-z0-9+.-]*://[^\s:/@]+):(?!\d{1,5}/)[^\s]+@#i' => '$1:' . self::FILTERED . '@',
+        '#\b([a-z][a-z0-9+.-]*://[^\s:/@]*):(?!\d{1,5}/)[^\s]+@#i' => '$1:' . self::FILTERED . '@',
         '/\beyJ[\w-]{8,}\.eyJ[\w-]{8,}\.[\w-]{8,}/'                => self::FILTERED,
         '/\b(Bearer|Basic)\s+[\w.~+\/=-]{8,}/i'                    => '$1 ' . self::FILTERED,
         '/\b(?:sk|rk|pk)_(?:live|test)_\w{10,}/'                   => self::FILTERED,
@@ -72,9 +75,9 @@ final class SensitiveValueRedactor
         // longer identifier (`DB_PASSWORD`, `AWS_SECRET_ACCESS_KEY`, `beacon_secret`, `smtp_pass`); short names
         // (`pass`, `pwd`, `pin`, `otp`, `cvv`) must end there. Quoted values are filtered whole (quotes kept);
         // unquoted values run to whitespace, a quote, `&`, `,`, `}` or `]`.
-        '/(?<![A-Za-z0-9])(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*")[^"]*"/i'                        => '$1' . self::FILTERED . '"',
-        '/(?<![A-Za-z0-9])(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*\')[^\']*\'/i'                     => '$1' . self::FILTERED . "'",
-        '/(?<![A-Za-z0-9])(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*)(?!\[Filtered\])[^\s"\'&,}\]]+/i' => '$1' . self::FILTERED,
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*")(?:[^"\\\\]|\\\\.)*"/i'          => '$1' . self::FILTERED . '"',
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*\')(?:[^\'\\\\]|\\\\.)*\'/i'       => '$1' . self::FILTERED . "'",
+        '/' . self::NAME_START . '(' . self::SECRET_NAME . '["\']?\s*(?:=>|[:=])\s*)(?!\[Filtered\])[^\s"\'&,}\]]+/i' => '$1' . self::FILTERED,
     ];
 
     /**
@@ -96,9 +99,9 @@ final class SensitiveValueRedactor
 
         $message = preg_replace(array_keys(self::SECRET_PATTERNS), array_values(self::SECRET_PATTERNS), $message) ?? $message;
 
-        // Payment card numbers: Visa / Mastercard / Amex / Discover prefixes, 15–19 digits, valid Luhn checksum.
+        // Payment card numbers: Amex (15 digits) and Visa / Mastercard / Discover prefixes (15–19 digits), valid Luhn checksum.
         return preg_replace_callback(
-            '/(?<![\d-])(?:4|5[1-5]|2[2-7]|3[47]|6)(?:[ -]?\d){14,18}(?![\d-])/',
+            '/(?<![\d-])(?:3[47](?:[ -]?\d){13}|(?:4|5[1-5]|2[2-7]|6)(?:[ -]?\d){14,18})(?![\d-])/',
             static fn (array $match): string => self::passesLuhn((string) preg_replace('/\D/', '', $match[0])) ? self::FILTERED : $match[0],
             $message,
         ) ?? $message;

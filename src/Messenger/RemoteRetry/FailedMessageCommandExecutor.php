@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Messenger\RemoteRetry;
 
 use DateTimeImmutable;
-use Exception;
+use DateTimeZone;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
@@ -58,6 +58,11 @@ final class FailedMessageCommandExecutor
      * expire 900 s after they were requested (`MessengerCommandPolicy::REQUEST_TTL_SECONDS`).
      */
     public const MAX_LIFETIME = 900;
+
+    /** The only accepted `issued_at` / `expires_at` format: what Symfony Beacon signs (`MessengerCommandSigner::timestamp()`). */
+    private const TIMESTAMP_FORMAT = '!Y-m-d\\TH:i:s\\Z';
+
+    private const TIMESTAMP_FORMAT_OUT = 'Y-m-d\\TH:i:s\\Z';
 
     private const CACHE_PREFIX = 'nowo_beacon.remote_command.';
 
@@ -254,23 +259,33 @@ final class FailedMessageCommandExecutor
 
     /**
      * Client-side lifetime check (SEC-004 Appendix CH, L3), each bound with {@see CLOCK_SKEW}: not expired, not issued
-     * in the future, not valid for longer than {@see MAX_LIFETIME} and not expiring later than that from now. A
-     * re-delivered command therefore always falls inside the 24 h executed-ids window.
+     * in the future, not issued after it expires, not valid for longer than {@see MAX_LIFETIME} and not expiring later
+     * than that from now. A re-delivered command therefore always falls inside the 24 h executed-ids window. Only the
+     * exact UTC format Symfony Beacon signs ({@see TIMESTAMP_FORMAT}) is accepted: relative strings such as `now` or
+     * `+15 minutes` are refused.
      */
     private function isWithinLifetime(string $issuedAt, string $expiresAt): bool
     {
-        try {
-            $issued  = (new DateTimeImmutable($issuedAt))->getTimestamp();
-            $expires = (new DateTimeImmutable($expiresAt))->getTimestamp();
-        } catch (Exception) {
+        $issued  = $this->parseTimestamp($issuedAt);
+        $expires = $this->parseTimestamp($expiresAt);
+        if ($issued === null || $expires === null) {
             return false;
         }
         $now = $this->now()->getTimestamp();
 
         return $expires > $now - self::CLOCK_SKEW
             && $issued <= $now + self::CLOCK_SKEW
+            && $issued <= $expires
             && $expires - $issued <= self::MAX_LIFETIME + self::CLOCK_SKEW
             && $expires <= $now + self::MAX_LIFETIME + self::CLOCK_SKEW;
+    }
+
+    private function parseTimestamp(string $value): ?int
+    {
+        $parsed = DateTimeImmutable::createFromFormat(self::TIMESTAMP_FORMAT, $value, new DateTimeZone('UTC'));
+
+        // The round trip rejects overflowing dates (`2026-02-31`) that createFromFormat() silently normalises.
+        return $parsed !== false && $parsed->format(self::TIMESTAMP_FORMAT_OUT) === $value ? $parsed->getTimestamp() : null;
     }
 
     private function listableReceiver(string $name): ?ListableReceiverInterface
