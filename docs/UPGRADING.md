@@ -89,6 +89,13 @@
 
 ## Unreleased
 
+**Security fixes (SEC-004 Appendix CH).** No configuration change. Behaviour notes:
+- More values are `[Filtered]` in events (env-style `*_PASSWORD=`, `pass` / `pwd` / `pin` / `session` / `cookie` / `signature` keys, card numbers, …). If a dashboard relied on one of these values, send it under another name or through `before_send`.
+- `BeaconDsn`, `WorkerKey` and `RemoteRetryCredentials` can no longer be serialized; `BeaconDsn::getSecretKey()` is unchanged.
+- Remote Messenger commands are refused as `expired` when the worker clock lags Beacon by more than 60 s (a command issued "in the future") or when `issued_at` / `expires_at` are not in Beacon's exact `Y-m-d\TH:i:s\Z` UTC format. Keep worker clocks NTP-synchronised; commands from Symfony Beacon are unaffected.
+- **Rotate the DSN secret if your Beacon URL ever redirected** to another host (proxy rule, migration, `http://` → another origin): up to 1.19.1 the bundle followed redirects and could forward `X-Beacon-Auth` (and, on 307 / 308, the Envelope with the full DSN) to the redirect target. 1.19.2 never follows redirects.
+- `verify_peer: true` (the default) now also overrides a host-wide `framework.http_client` `verify_peer: false` for Beacon requests; set `nowo_beacon.verify_peer: false` explicitly for a self-signed local Beacon.
+
 From **1.19.2**: no change needed. If your Beacon URL answers with a redirect (for example `http://` → `https://`), put
 the final URL in `BEACON_DSN`: the bundle no longer follows redirects. Hosts that disable the bundle with Messenger
 installed no longer need any workaround for the `BeaconTraceMiddleware` compile error.

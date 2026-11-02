@@ -12,6 +12,8 @@ use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendOptions;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use SensitiveParameter;
+use SensitiveParameterValue;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function is_array;
@@ -28,11 +30,14 @@ use function trim;
  */
 final class BeaconConnectionTester
 {
+    private readonly SensitiveParameterValue $dsn;
+
     public function __construct(
         private readonly BeaconDsnParser $parser,
         private readonly HttpClientInterface $httpClient,
         private readonly bool $reportingEnabled,
-        private readonly string $dsn,
+        #[SensitiveParameter]
+        string $dsn,
         private readonly bool $verifyPeer = true,
         private readonly float $timeout = 5.0,
         private readonly string $environment = 'prod',
@@ -40,6 +45,7 @@ final class BeaconConnectionTester
         private readonly string $serverName = 'unknown',
         private readonly ?LoggerInterface $logger = null,
     ) {
+        $this->dsn = new SensitiveParameterValue($dsn);
     }
 
     /**
@@ -50,7 +56,7 @@ final class BeaconConnectionTester
      */
     public function test(bool $checkOnly = false, string $message = 'BeaconBundle connection test'): ConnectionTestResult
     {
-        $dsnString = trim($this->dsn);
+        $dsnString = trim($this->dsn->getValue());
         if ($dsnString === '' || str_starts_with($dsnString, '%')) {
             return new ConnectionTestResult(
                 false,

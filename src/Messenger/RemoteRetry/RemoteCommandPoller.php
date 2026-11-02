@@ -225,7 +225,9 @@ final class RemoteCommandPoller implements EventSubscriberInterface
             $this->client->postResult($command, $result);
 
             return true;
-        } catch (RemoteCommandException $e) {
+        } catch (Throwable $thrown) {
+            // Any failure (a decorated http_client, a JSON error, …) keeps the result pending: never throw into the worker.
+            $e = $this->asRemoteCommandException($thrown);
             if ($e->kind === RemoteCommandException::KIND_REJECTED) {
                 $this->logger?->warning('Beacon refused the result of remote command {id} ({detail}).', ['id' => $command->id, 'detail' => $e->getMessage()]);
 
@@ -241,6 +243,13 @@ final class RemoteCommandPoller implements EventSubscriberInterface
         }
     }
 
+    private function asRemoteCommandException(Throwable $thrown): RemoteCommandException
+    {
+        return $thrown instanceof RemoteCommandException
+            ? $thrown
+            : new RemoteCommandException(RemoteCommandException::KIND_UNAVAILABLE, 'Result POST failed (' . $thrown::class . ').');
+    }
+
     /**
      * @throws RemoteCommandException when Beacon refuses the key or is unreachable (remaining results stay pending)
      */
@@ -251,7 +260,8 @@ final class RemoteCommandPoller implements EventSubscriberInterface
 
             try {
                 $this->client->postResult($command, $result);
-            } catch (RemoteCommandException $e) {
+            } catch (Throwable $thrown) {
+                $e = $this->asRemoteCommandException($thrown);
                 if ($e->kind !== RemoteCommandException::KIND_REJECTED && $attempts < self::MAX_RESULT_ATTEMPTS) {
                     // @igor-ignore - Per-process unsent results (ids / codes only), reset on WorkerStartedEvent.
                     $this->pendingResults[0]['attempts'] = $attempts + 1;

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Messenger\RemoteRetry;
 
 use InvalidArgumentException;
+use LogicException;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use SensitiveParameter;
+use SensitiveParameterValue;
 
 use function is_string;
 use function preg_match;
@@ -20,7 +22,8 @@ use function trim;
  * from env vars, so an empty or malformed value disables the feature with one explanation instead
  * of failing container compilation).
  *
- * The resolved value depends only on the process environment, so it is computed once per process.
+ * The resolved value depends only on the process environment, so it is computed once per process. The raw values
+ * are held in {@see SensitiveParameterValue}s (hidden from dumps and traces) and the object cannot be serialized.
  */
 final class RemoteRetryCredentials
 {
@@ -34,13 +37,35 @@ final class RemoteRetryCredentials
 
     private ?string $problem = null;
 
+    private readonly SensitiveParameterValue $rawDsn;
+
+    private readonly SensitiveParameterValue $rawWorkerKey;
+
     public function __construct(
         private readonly BeaconDsnParser $parser,
         #[SensitiveParameter]
-        private readonly mixed $rawDsn,
+        mixed $rawDsn,
         #[SensitiveParameter]
-        private readonly mixed $rawWorkerKey,
+        mixed $rawWorkerKey,
     ) {
+        $this->rawDsn       = new SensitiveParameterValue($rawDsn);
+        $this->rawWorkerKey = new SensitiveParameterValue($rawWorkerKey);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return ['dsn' => $this->dsn, 'worker_key' => $this->workerKey, 'problem' => $this->problem];
+    }
+
+    /**
+     * @return never
+     */
+    public function __serialize(): array
+    {
+        throw new LogicException('Beacon remote-retry credentials cannot be serialized.');
     }
 
     /**
@@ -98,7 +123,8 @@ final class RemoteRetryCredentials
         // @igor-ignore - Derived once per process from immutable configuration / env (no request data).
         $this->resolved = true;
 
-        $dsn = is_string($this->rawDsn) ? trim($this->rawDsn) : '';
+        $rawDsn = $this->rawDsn->getValue();
+        $dsn    = is_string($rawDsn) ? trim($rawDsn) : '';
         if ($dsn === '') {
             // @igor-ignore - Derived once per process from immutable configuration / env.
             $this->problem = 'BEACON_DSN is empty: remote Messenger commands need the Beacon DSN.';
@@ -116,7 +142,8 @@ final class RemoteRetryCredentials
             return;
         }
 
-        $key = is_string($this->rawWorkerKey) ? trim($this->rawWorkerKey) : '';
+        $rawKey = $this->rawWorkerKey->getValue();
+        $key    = is_string($rawKey) ? trim($rawKey) : '';
         if ($key === '') {
             // @igor-ignore - Derived once per process from immutable configuration / env.
             $this->problem = 'nowo_beacon.messenger.remote_retry.worker_key is empty (set BEACON_WORKER_KEY).';

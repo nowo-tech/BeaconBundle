@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Messenger\RemoteRetry;
 
 use InvalidArgumentException;
+use LogicException;
 use SensitiveParameter;
+use SensitiveParameterValue;
 
 use function hash_hkdf;
 use function preg_match;
@@ -20,7 +22,8 @@ use function trim;
  *   key of command signatures.
  *
  * The input keying material is the full key string exactly as configured (including the `bwk_`
- * prefix, surrounding whitespace trimmed). The key never appears in `var_dump()` / exceptions / logs.
+ * prefix, surrounding whitespace trimmed). The key is held in a {@see SensitiveParameterValue}: it never appears in
+ * `var_dump()`, `var_export()`, Symfony VarDumper, exception traces or logs, and the object cannot be serialized.
  */
 final class WorkerKey
 {
@@ -35,7 +38,7 @@ final class WorkerKey
     /** `bwk_` + base64url (no padding) of at least 32 bytes. */
     private const PATTERN = '/^bwk_[A-Za-z0-9_-]{43,}$/';
 
-    private readonly string $key;
+    private readonly SensitiveParameterValue $key;
 
     /**
      * @throws InvalidArgumentException when the value is not a `bwk_…` key
@@ -47,7 +50,7 @@ final class WorkerKey
             throw new InvalidArgumentException('Invalid Beacon worker key: expected "bwk_" followed by base64url characters (copy it from Beacon → Settings → Alerts → Remote Messenger commands).');
         }
 
-        $this->key = $key;
+        $this->key = new SensitiveParameterValue($key);
     }
 
     /**
@@ -63,7 +66,7 @@ final class WorkerKey
      */
     public function authorizationHeader(): string
     {
-        return 'Bearer ' . $this->key;
+        return 'Bearer ' . $this->value();
     }
 
     /**
@@ -71,7 +74,7 @@ final class WorkerKey
      */
     public function authKey(): string
     {
-        return hash_hkdf('sha256', $this->key, self::SUBKEY_LENGTH, self::INFO_AUTH);
+        return hash_hkdf('sha256', $this->value(), self::SUBKEY_LENGTH, self::INFO_AUTH);
     }
 
     /**
@@ -79,7 +82,7 @@ final class WorkerKey
      */
     public function signingKey(): string
     {
-        return hash_hkdf('sha256', $this->key, self::SUBKEY_LENGTH, self::INFO_SIGN);
+        return hash_hkdf('sha256', $this->value(), self::SUBKEY_LENGTH, self::INFO_SIGN);
     }
 
     /**
@@ -88,5 +91,18 @@ final class WorkerKey
     public function __debugInfo(): array
     {
         return ['key' => self::PREFIX . '***'];
+    }
+
+    /**
+     * @return never
+     */
+    public function __serialize(): array
+    {
+        throw new LogicException('A Beacon worker key cannot be serialized.');
+    }
+
+    private function value(): string
+    {
+        return (string) $this->key->getValue();
     }
 }

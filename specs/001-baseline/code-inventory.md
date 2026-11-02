@@ -23,7 +23,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Dsn/BeaconDsn.php` | DSN value object | FR-DSN-003 |
+| `src/Dsn/BeaconDsn.php` | DSN value object (secret wrapped, not serializable) | FR-DSN-003, FR-SEC-001 |
 | `src/Dsn/BeaconDsnParser.php` | Parse/validate DSN | FR-DSN-001/002 |
 | `src/Dsn/InvalidBeaconDsnException.php` | Parse errors | FR-DSN-002 |
 
@@ -71,7 +71,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Support/IgnoredRequestPath.php` | Path-prefix matcher + default ignore list | FR-LI-005 |
 | `src/Support/HttpRequestSnapshot.php` | Safe HTTP request extras | FR-ENV-005 |
 | `src/Support/ConsoleInputSnapshot.php` | Safe console input extras (no raw argv) | FR-LI-002 |
-| `src/Support/SensitiveValueRedactor.php` | Secret-like key / value redaction | FR-ENV-004..005 |
+| `src/Support/SensitiveValueRedactor.php` | Secret-like key / value redaction (free text, maps, URLs, card numbers) | FR-ENV-004..005, FR-ENV-009 |
 | `src/Support/FrameVarsSerializer.php` | Frame `vars` from call arguments | FR-ENV-004 (`send.stack_vars`) |
 
 ### Event listeners (13)
@@ -98,8 +98,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 |------|------|------------|
 | `src/Messenger/FailureTransport/FailureTransportRecorder.php` | Per-message holder of the failure-transport id (`kernel.reset`, cleared on receive) | FR-MRR-001 |
 | `src/Messenger/FailureTransport/RecordingFailureSender.php` | Failure sender decorator recording the returned `TransportMessageIdStamp` (listable transports only) | FR-MRR-001 |
-| `src/Messenger/RemoteRetry/WorkerKey.php` | `bwk_…` key, HKDF auth / sign subkeys, Bearer header (redacted from dumps) | FR-MRR-003 |
-| `src/Messenger/RemoteRetry/RemoteRetryCredentials.php` | Lazy DSN + worker key resolution, project match | FR-MRR-002, FR-MRR-005 |
+| `src/Messenger/RemoteRetry/WorkerKey.php` | `bwk_…` key, HKDF auth / sign subkeys, Bearer header (wrapped secret, not serializable) | FR-MRR-003, FR-SEC-001 |
+| `src/Messenger/RemoteRetry/RemoteRetryCredentials.php` | Lazy DSN + worker key resolution (wrapped raw values), project match | FR-MRR-002, FR-MRR-005, FR-SEC-001 |
 | `src/Messenger/RemoteRetry/RemoteCommand.php` | Claimed command VO, canonical string, expected signature | FR-MRR-003, FR-MRR-005 |
 | `src/Messenger/RemoteRetry/CommandResult.php` | Result VO (status, outcome, closed reason codes, exception class) | FR-MRR-006 |
 | `src/Messenger/RemoteRetry/ClaimResponse.php` | Parsed claim response | FR-MRR-003 |

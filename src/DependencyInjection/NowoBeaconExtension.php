@@ -60,6 +60,7 @@ use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Psr\Clock\ClockInterface;
+use SensitiveParameter;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -844,6 +845,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
     private function registerConnectionTestCommand(
         ContainerBuilder $container,
         bool $reportingEnabled,
+        #[SensitiveParameter]
         mixed $dsn,
         bool $verifyPeer,
         float $timeout,
