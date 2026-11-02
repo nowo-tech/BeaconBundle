@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.19.2] - 2026-11-02](#1192---2026-11-02)
 - [[1.19.1] - 2026-10-28](#1191---2026-10-28)
 - [[1.19.0] - 2026-10-28](#1190---2026-10-28)
 - [[1.18.2] - 2026-10-28](#1182---2026-10-28)
@@ -71,6 +72,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.19.2] - 2026-11-02
+
+Security hardening: fail-closed redaction with bounded cost (camelCase names, quoted JSON, URL passwords, cards), strict remote-command lifetime, explicit TLS verification, secret holders never dumped or serialized. Rotate the DSN secret if your Beacon URL ever redirected. See [UPGRADING](https://github.com/nowo-tech/BeaconBundle/blob/v1.19.2/docs/UPGRADING.md#to-1192).
 
 ### Security
 
@@ -776,7 +781,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.19.2...HEAD
 [1.13.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.1...v1.12.0

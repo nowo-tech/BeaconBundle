@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.19.2](#to-1192)
 - [To 1.19.1](#to-1191)
 - [To 1.19.0](#to-1190)
 - [To 1.18.2](#to-1182)
@@ -88,6 +89,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.19.2
+
+From **1.19.1**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 **Security fixes (SEC-004 Appendix CH).** No configuration change. Behaviour notes:
 - More values are `[Filtered]` in events (env-style `*_PASSWORD=`, `pass` / `pwd` / `pin` / `session` / `cookie` / `signature` keys, card numbers, …). If a dashboard relied on one of these values, send it under another name or through `before_send`.
