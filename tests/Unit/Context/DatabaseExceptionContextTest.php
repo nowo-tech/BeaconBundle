@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Context;
 
+use Nowo\Beacon\Context\DatabaseExceptionContext as CoreDatabaseExceptionContext;
 use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
 use PDOException;
 use PHPUnit\Framework\TestCase;
@@ -106,7 +107,8 @@ final class DatabaseExceptionContextTest extends TestCase
 
     public function testMergeSkipsEmptyOverlayValues(): void
     {
-        $method = new ReflectionMethod(DatabaseExceptionContext::class, 'merge');
+        // The rules live in beacon-php; the bundle class forwards to it.
+        $method = new ReflectionMethod(CoreDatabaseExceptionContext::class, 'merge');
         $merged = $method->invoke(null, ['sqlstate' => 'HY000'], ['sqlstate' => '', 'code' => '1040', 'driver' => null]);
         self::assertSame(['sqlstate' => 'HY000', 'code' => '1040'], $merged);
     }

@@ -23,16 +23,16 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Dsn/BeaconDsn.php` | DSN value object (secret wrapped, not serializable) | FR-DSN-003, FR-SEC-001 |
+| `src/Dsn/BeaconDsn.php` | DSN value object extending beacon-php `Dsn` (secret wrapped, not serializable) | FR-DSN-003, FR-SEC-001, FR-SDK-002 |
 | `src/Dsn/BeaconDsnParser.php` | Parse/validate DSN | FR-DSN-001/002 |
-| `src/Dsn/InvalidBeaconDsnException.php` | Parse errors | FR-DSN-002 |
+| `src/Dsn/InvalidBeaconDsnException.php` | Parse errors (extends beacon-php `InvalidDsnException`) | FR-DSN-002, FR-SDK-002 |
 
 ### Client API (11)
 
 | Path | Role | FR / notes |
 |------|------|------------|
 | `src/Client/BeaconClientInterface.php` | Public API | FR-CL-001..008 |
-| `src/Client/BeaconClient.php` | Default client | FR-CL-001..008, FR-ENV-*, FR-SCOPE-001 |
+| `src/Client/BeaconClient.php` | Default client (builder → beacon-php `PayloadScrubber` → `before_send` → transport) | FR-CL-001..008, FR-ENV-*, FR-SCOPE-001, FR-SDK-005 |
 | `src/Client/BeaconClientFactory.php` | Runtime enable/disable from DSN; picks the bounded ingest client for `sync`, the full one for `async` / `messenger` | FR-DI-002, FR-CL-004, FR-TR-003 |
 | `src/Client/NullBeaconClient.php` | Disabled client | FR-CL-004 |
 | `src/Client/QueueSnapshotCapableInterface.php` | Optional `captureQueueSnapshot()` capability | FR-MQ-005 |
@@ -40,19 +40,21 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Client/CheckInCapableInterface.php` | Optional `captureScheduleCatalog()` / `captureCheckIn()` capability | FR-SCI-006 |
 | `src/Attribute/BeaconCheckIn.php` | `#[BeaconCheckIn(maxRuntime:, enabled:)]` on scheduled message classes | FR-SCI-002 |
 | `src/Client/ClientUserAgent.php` | Versioned `User-Agent` | FR-TR-001 |
-| `src/Breadcrumb/BreadcrumbBuffer.php` | Request-scoped breadcrumb trail | FR-CL-005 |
-| `src/Scope/Scope.php` | Mutable tags / context / extras | FR-SCOPE-001, FR-CL-007 |
+| `src/Breadcrumb/BreadcrumbBuffer.php` | Request-scoped breadcrumb trail (beacon-php class + `ResetInterface`) | FR-CL-005, FR-SDK-002 |
+| `src/Scope/Scope.php` | Mutable tags / context / extras (beacon-php class + `ResetInterface`) | FR-SCOPE-001, FR-CL-007, FR-SDK-002 |
 
-### Envelope and transports (13)
+### Envelope and transports (15)
 
 | Path | Role | FR / notes |
 |------|------|------------|
 | `src/Envelope/TransportResult.php` | Sync POST result VO | FR-CMD-002, FR-TR-001 |
 | `src/Envelope/SendOptions.php` | `send.*` value object | FR-ENV-004..006 |
-| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events, transactions, `queue_snapshot`, `deploy`, `schedule_catalog`, `check_in`) | FR-ENV-001..007, FR-WK-004, FR-MQ-005, FR-DEP-001, FR-SCI-006 |
+| `src/Envelope/EnvelopeBuilder.php` | NDJSON builder (events, transactions, `queue_snapshot`, `deploy`, `schedule_catalog`, `check_in`) delegating to beacon-php's builder, bundle redaction re-applied, no header DSN | FR-ENV-001..007, FR-WK-004, FR-MQ-005, FR-DEP-001, FR-SCI-006, FR-SDK-003 |
+| `src/Envelope/SymfonyRequestContextProvider.php` | Internal: current Symfony request → beacon-php `RequestSnapshot` | FR-ENV-003, FR-SDK-003 |
 | `src/Envelope/EnvelopeTransportInterface.php` | Transport contract | FR-TR-001 |
 | `src/Envelope/FlushableEnvelopeTransportInterface.php` | Async flush contract | FR-TR-002 |
-| `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest (no redirects) | FR-TR-001, FR-ENV-002 |
+| `src/Envelope/EnvelopeTransport.php` | Sync HTTP POST ingest through beacon-php `SymfonyHttpClientTransport` (no redirects) | FR-TR-001, FR-ENV-002, FR-SDK-004 |
+| `src/Envelope/ExplicitTlsHttpClient.php` | Internal: always sets `verify_peer` / `verify_host` on ingest requests | FR-SEC-001, FR-SDK-004 |
 | `src/Envelope/IngestHttpClientFactory.php` | `transport.retry` client (`RetryableHttpClient` + `GenericRetryStrategy`); bounded variant for sync sends | FR-TR-003 |
 | `src/Envelope/BoundedRetryAfterStrategy.php` | Sync-only retry strategy: declines a retry whose `Retry-After` exceeds `max_delay_ms` | FR-TR-003 |
 | `src/Envelope/AsyncEnvelopeTransport.php` | Defer send until terminate | FR-TR-002 |
@@ -61,14 +63,15 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Envelope/SendBeaconEnvelopeMessage.php` | Messenger message | FR-TR-002 |
 | `src/Envelope/SendBeaconEnvelopeMessageHandler.php` | Messenger handler | FR-TR-002 |
 
-### Context and redaction (8)
+### Context and redaction (9)
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Context/UserContextProviderInterface.php` | Optional user context | FR-ENV-006 |
+| `src/Context/UserContextProviderInterface.php` | Optional user context (extends beacon-php's interface) | FR-ENV-006, FR-SDK-002 |
 | `src/Context/SecurityUserContextProvider.php` | Security token → user summary | FR-ENV-006 (`send.user`) |
-| `src/Context/DatabaseExceptionContext.php` | SQL / SQLSTATE facts → `contexts.db` | FR-ENV-007 |
+| `src/Context/DatabaseExceptionContext.php` | SQL / SQLSTATE facts → `contexts.db` (forwards to beacon-php) | FR-ENV-007 |
 | `src/Support/IgnoredRequestPath.php` | Path-prefix matcher + default ignore list | FR-LI-005 |
+| `src/Support/IgnoredException.php` | Shared ignore matcher (`ignore_exceptions`, 4xx `HttpExceptionInterface` rule) for the listeners and the Monolog handler | FR-LI-001 |
 | `src/Support/HttpRequestSnapshot.php` | Safe HTTP request extras | FR-ENV-005 |
 | `src/Support/ConsoleInputSnapshot.php` | Safe console input extras (no raw argv) | FR-LI-002 |
 | `src/Support/SensitiveValueRedactor.php` | Secret-like key / value redaction (free text, maps, URLs, card numbers) | FR-ENV-004..005, FR-ENV-009 |
@@ -85,7 +88,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/EventListener/BeaconMessengerRetryListener.php` | Opt-in retry / recovered events | FR-MQ-002 |
 | `src/EventListener/BeaconMessengerTransactionListener.php` | Opt-in per-message transactions | FR-MQ-001 |
 | `src/EventListener/BeaconWorkerMemoryListener.php` | Opt-in worker memory warning | FR-MQ-004 |
-| `src/EventListener/BeaconPhpWarningHandler.php` | PHP warnings / notices → events | FR-PW-001 |
+| `src/EventListener/BeaconPhpWarningHandler.php` | PHP warnings / notices → events (redacted fingerprint) | FR-PW-001, FR-SDK-006 |
 | `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004, FR-LI-005, FR-WK-002 |
 | `src/EventListener/BeaconRequestScopeResetListener.php` | Worker-safe request buffer reset | FR-WK-001, FR-WK-003 |
 | `src/EventListener/BeaconTraceRequestListener.php` | Seed / honour trace id | FR-WK-001 |
@@ -126,8 +129,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Trace/TraceIdProvider.php` | Request-scoped trace id | FR-WK-001 |
-| `src/Instrumentation/SpanBuffer.php` | In-request SQL/HTTP spans | FR-INS-001 |
+| `src/Trace/TraceIdProvider.php` | Request-scoped trace id (beacon-php class + `ResetInterface`) | FR-WK-001, FR-SDK-002 |
+| `src/Instrumentation/SpanBuffer.php` | In-request SQL/HTTP spans (beacon-php class + `ResetInterface`) | FR-INS-001, FR-SDK-002 |
 | `src/Instrumentation/SqlNormalizer.php` | Normalize SQL for spans | FR-INS-001 |
 | `src/Instrumentation/DoctrineSqlMiddleware.php` | DBAL middleware (+ tracing driver/connection) | FR-INS-001 |
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |
@@ -168,9 +171,9 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Metric | Value |
 |--------|-------|
-| PHP production files (`find src -name '*.php' \| wc -l`) | 96 |
+| PHP production files (`find src -name '*.php' \| wc -l`) | 99 |
 | Other production files (`src/Resources/config/services.yaml`) | 1 |
-| **Total production sources** (`find src -type f \| wc -l`) | **97** |
-| Rows mapped in this inventory | **97** |
+| **Total production sources** (`find src -type f \| wc -l`) | **100** |
+| Rows mapped in this inventory | **100** |
 | Unmapped files | 0 (no placeholder IDs) |
 | Success criteria in `spec.md` | SC-001 … SC-007 |

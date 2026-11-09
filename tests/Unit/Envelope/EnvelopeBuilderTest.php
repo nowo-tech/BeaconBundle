@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\Envelope;
 
 use InvalidArgumentException;
+use Nowo\Beacon\Envelope\EnvelopeBuilder as CoreEnvelopeBuilder;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
@@ -15,6 +16,7 @@ use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PDOException;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
 use RuntimeException;
@@ -26,6 +28,7 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Throwable;
 
+use function array_keys;
 use function is_array;
 
 use const JSON_THROW_ON_ERROR;
@@ -54,7 +57,8 @@ final class EnvelopeBuilderTest extends TestCase
         self::assertSame('event', $item['type']);
         self::assertSame('application/json', $item['content_type']);
         self::assertSame($header['event_id'], $payload['event_id']);
-        self::assertSame('https://pubkey:secret@localhost:9444/1', $header['dsn']);
+        // Since 1.21 the header carries no DSN: the secret travels only in X-Beacon-Auth.
+        self::assertSame(['event_id', 'sent_at'], array_keys($header));
         self::assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $header['event_id']);
         self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/', $header['sent_at']);
         self::assertSame($header['sent_at'], $payload['datetime']);
@@ -288,11 +292,11 @@ final class EnvelopeBuilderTest extends TestCase
         try {
             $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
             $builder = new EnvelopeBuilder('test', null, 'ci-host');
-            $method  = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+            $method  = new ReflectionMethod(CoreEnvelopeBuilder::class, 'normalizeFrame');
             $method->setAccessible(true);
 
             /** @var array<string, mixed> $frame */
-            $frame = $method->invoke($builder, [
+            $frame = $method->invoke($this->core($builder), [
                 'file'     => $tmp,
                 'line'     => 2,
                 'function' => 'demo',
@@ -312,11 +316,11 @@ final class EnvelopeBuilderTest extends TestCase
     public function testVendorPathsAreNotInApp(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci-host');
-        $method  = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+        $method  = new ReflectionMethod(CoreEnvelopeBuilder::class, 'normalizeFrame');
         $method->setAccessible(true);
 
         /** @var array<string, mixed> $frame */
-        $frame = $method->invoke($builder, [
+        $frame = $method->invoke($this->core($builder), [
             'file'     => '/app/vendor/symfony/http-kernel/HttpKernel.php',
             'line'     => 10,
             'function' => 'handle',
@@ -395,19 +399,19 @@ final class EnvelopeBuilderTest extends TestCase
     public function testGuessCulpritUsesFileWhenTraceIsEmpty(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci-host');
-        $method  = new ReflectionMethod(EnvelopeBuilder::class, 'formatCulprit');
+        $method  = new ReflectionMethod(CoreEnvelopeBuilder::class, 'formatCulprit');
         $method->setAccessible(true);
 
-        self::assertSame('/tmp/empty-trace.php:42', $method->invoke($builder, [], '/tmp/empty-trace.php', 42));
+        self::assertSame('/tmp/empty-trace.php:42', $method->invoke($this->core($builder), [], '/tmp/empty-trace.php', 42));
     }
 
     public function testGuessCulpritFallsBackToFunctionName(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci-host');
-        $method  = new ReflectionMethod(EnvelopeBuilder::class, 'formatCulprit');
+        $method  = new ReflectionMethod(CoreEnvelopeBuilder::class, 'formatCulprit');
         $method->setAccessible(true);
 
-        $culprit = $method->invoke($builder, [
+        $culprit = $method->invoke($this->core($builder), [
             [
                 'function' => 'procedural_handler',
                 'file'     => '/tmp/demo.php',
@@ -420,17 +424,13 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testEncodeFailureThrowsRuntimeException(): void
     {
-        $builder = new EnvelopeBuilder('test', null, 'ci-host');
-        $method  = new ReflectionMethod(EnvelopeBuilder::class, 'encode');
-        $method->setAccessible(true);
-
         $data         = [];
         $data['loop'] = &$data;
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to encode envelope JSON:');
 
-        $method->invoke($builder, $data);
+        EnvelopeBuilder::encodeLine($data);
     }
 
     public function testAttachesBreadcrumbsAndClearsBuffer(): void
@@ -523,8 +523,8 @@ final class EnvelopeBuilderTest extends TestCase
     public function testSourceLineCacheIsBoundedAndKeepsRecentlyUsedFiles(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci');
-        $load    = new ReflectionMethod(EnvelopeBuilder::class, 'loadSourceLines');
-        $cache   = new ReflectionProperty(EnvelopeBuilder::class, 'sourceLineCache');
+        $load    = new ReflectionMethod(CoreEnvelopeBuilder::class, 'loadSourceLines');
+        $cache   = new ReflectionProperty(CoreEnvelopeBuilder::class, 'sourceLineCache');
 
         $dir = sys_get_temp_dir() . '/beacon-lru-' . bin2hex(random_bytes(4));
         mkdir($dir);
@@ -535,20 +535,20 @@ final class EnvelopeBuilderTest extends TestCase
                 file_put_contents($files[$i], "line {$i}\n");
             }
 
-            self::assertSame(['line 0'], $load->invoke($builder, $files[0]));
+            self::assertSame(['line 0'], $load->invoke($this->core($builder), $files[0]));
             for ($i = 1; $i < 80; ++$i) {
-                $load->invoke($builder, $files[$i]);
+                $load->invoke($this->core($builder), $files[$i]);
                 // Keep file 0 hot so it survives eviction.
-                $load->invoke($builder, $files[0]);
+                $load->invoke($this->core($builder), $files[0]);
             }
 
-            $cached = $cache->getValue($builder);
+            $cached = $cache->getValue($this->core($builder));
             self::assertIsArray($cached);
             self::assertCount(64, $cached);
             self::assertArrayHasKey($files[0], $cached);
             self::assertArrayHasKey($files[79], $cached);
             self::assertArrayNotHasKey($files[1], $cached);
-            self::assertSame(['line 79'], $load->invoke($builder, $files[79]));
+            self::assertSame(['line 79'], $load->invoke($this->core($builder), $files[79]));
         } finally {
             array_map('unlink', $files);
             rmdir($dir);
@@ -558,24 +558,29 @@ final class EnvelopeBuilderTest extends TestCase
     public function testSourceContextEdgeCasesViaReflection(): void
     {
         $builder = new EnvelopeBuilder('test', null, 'ci');
-        $read    = new ReflectionMethod(EnvelopeBuilder::class, 'readSourceContext');
+        $read    = new ReflectionMethod(CoreEnvelopeBuilder::class, 'readSourceContext');
         $read->setAccessible(true);
-        $isInApp = new ReflectionMethod(EnvelopeBuilder::class, 'isInApp');
+        $isInApp = new ReflectionMethod(CoreEnvelopeBuilder::class, 'isInApp');
         $isInApp->setAccessible(true);
-        $isImpl = new ReflectionMethod(EnvelopeBuilder::class, 'isBeaconBundleImplementationFrame');
+        $isImpl = new ReflectionMethod(EnvelopeBuilder::class, 'isImplementationFrame');
         $isImpl->setAccessible(true);
 
-        self::assertFalse($isInApp->invoke($builder, null));
-        self::assertFalse($isInApp->invoke($builder, ''));
+        self::assertFalse($isInApp->invoke($this->core($builder), null));
+        self::assertFalse($isInApp->invoke($this->core($builder), ''));
         self::assertFalse($isImpl->invoke($builder, ['file' => '']));
-        self::assertSame([], $read->invoke($builder, '/tmp/definitely-missing-beacon-file.php', 1));
+        self::assertTrue($isImpl->invoke($builder, ['file' => (string) (new ReflectionClass(EnvelopeBuilder::class))->getFileName()]));
+        self::assertTrue($isImpl->invoke($builder, ['file' => (string) (new ReflectionClass(CoreEnvelopeBuilder::class))->getFileName()]));
+        self::assertTrue($isImpl->invoke($builder, ['class' => 'Nowo\\Beacon\\Client', 'file' => '/srv/app/src/Kernel.php']));
+        self::assertFalse($isImpl->invoke($builder, ['class' => 'Nowo\\Beacon\\Tests\\Demo', 'file' => '/srv/app/tests/Demo.php']));
+        self::assertFalse($isImpl->invoke($builder, ['class' => 'App\\Kernel', 'file' => '/srv/app/src/Kernel.php']));
+        self::assertSame([], $read->invoke($this->core($builder), '/tmp/definitely-missing-beacon-file.php', 1));
 
         $tmp = tempnam(sys_get_temp_dir(), 'beacon-src-');
         self::assertNotFalse($tmp);
         file_put_contents($tmp, "only-one-line\n");
         try {
-            self::assertSame([], $read->invoke($builder, $tmp, 0));
-            self::assertSame([], $read->invoke($builder, $tmp, 99));
+            // Line 0 never reaches readSourceContext(): normalizeFrame() only reads source for lines > 0.
+            self::assertSame([], $read->invoke($this->core($builder), $tmp, 99));
         } finally {
             @unlink($tmp);
         }
@@ -587,7 +592,7 @@ final class EnvelopeBuilderTest extends TestCase
         ftruncate($fh, 1_048_577);
         fclose($fh);
         try {
-            self::assertSame([], $read->invoke($builder, $large, 1));
+            self::assertSame([], $read->invoke($this->core($builder), $large, 1));
         } finally {
             @unlink($large);
         }
@@ -711,7 +716,7 @@ final class EnvelopeBuilderTest extends TestCase
 
     public function testStackVarsRedactSensitiveArgumentNames(): void
     {
-        $method = new ReflectionMethod(EnvelopeBuilder::class, 'normalizeFrame');
+        $method = new ReflectionMethod(CoreEnvelopeBuilder::class, 'normalizeFrame');
         $method->setAccessible(true);
         $builder = new EnvelopeBuilder(
             'test',
@@ -721,7 +726,7 @@ final class EnvelopeBuilderTest extends TestCase
         );
 
         /** @var array<string, mixed> $frame */
-        $frame = $method->invoke($builder, [
+        $frame = $method->invoke($this->core($builder), [
             'file'     => __FILE__,
             'line'     => __LINE__,
             'function' => 'demo',
@@ -731,7 +736,7 @@ final class EnvelopeBuilderTest extends TestCase
         // Reflection fails for missing function → arg0; value kept (key is not sensitive).
         self::assertSame('super-secret', $frame['vars']['arg0']);
 
-        $frame = $method->invoke($builder, [
+        $frame = $method->invoke($this->core($builder), [
             'file'     => __FILE__,
             'line'     => __LINE__,
             'function' => 'password_hash',
@@ -751,5 +756,16 @@ final class EnvelopeBuilderTest extends TestCase
     private function throwFromNamedMethod(): RuntimeException
     {
         return new RuntimeException('root cause');
+    }
+
+    /**
+     * beacon-php builder the adapter delegates to (its private helpers are exercised through reflection).
+     */
+    private function core(EnvelopeBuilder $builder): CoreEnvelopeBuilder
+    {
+        $core = (new ReflectionProperty(EnvelopeBuilder::class, 'core'))->getValue($builder);
+        self::assertInstanceOf(CoreEnvelopeBuilder::class, $core);
+
+        return $core;
     }
 }

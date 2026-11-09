@@ -4,70 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Breadcrumb;
 
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
 use Symfony\Contracts\Service\ResetInterface;
 
-use function array_slice;
-use function count;
-
 /**
- * Request-scoped breadcrumb trail attached to the next captured event/transaction.
+ * Request-scoped breadcrumb trail attached to the next captured event/transaction (at most 50 items).
+ *
+ * Extends beacon-php's {@see CoreBreadcrumbBuffer} and is reset by Symfony between requests / worker jobs.
  */
-final class BreadcrumbBuffer implements ResetInterface
+final class BreadcrumbBuffer extends CoreBreadcrumbBuffer implements ResetInterface
 {
-    private const MAX_ITEMS = 50;
-
-    /** @var list<array{timestamp: float, type: string, category: string, level: string, message: string, data: array<string, mixed>}> */
-    private array $items = [];
-
-    /**
-     * Append a breadcrumb (oldest entries drop when the buffer exceeds the max size).
-     *
-     * @param array<string, mixed> $data
-     */
-    public function add(
-        string $message,
-        string $category = 'default',
-        string $level = 'info',
-        array $data = [],
-        string $type = 'default',
-    ): void {
-        $this->items[] = [
-            'timestamp' => microtime(true),
-            'type'      => $type,
-            'category'  => $category,
-            'level'     => $level,
-            'message'   => $message,
-            'data'      => $data,
-        ];
-
-        if (count($this->items) > self::MAX_ITEMS) {
-            $this->items = array_slice($this->items, -self::MAX_ITEMS);
-        }
-    }
-
-    /**
-     * Current breadcrumb items in insertion order.
-     *
-     * @return list<array{timestamp: float, type: string, category: string, level: string, message: string, data: array<string, mixed>}>
-     */
-    public function all(): array
-    {
-        return $this->items;
-    }
-
-    /**
-     * Remove all buffered breadcrumbs.
-     */
-    public function clear(): void
-    {
-        $this->items = [];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function reset(): void
-    {
-        $this->clear();
-    }
 }

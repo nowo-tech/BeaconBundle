@@ -137,7 +137,7 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 
 | ID | Criterion |
 |----|-----------|
-| SC-001 | Every production file under `src/` is mapped in [`code-inventory.md`](code-inventory.md): **97/97** (96 PHP + `services.yaml`), no placeholder IDs |
+| SC-001 | Every production file under `src/` is mapped in [`code-inventory.md`](code-inventory.md): **100/100** (99 PHP + `services.yaml`), no placeholder IDs |
 | SC-002 | PHPUnit line coverage of `src/` is **100%** (`make test-coverage-100`) on the CI matrix (PHP 8.2–8.5 × Symfony 7.4 / 8.x) |
 | SC-003 | PHPStan, PHP-CS-Fixer, Rector (dry run) and Igor report no errors |
 | SC-004 | Envelope shapes match the golden fixtures in `tests/Contract/fixtures/envelope/` (`make check-envelope-goldens` against Symfony Beacon) |

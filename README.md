@@ -25,6 +25,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 - HTTP events attach request URL/method (and safe headers) when available
 - Breadcrumbs (`addBreadcrumb`) and performance transactions (`captureTransaction`)
 - Public **tags** API (`setTag` / `setTags`) and optional **`before_send`** scrubbing hook
+- Built on the framework-free SDK [`nowo-tech/beacon-php`](https://github.com/nowo-tech/beacon-php): client-side scrubbing of sensitive keys, credentials and card numbers before `before_send`; the DSN secret is sent only in the `X-Beacon-Auth` header (1.21+)
 - Opt-in Doctrine SQL + HttpClient request spans / breadcrumbs (`instrumentation.*`)
 - Database exceptions attach `contexts.db` (SQLSTATE / SQL) without requiring Doctrine instrumentation
 - Optional console / Messenger failure listeners (nested console extras; optional Scheduler `ScheduledStamp` context) and optional Monolog handler

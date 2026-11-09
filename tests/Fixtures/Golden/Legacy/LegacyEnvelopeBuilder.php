@@ -1,0 +1,878 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Nowo\BeaconBundle\Tests\Fixtures\Golden\Legacy;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\BeaconBundle\Context\DatabaseExceptionContext;
+use Nowo\BeaconBundle\Context\UserContextProviderInterface;
+use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\Envelope\SendOptions;
+use Nowo\BeaconBundle\Messenger\MessengerContext;
+use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Support\FrameVarsSerializer;
+use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
+use Nowo\BeaconBundle\Trace\TraceIdProvider;
+use Psr\Clock\ClockInterface;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Throwable;
+
+use function array_key_exists;
+use function array_key_first;
+use function count;
+use function dirname;
+use function is_array;
+use function is_string;
+
+use const DEBUG_BACKTRACE_IGNORE_ARGS;
+use const DIRECTORY_SEPARATOR;
+use const FILE_IGNORE_NEW_LINES;
+use const JSON_UNESCAPED_SLASHES;
+use const JSON_UNESCAPED_UNICODE;
+use const PHP_OS_FAMILY;
+use const PHP_VERSION;
+
+/**
+ * Frozen copy of BeaconBundle v1.20.0 `Envelope\EnvelopeBuilder` (the last self-contained builder), kept as the
+ * reference for the live parity tests of the beacon-php adapter. Do not change it: it documents the 1.20 bytes.
+ *
+ * Only the namespace and the `src/` root used to hide implementation frames differ from the original.
+ */
+final class LegacyEnvelopeBuilder
+{
+    private const SOURCE_LINE_CACHE_MAX_FILES = 64;
+
+    /** @var array<string, list<string>|null> */
+    private array $sourceLineCache = [];
+
+    private readonly ClockInterface $clock;
+
+    public function __construct(
+        private readonly string $environment = 'prod',
+        private readonly ?string $release = null,
+        private readonly string $serverName = 'unknown',
+        private readonly SendOptions $sendOptions = new SendOptions(),
+        private readonly ?UserContextProviderInterface $userContextProvider = null,
+        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
+        private readonly ?RequestStack $requestStack = null,
+        private readonly int $stackContextLines = 5,
+        private readonly ?Scope $scope = null,
+        private readonly ?TraceIdProvider $traceIdProvider = null,
+        ?ClockInterface $clock = null,
+    ) {
+        $this->clock = $clock ?? new class implements ClockInterface {
+            public function now(): DateTimeImmutable
+            {
+                return new DateTimeImmutable();
+            }
+        };
+    }
+
+    /**
+     * Build a 3-line NDJSON envelope for an event (message and/or exception).
+     *
+     * @param array<string, mixed> $extra
+     * @param list<string>|null $fingerprint
+     */
+    public function buildEventEnvelope(
+        BeaconDsn $dsn,
+        string $message,
+        string $level = 'error',
+        ?Throwable $throwable = null,
+        array $extra = [],
+        ?array $fingerprint = null,
+    ): string {
+        $eventId    = $this->generateEventId();
+        $occurredAt = $this->clock->now();
+        // @igor-ignore - Not shared worker service state.
+        $sentAt    = $occurredAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $timestamp = (float) $occurredAt->format('U.u');
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $sentAt,
+        ];
+
+        $payload = [
+            'event_id'  => $eventId,
+            'timestamp' => $timestamp,
+            'datetime'  => $sentAt,
+            'platform'  => 'php',
+            'level'     => $level,
+            'logger'    => 'nowo.beacon',
+            'message'   => SensitiveValueRedactor::redactMessage($message),
+        ];
+
+        if ($this->sendOptions->serverName) {
+            $payload['server_name'] = $this->serverName;
+        }
+
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+
+        if ($this->sendOptions->release && $this->release !== null && $this->release !== '') {
+            $payload['release'] = $this->release;
+        }
+
+        $contexts = $this->buildContexts();
+        if ($throwable instanceof Throwable) {
+            $db = DatabaseExceptionContext::fromThrowable($throwable);
+            if ($db !== null) {
+                $contexts['db'] = $db;
+            }
+        }
+        if ($contexts !== []) {
+            $payload['contexts'] = $contexts;
+        }
+
+        if ($this->sendOptions->user && $this->userContextProvider instanceof UserContextProviderInterface) {
+            $user = $this->userContextProvider->getUserContext();
+            if ($user !== null && $user !== []) {
+                $payload['user'] = $user;
+            }
+        }
+
+        if ($extra !== []) {
+            $payload['extra'] = $extra;
+        }
+
+        if ($fingerprint !== null && $fingerprint !== []) {
+            $payload['fingerprint'] = $fingerprint;
+        }
+
+        $this->seedTraceId();
+        $this->attachTags($payload);
+        $this->attachTraceId($payload);
+        $this->attachRequest($payload);
+        $this->attachBreadcrumbs($payload);
+
+        if ($throwable instanceof Throwable) {
+            $payload['exception'] = [
+                'values' => $this->serializeExceptions($throwable),
+            ];
+            if ($this->sendOptions->stacktrace) {
+                $payload['culprit'] = $this->guessCulprit($throwable);
+            }
+            if ($message === '') {
+                $payload['message'] = SensitiveValueRedactor::redactMessage($throwable->getMessage());
+            }
+        } elseif ($this->sendOptions->stacktrace) {
+            $this->attachCurrentStacktrace($payload);
+        }
+
+        $itemHeader = ['type' => 'event', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Builds a performance transaction Envelope item (Beacon `type: transaction`).
+     *
+     * @param list<array{
+     *     op?: string,
+     *     description?: string,
+     *     span_id?: string,
+     *     start_timestamp?: float,
+     *     timestamp?: float
+     * }> $spans
+     * @param array<string, mixed> $extra
+     */
+    public function buildTransactionEnvelope(
+        BeaconDsn $dsn,
+        string $transactionName,
+        float $startTimestamp,
+        float $endTimestamp,
+        array $spans = [],
+        array $extra = [],
+    ): string {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $sentAt = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $sentAt,
+        ];
+
+        $payload = [
+            'event_id'        => $eventId,
+            'type'            => 'transaction',
+            'transaction'     => $transactionName,
+            'start_timestamp' => $startTimestamp,
+            'timestamp'       => $endTimestamp,
+            'platform'        => 'php',
+            'spans'           => $spans,
+        ];
+
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+        if ($this->sendOptions->release && $this->release !== null && $this->release !== '') {
+            $payload['release'] = $this->release;
+        }
+        if ($extra !== []) {
+            $payload['extra'] = $extra;
+        }
+
+        $this->seedTraceId();
+        $this->attachTags($payload);
+        $this->attachTraceId($payload);
+        $this->attachRequest($payload);
+        $this->attachBreadcrumbs($payload);
+
+        $itemHeader = ['type' => 'transaction', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Build a 3-line envelope with a `queue_snapshot` item: Messenger message counts per transport.
+     *
+     * Numbers only — no message bodies, ids or payloads. Beacon stores the latest snapshot per
+     * transport and can open an issue when a failure transport crosses the project threshold.
+     *
+     * @param list<array{name: string, count: int|null, failure: bool}> $transports `count` is null when the
+     *                                                                              transport cannot count messages
+     */
+    public function buildQueueSnapshotEnvelope(BeaconDsn $dsn, array $transports): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'   => $eventId,
+            'type'       => 'queue_snapshot',
+            'timestamp'  => (float) $now->format('U.u'),
+            'platform'   => 'php',
+            'transports' => $transports,
+        ];
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+        if ($this->sendOptions->serverName) {
+            $payload['server_name'] = $this->serverName;
+        }
+
+        $itemHeader = ['type' => 'queue_snapshot', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Build a 3-line envelope with a `deploy` item (release marker for Beacon analytics / suspect release).
+     *
+     * @param array{release: string, environment?: string|null, commit?: string|null, url?: string|null, name?: string|null, deployed_at?: float|null} $deploy
+     */
+    public function buildDeployEnvelope(BeaconDsn $dsn, array $deploy): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'    => $eventId,
+            'type'        => 'deploy',
+            'release'     => $deploy['release'],
+            'environment' => $deploy['environment'] ?? ($this->sendOptions->environment ? $this->environment : null),
+            'deployed_at' => $deploy['deployed_at'] ?? (float) $now->format('U.u'),
+            'platform'    => 'php',
+        ];
+        foreach (['commit', 'url', 'name'] as $key) {
+            $value = $deploy[$key] ?? null;
+            if (is_string($value) && $value !== '') {
+                $payload[$key] = $value;
+            }
+        }
+        if ($payload['environment'] === null) {
+            unset($payload['environment']);
+        }
+
+        $itemHeader = ['type' => 'deploy', 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Build a 3-line envelope with a `schedule_catalog` item (Symfony Scheduler check-ins).
+     *
+     * Schedule names, recurring ids, message classes, command names and trigger descriptions only —
+     * never message payloads or command arguments.
+     *
+     * @param list<array{name: string, entries: list<array<string, mixed>>}> $schedules
+     */
+    public function buildScheduleCatalogEnvelope(BeaconDsn $dsn, array $schedules): string
+    {
+        return $this->buildMetadataEnvelope($dsn, 'schedule_catalog', ['schedules' => $schedules]);
+    }
+
+    /**
+     * Build a 3-line envelope with a `check_in` item (one Symfony Scheduler run status).
+     *
+     * @param array<string, mixed> $checkIn
+     */
+    public function buildCheckInEnvelope(BeaconDsn $dsn, array $checkIn): string
+    {
+        return $this->buildMetadataEnvelope($dsn, 'check_in', ['check_in' => $checkIn]);
+    }
+
+    /**
+     * Shared framing for metadata-only items: header, item header, payload with `event_id`, `type`,
+     * `timestamp`, `platform`, optional `environment` / `server_name` (send.* switches), then `$body`.
+     *
+     * @param array<string, mixed> $body
+     */
+    private function buildMetadataEnvelope(BeaconDsn $dsn, string $type, array $body): string
+    {
+        $eventId = $this->generateEventId();
+        // @igor-ignore - Not shared worker service state.
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+
+        $envelopeHeader = [
+            'event_id' => $eventId,
+            'dsn'      => $dsn->toString(),
+            'sent_at'  => $now->format('Y-m-d\TH:i:s.u\Z'),
+        ];
+
+        $payload = [
+            'event_id'  => $eventId,
+            'type'      => $type,
+            'timestamp' => (float) $now->format('U.u'),
+            'platform'  => 'php',
+        ];
+        if ($this->sendOptions->environment) {
+            $payload['environment'] = $this->environment;
+        }
+        if ($this->sendOptions->serverName) {
+            $payload['server_name'] = $this->serverName;
+        }
+        $payload += $body;
+
+        $itemHeader = ['type' => $type, 'content_type' => 'application/json'];
+
+        return $this->encode($envelopeHeader) . "\n"
+            . $this->encode($itemHeader) . "\n"
+            . $this->encode($payload) . "\n";
+    }
+
+    /**
+     * Ensure a correlation id exists on the scope before tags are copied.
+     */
+    private function seedTraceId(): void
+    {
+        if (!$this->traceIdProvider instanceof TraceIdProvider) {
+            return;
+        }
+
+        $traceId = $this->traceIdProvider->getOrCreate();
+        if ($this->scope instanceof Scope) {
+            // @igor-ignore - Not shared worker service state.
+            $this->scope->setTag('trace_id', $traceId);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachTraceId(array &$payload): void
+    {
+        if (!$this->traceIdProvider instanceof TraceIdProvider) {
+            return;
+        }
+
+        $traceId = $this->traceIdProvider->getOrCreate();
+        if (!isset($payload['extra']) || !is_array($payload['extra'])) {
+            $payload['extra'] = [];
+        }
+        $payload['extra'] += ['trace_id' => $traceId];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachRequest(array &$payload): void
+    {
+        if (!$this->sendOptions->request || !$this->requestStack instanceof RequestStack) {
+            return;
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof Request) {
+            return;
+        }
+
+        // Secret-like query parameters (token, api_key, …) and URL userinfo are redacted.
+        $requestContext = [
+            'url'          => SensitiveValueRedactor::redactUrl($request->getUri()),
+            'method'       => $request->getMethod(),
+            'query_string' => SensitiveValueRedactor::redactQueryString($request->getQueryString() ?? ''),
+        ];
+
+        $http = HttpRequestSnapshot::fromRequest($request, null, $this->sendOptions->client);
+        foreach (['route', 'controller', 'query_keys'] as $key) {
+            if (isset($http[$key])) {
+                $requestContext[$key] = $http[$key];
+            }
+        }
+        if (isset($http['client'])) {
+            $requestContext['client'] = $http['client'];
+        }
+
+        $headers = [];
+        foreach ([
+            'host',
+            'user-agent',
+            'accept',
+            'accept-language',
+            'accept-encoding',
+            'content-type',
+            'origin',
+            'referer',
+            'x-requested-with',
+        ] as $headerName) {
+            if ($request->headers->has($headerName)) {
+                $value                = (string) $request->headers->get($headerName);
+                $headers[$headerName] = $headerName === 'referer' ? SensitiveValueRedactor::redactUrl($value) : $value;
+            }
+        }
+        if ($headers !== []) {
+            $requestContext['headers'] = $headers;
+        }
+
+        $payload['request'] = $requestContext;
+
+        if (!isset($payload['contexts']) || !is_array($payload['contexts'])) {
+            $payload['contexts'] = [];
+        }
+        $payload['contexts']['request'] = $requestContext;
+
+        // Keep listener-style keys when callers did not already set them in extra.
+        if (!isset($payload['extra']) || !is_array($payload['extra'])) {
+            $payload['extra'] = [];
+        }
+        $payload['extra'] += [
+            'request_uri'    => $requestContext['url'],
+            'request_method' => $requestContext['method'],
+        ];
+        if ($http !== [] && !isset($payload['extra']['http'])) {
+            $payload['extra']['http'] = $http;
+        }
+    }
+
+    /**
+     * Attaches a current PHP stacktrace for message events (no Throwable).
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function attachCurrentStacktrace(array &$payload): void
+    {
+        $traceFlags = $this->sendOptions->stackVars ? 0 : DEBUG_BACKTRACE_IGNORE_ARGS;
+        $trace      = debug_backtrace($traceFlags);
+        $trace      = array_values(array_filter(
+            $trace,
+            fn (array $frame): bool => !$this->isBeaconBundleImplementationFrame($frame),
+        ));
+
+        if ($trace === []) { // @codeCoverageIgnore
+            return; // @codeCoverageIgnore
+        }
+
+        $payload['stacktrace'] = [
+            'frames' => $this->framesFromPhpTrace($trace),
+        ];
+        $payload['culprit'] = $this->formatCulprit($trace, (string) ($trace[0]['file'] ?? 'unknown'), (int) ($trace[0]['line'] ?? 0));
+    }
+
+    /**
+     * True for BeaconBundle implementation frames (not tests or host app code).
+     *
+     * Must not match any path segment named "BeaconBundle" — CI checkouts live under
+     * `…/BeaconBundle/BeaconBundle/…`, which would wipe the entire backtrace.
+     *
+     * @param array<string, mixed> $frame
+     */
+    private function isBeaconBundleImplementationFrame(array $frame): bool
+    {
+        $class = isset($frame['class']) && is_string($frame['class']) ? $frame['class'] : '';
+        if ($class !== '' && str_starts_with($class, 'Nowo\\BeaconBundle\\')) {
+            return true;
+        }
+
+        $file = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : '';
+        if ($file === '') {
+            return false;
+        }
+
+        // EnvelopeBuilder lives in src/Envelope → package src/ root.
+        $srcRoot = dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($file, $srcRoot);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachTags(array &$payload): void
+    {
+        if (!$this->scope instanceof Scope) {
+            return;
+        }
+
+        $tags = $this->scope->getTags();
+        if ($tags === []) {
+            return;
+        }
+
+        $payload['tags'] = $tags;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function attachBreadcrumbs(array &$payload): void
+    {
+        if (!$this->breadcrumbBuffer instanceof BreadcrumbBuffer) {
+            return;
+        }
+
+        $crumbs = $this->breadcrumbBuffer->all();
+        if ($crumbs === []) {
+            return;
+        }
+
+        $payload['breadcrumbs'] = ['values' => $crumbs];
+        // @igor-ignore - Not shared worker service state.
+        $this->breadcrumbBuffer->clear();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildContexts(): array
+    {
+        $contexts = [];
+
+        if ($this->sendOptions->runtime) {
+            $contexts['runtime'] = [
+                'name'    => 'php',
+                'version' => PHP_VERSION,
+            ];
+        }
+
+        if ($this->sendOptions->framework && class_exists(Kernel::class)) {
+            $contexts['framework'] = [
+                'name'    => 'symfony',
+                'version' => Kernel::VERSION,
+            ];
+        }
+
+        if ($this->sendOptions->os) {
+            $contexts['os'] = [
+                'name'    => PHP_OS_FAMILY,
+                'version' => php_uname('r'),
+            ];
+        }
+
+        return $contexts;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function serializeExceptions(Throwable $throwable): array
+    {
+        $values  = [];
+        $current = $throwable;
+
+        while ($current instanceof Throwable) {
+            $entry = [
+                'type'  => $current::class,
+                'value' => SensitiveValueRedactor::redactMessage($current->getMessage()),
+            ];
+            if ($this->sendOptions->stacktrace) {
+                $entry['stacktrace'] = [
+                    'frames' => $this->framesFromTrace($current),
+                ];
+            }
+            $values[] = $entry;
+            $current  = $current->getPrevious();
+        }
+
+        return array_reverse($values);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function framesFromTrace(Throwable $throwable): array
+    {
+        $frames = [];
+        $trace  = $throwable->getTrace();
+
+        $frames[] = $this->normalizeFrame([
+            'file'     => $throwable->getFile(),
+            'line'     => $throwable->getLine(),
+            'function' => null,
+        ]);
+
+        foreach ($trace as $frame) {
+            $frames[] = $this->normalizeFrame($frame);
+        }
+
+        return array_reverse($frames);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $trace
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function framesFromPhpTrace(array $trace): array
+    {
+        $frames = [];
+        foreach ($trace as $frame) {
+            $frames[] = $this->normalizeFrame($frame);
+        }
+
+        return array_reverse($frames);
+    }
+
+    /**
+     * @param array<string, mixed> $frame
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeFrame(array $frame): array
+    {
+        $file = isset($frame['file']) && is_string($frame['file']) ? $frame['file'] : null;
+        $line = isset($frame['line']) ? (int) $frame['line'] : 0;
+
+        $normalized = [
+            'filename' => $file ?? '[internal]',
+            'lineno'   => $line,
+            'function' => isset($frame['class'], $frame['type'], $frame['function'])
+                ? $frame['class'] . $frame['type'] . $frame['function']
+                : ($frame['function'] ?? null),
+            'in_app' => $this->isInApp($file),
+        ];
+
+        if ($file !== null) {
+            $normalized['abs_path'] = $file;
+        }
+
+        if ($this->sendOptions->stacktrace && $file !== null && $line > 0) {
+            $normalized += $this->readSourceContext($file, $line);
+        }
+
+        if ($this->sendOptions->stacktrace && $this->sendOptions->stackVars) {
+            $vars = FrameVarsSerializer::fromPhpFrame($frame);
+            if ($vars !== []) {
+                $normalized['vars'] = $vars;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array{
+     *     pre_context?: list<string>,
+     *     context_line?: string,
+     *     post_context?: list<string>
+     * }
+     */
+    private function readSourceContext(string $file, int $lineno): array
+    {
+        $lines = $this->loadSourceLines($file);
+        if ($lines === null) {
+            return [];
+        }
+
+        $index = $lineno - 1;
+        if ($index < 0 || $index >= count($lines)) {
+            return [];
+        }
+
+        $context = max(0, $this->stackContextLines);
+        $start   = max(0, $index - $context);
+        $end     = min(count($lines) - 1, $index + $context);
+
+        $pre = [];
+        for ($i = $start; $i < $index; ++$i) {
+            $pre[] = $lines[$i];
+        }
+
+        $post = [];
+        for ($i = $index + 1; $i <= $end; ++$i) {
+            $post[] = $lines[$i];
+        }
+
+        return [
+            'pre_context'  => $pre,
+            'context_line' => $lines[$index],
+            'post_context' => $post,
+        ];
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function loadSourceLines(string $file): ?array
+    {
+        if (array_key_exists($file, $this->sourceLineCache)) {
+            $lines = $this->sourceLineCache[$file];
+            unset($this->sourceLineCache[$file]);
+
+            // @igor-ignore - Not shared worker service state.
+            return $this->sourceLineCache[$file] = $lines;
+        }
+
+        return $this->rememberSourceLines($file, $this->readSourceLines($file));
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function readSourceLines(string $file): ?array
+    {
+        if ($file === '' || !is_file($file) || !is_readable($file)) {
+            return null;
+        }
+
+        $size = filesize($file);
+        if ($size === false || $size > 1_048_576) {
+            return null;
+        }
+
+        $lines = file($file, FILE_IGNORE_NEW_LINES);
+        if ($lines === false) { // @codeCoverageIgnore
+            return null; // @codeCoverageIgnore
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Least-recently-used cap: the builder lives as long as a long-running worker.
+     *
+     * @param list<string>|null $lines
+     *
+     * @return list<string>|null
+     */
+    private function rememberSourceLines(string $file, ?array $lines): ?array
+    {
+        while (count($this->sourceLineCache) >= self::SOURCE_LINE_CACHE_MAX_FILES) {
+            unset($this->sourceLineCache[array_key_first($this->sourceLineCache)]);
+        }
+
+        // @igor-ignore - Not shared worker service state.
+        return $this->sourceLineCache[$file] = $lines;
+    }
+
+    /**
+     * Whether the path looks like application code (excludes vendor/cache/node_modules).
+     */
+    private function isInApp(?string $file): bool
+    {
+        if ($file === null || $file === '') {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $file);
+        foreach (['/vendor/', '/var/cache/', '/node_modules/'] as $exclude) {
+            if (str_contains($normalized, $exclude)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Best-effort culprit from the top exception frame.
+     *
+     * Messenger {@see HandlerFailedException} is thrown from Messenger middleware; its root cause
+     * points at application code, so the culprit is taken from the deepest previous exception.
+     */
+    private function guessCulprit(Throwable $throwable): string
+    {
+        if ($throwable instanceof HandlerFailedException) {
+            $throwable = MessengerContext::rootCause($throwable);
+        }
+
+        return $this->formatCulprit($throwable->getTrace(), $throwable->getFile(), $throwable->getLine());
+    }
+
+    /**
+     * Human-readable culprit (class::method or file:line fallback).
+     *
+     * @param list<array<string, mixed>> $trace
+     */
+    private function formatCulprit(array $trace, string $file, int $line): string
+    {
+        if ($trace === []) {
+            return $file . ':' . $line;
+        }
+
+        $top = $trace[0];
+        if (isset($top['class'], $top['type'], $top['function'])) {
+            return $top['class'] . $top['type'] . $top['function'];
+        }
+
+        return (string) ($top['function'] ?? $file);
+    }
+
+    /**
+     * Encode a payload as a single JSON line for the envelope.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function encode(array $data): string
+    {
+        $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new RuntimeException('Failed to encode envelope JSON: ' . json_last_error_msg());
+        }
+
+        return $json;
+    }
+
+    /**
+     * 32-character hex event id.
+     */
+    private function generateEventId(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+}

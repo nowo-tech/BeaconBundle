@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Client;
 
+use Nowo\Beacon\Envelope\Envelope;
+use Nowo\Beacon\Scrubber\PayloadScrubber;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
@@ -12,7 +14,6 @@ use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Scope\Scope;
 use Throwable;
 
-use function count;
 use function is_array;
 use function is_callable;
 use function is_string;
@@ -24,6 +25,12 @@ use const JSON_UNESCAPED_UNICODE;
 
 /**
  * Default Beacon client: builds Envelope NDJSON and POSTs via {@see EnvelopeTransportInterface}.
+ *
+ * Pipeline for events and transactions: {@see EnvelopeBuilder} (beacon-php core + the bundle's message / exception /
+ * URL redaction) → beacon-php's {@see PayloadScrubber} (sensitive keys in `extra`, `contexts`, `tags` and breadcrumb
+ * `data`, credential headers, cookies, credential patterns and Luhn-valid card numbers in strings) → `before_send` →
+ * encode → transport. The hook never sees what the scrubber removed. Deploys, check-ins, schedule catalogs and queue
+ * snapshots carry metadata only and skip both.
  */
 final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableInterface, DeployCapableInterface, CheckInCapableInterface
 {
@@ -58,16 +65,14 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
             return null;
         }
 
-        $body = $this->envelopeBuilder->buildEventEnvelope(
+        $body = $this->finalize($this->envelopeBuilder->eventEnvelope(
             $this->transport->getDsn(),
             $throwable->getMessage(),
             'error',
             $throwable,
             $extra,
             $fingerprint,
-        );
-
-        $body = $this->applyBeforeSend($body);
+        ));
         if ($body === null) {
             return null;
         }
@@ -90,16 +95,14 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
             return null;
         }
 
-        $body = $this->envelopeBuilder->buildEventEnvelope(
+        $body = $this->finalize($this->envelopeBuilder->eventEnvelope(
             $this->transport->getDsn(),
             $message,
             $level,
             null,
             $extra,
             $fingerprint,
-        );
-
-        $body = $this->applyBeforeSend($body);
+        ));
         if ($body === null) {
             return null;
         }
@@ -138,16 +141,14 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
         $buffered = $this->spanBuffer?->drain() ?? [];
         $spans    = [...$buffered, ...$spans];
 
-        $body = $this->envelopeBuilder->buildTransactionEnvelope(
+        $body = $this->finalize($this->envelopeBuilder->transactionEnvelope(
             $this->transport->getDsn(),
             $transactionName,
             $startTimestamp,
             $endTimestamp,
             $spans,
             $extra,
-        );
-
-        $body = $this->applyBeforeSend($body);
+        ));
         if ($body === null) {
             return null;
         }
@@ -266,32 +267,23 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
     }
 
     /**
-     * Runs `before_send` on the event/transaction payload line. Returns null to drop the send.
+     * Scrubs the event/transaction payload, runs `before_send` on it and encodes the envelope. Returns null to drop
+     * the send.
      */
-    private function applyBeforeSend(string $envelopeBody): ?string
+    private function finalize(Envelope $envelope): ?string
     {
+        $payload = (new PayloadScrubber())->scrub($envelope->payload);
         if (!is_callable($this->beforeSend)) {
-            return $envelopeBody;
+            return EnvelopeBuilder::encode($envelope->withPayload($this->stripUserIp($payload)));
         }
 
-        $lines = explode("\n", rtrim($envelopeBody, "\n"));
-        if (count($lines) < 3) {
-            return $envelopeBody;
-        }
-
-        $payload = json_decode($lines[2], true);
-        if (!is_array($payload)) {
-            return $envelopeBody;
-        }
+        // The hook receives the payload as decoded from its JSON line (as before).
+        $decoded = json_decode(EnvelopeBuilder::encodeLine($payload), true);
 
         try {
-            $result = ($this->beforeSend)($payload);
+            $result = ($this->beforeSend)($decoded);
         } catch (Throwable) {
             // Fail soft: drop the event so a buggy hook cannot break the host app.
-            return null;
-        }
-
-        if ($result === null) {
             return null;
         }
 
@@ -299,9 +291,26 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
             return null;
         }
 
-        $lines[2] = json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return EnvelopeBuilder::encodeLine($envelope->header) . "\n"
+            . EnvelopeBuilder::encodeLine($envelope->itemHeader) . "\n"
+            . json_encode($this->stripUserIp($result), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+    }
 
-        return implode("\n", $lines) . "\n";
+    /**
+     * Without `send.client`, `user.ip_address` is removed after `before_send` (as beacon-php's `IpStripper` does for
+     * the user), whoever set it: `Scope::setUser()`, a user provider or the hook.
+     *
+     * @param array<array-key, mixed> $payload
+     *
+     * @return array<array-key, mixed>
+     */
+    private function stripUserIp(array $payload): array
+    {
+        if (!$this->envelopeBuilder->sendsClientAddress() && isset($payload['user']) && is_array($payload['user'])) {
+            unset($payload['user']['ip_address']);
+        }
+
+        return $payload;
     }
 
     /**

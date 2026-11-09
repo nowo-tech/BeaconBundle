@@ -17,3 +17,7 @@ Canonical NDJSON bodies for the Bundle ↔ Beacon ingest contract.
   chars). Beacon < 1.70 ignores the unknown key.
 
 When changing the wire format, update both copies and the contract tests.
+
+Since BeaconBundle 1.21 the live builder no longer sends the header `dsn` (the secret travels only in
+`X-Beacon-Auth`). These fixtures keep it on purpose: they are the legacy shape that Symfony Beacon must still
+accept from older clients. The byte-for-byte goldens of the current builder live in `tests/Fixtures/Golden/`.

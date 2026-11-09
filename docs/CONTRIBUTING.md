@@ -71,6 +71,8 @@ composer test-coverage
 
 Coverage HTML is written to `coverage/`. The release checklist expects ~100% PHP line coverage.
 
+When `nowo-tech/beacon-php` moves (any 0.1.x, `composer update nowo-tech/beacon-php`), the 18 `tests/Fixtures/Golden/bundle-1.20/` goldens and `tests/Contract/EnvelopeLiveParityTest.php` must stay green unchanged; never re-record them to make a beacon-php bump pass (see [RELEASE.md](RELEASE.md#before-tagging)).
+
 ## Demo checks
 
 The repository ships a runnable demo under `demo/`.

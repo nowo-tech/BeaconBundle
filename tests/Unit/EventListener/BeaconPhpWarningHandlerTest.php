@@ -68,6 +68,21 @@ final class BeaconPhpWarningHandlerTest extends TestCase
         $handler->capture(E_USER_WARNING, 'missing key', __FILE__, 42);
     }
 
+    public function testFingerprintCarriesTheRedactedMessage(): void
+    {
+        // BUNDLE-ADAPTER L5: Beacon stores the fingerprint as is, so no secret may survive in it.
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureMessage')->with(
+            'Warning: connect failed password=hunter2',
+            'warning',
+            self::callback(static fn (array $extra): bool => ($extra['php_error']['message'] ?? null) === 'connect failed password=hunter2'),
+            ['php-warning', 'Warning', 'connect failed password=[Filtered]', __FILE__ . ':7'],
+        );
+
+        (new BeaconPhpWarningHandler($client, true))->capture(E_WARNING, 'connect failed password=hunter2', __FILE__, 7);
+    }
+
     public function testHandleContinuesWithoutCallingPrevious(): void
     {
         $calledPrevious = false;
