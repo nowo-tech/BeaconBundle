@@ -6,12 +6,10 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Support\ConsoleInputSnapshot;
+use Nowo\BeaconBundle\Support\IgnoredException;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Throwable;
-
-use function is_string;
 
 use const PHP_SAPI;
 
@@ -49,7 +47,7 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
         }
 
         $error = $event->getError();
-        if ($this->shouldIgnore($error)) {
+        if (IgnoredException::matches($error, $this->ignoreExceptions)) {
             return;
         }
 
@@ -65,22 +63,5 @@ final class BeaconConsoleErrorListener implements EventSubscriberInterface
         $this->client->captureException($error, [
             'console' => $console,
         ]);
-    }
-
-    /**
-     * Whether `$throwable` matches any configured ignore class.
-     */
-    private function shouldIgnore(Throwable $throwable): bool
-    {
-        foreach ($this->ignoreExceptions as $class) {
-            if (!is_string($class) || $class === '') {
-                continue;
-            }
-            if ($throwable instanceof $class) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

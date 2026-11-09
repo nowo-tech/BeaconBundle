@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Messenger;
 
 use DateTimeInterface;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
+use Nowo\BeaconBundle\Support\IgnoredException;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
@@ -179,16 +180,7 @@ final class MessengerContext
      */
     public static function isIgnored(Throwable $throwable, array $ignoreExceptions): bool
     {
-        foreach ($ignoreExceptions as $class) {
-            if (!is_string($class) || $class === '') {
-                continue;
-            }
-            if ($throwable instanceof $class) {
-                return true;
-            }
-        }
-
-        return false;
+        return IgnoredException::matches($throwable, $ignoreExceptions);
     }
 
     /**

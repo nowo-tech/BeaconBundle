@@ -90,6 +90,27 @@
 
 ## Unreleased
 
+Target: **1.20.0**.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+**Monolog handler (`monolog_handler.enabled: true`) — behaviour change.** Records whose `context.exception` is an `HttpExceptionInterface` with a status code below 500 (404, 403, 405, …) are no longer sent to Beacon, and the main `ignore_exceptions` list now applies to the handler as well. Symfony's `ErrorListener` logs every uncaught 4xx at ERROR, so these were noise issues. The records still reach your other Monolog handlers (files, stderr). To keep the old behaviour:
+
+```yaml
+nowo_beacon:
+    monolog_handler:
+        ignore_http_client_errors: false
+```
+
+New options (all optional):
+
+- `monolog_handler.ignore_exceptions`: extra FQCNs skipped by the handler only (the main list always applies).
+- `ignore_http_client_errors` (default `false`): apply the same 4xx rule to the HTTP exception listener. If you list `NotFoundHttpException` / `AccessDeniedHttpException` in `ignore_exceptions` only to silence 4xx, you can set this to `true` instead.
+
+Hosts that construct `BeaconMonologHandler` or `BeaconExceptionListener` by hand: the new constructor arguments are appended with defaults, so existing calls still work (a hand-built `BeaconMonologHandler` now skips 4xx by default).
+
 ## To 1.19.2
 
 From **1.19.1**:

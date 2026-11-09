@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Integration;
 
+use DomainException;
 use LogicException;
 use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
@@ -333,7 +334,43 @@ final class ExtensionLoadTest extends TestCase
         self::assertTrue($container->hasDefinition(TraceableBeaconHttpClient::class));
         if (class_exists(AbstractProcessingHandler::class)) {
             self::assertTrue($container->hasDefinition(BeaconMonologHandler::class));
+            $handler = $container->getDefinition(BeaconMonologHandler::class);
+            self::assertSame([], $handler->getArgument('$ignoreExceptions'));
+            self::assertTrue($handler->getArgument('$ignoreHttpClientErrors'));
         }
+        self::assertFalse($container->getDefinition(BeaconExceptionListener::class)->getArgument('$ignoreHttpClientErrors'));
+    }
+
+    public function testMonologHandlerSharesIgnoreRulesWithExceptionListener(): void
+    {
+        if (!class_exists(AbstractProcessingHandler::class)) {
+            self::markTestSkipped('monolog/monolog not installed');
+        }
+
+        $container = $this->createContainer();
+
+        (new NowoBeaconExtension())->load([[
+            'enabled'                   => true,
+            'dsn'                       => 'https://pubkey:secret@beacon.example.com/5',
+            'ignore_exceptions'         => [LogicException::class, RuntimeException::class],
+            'ignore_http_client_errors' => true,
+            'monolog_handler'           => [
+                'enabled'                   => true,
+                'ignore_exceptions'         => [RuntimeException::class, DomainException::class],
+                'ignore_http_client_errors' => false,
+            ],
+        ]], $container);
+
+        $handler = $container->getDefinition(BeaconMonologHandler::class);
+        self::assertSame(
+            [LogicException::class, RuntimeException::class, DomainException::class],
+            $handler->getArgument('$ignoreExceptions'),
+        );
+        self::assertFalse($handler->getArgument('$ignoreHttpClientErrors'));
+
+        $listener = $container->getDefinition(BeaconExceptionListener::class);
+        self::assertSame([LogicException::class, RuntimeException::class], $listener->getArgument('$ignoreExceptions'));
+        self::assertTrue($listener->getArgument('$ignoreHttpClientErrors'));
     }
 
     public function testPrependSkipsWithoutMonologExtension(): void
