@@ -40,6 +40,7 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
 - [Automatic HTTP transactions](#automatic-http-transactions)
 - [Monolog](#monolog)
 - [Disabled mode](#disabled-mode)
+- [Using it from a DDD / hexagonal application](#using-it-from-a-ddd--hexagonal-application)
 - [Ingest endpoint](#ingest-endpoint)
 - [End-to-end against `symfony-beacon`](#end-to-end-against-symfony-beacon)
 - [Scenario matrix](#scenario-matrix)
@@ -682,6 +683,59 @@ The bundle's own transport logs ("Beacon ingest transport failed.", "Beacon inge
 ## Disabled mode
 
 When `enabled: false` or the DSN is empty, the container injects `NullBeaconClient`. Calls become no-ops and return `null`.
+
+## Using it from a DDD / hexagonal application
+
+BeaconBundle is an **infrastructure adapter** (outbound observability client). It has no entities, no Doctrine
+mapping and no persistence, and it never needs to see your domain objects.
+
+**Keep the domain free of it**
+
+- Report from the domain/application layer through `Psr\Log\LoggerInterface` and enable `monolog_handler`; or define
+  your own port (e.g. `ErrorReporter`) and implement it in infrastructure with `Nowo\BeaconBundle\Client\BeaconClientInterface`.
+  Uncaught HTTP, console, Messenger and Scheduler failures are reported by the bundle's listeners without any code.
+- Never type-hint the concrete `BeaconClient`; it is final. Use `BeaconClientInterface` (and `CheckInCapableInterface`,
+  `DeployCapableInterface`, `QueueSnapshotCapableInterface` when needed). In tests use `NullBeaconClient` or an empty DSN.
+- Keep `#[BeaconCheckIn]` off domain messages: the same settings exist in config by message FQCN
+  (`scheduler.check_ins.max_runtime`, `ignore`, `descriptions`).
+- Doctrine instrumentation (`instrumentation.doctrine`) is a DBAL middleware: it records SQL, not entities.
+
+**Ports you can implement**
+
+- `Nowo\BeaconBundle\Context\UserContextProviderInterface` — map your identity model to
+  `['id' => …, 'username' => …, 'email' => …]`. Override the alias in `config/services.yaml`:
+
+      Nowo\BeaconBundle\Context\UserContextProviderInterface: '@App\Infrastructure\Beacon\UserContextProvider'
+
+  The default provider reads the Security token and calls `getEmail()` on your user class when it exists.
+  User data is only sent with `send.user: true`.
+- `before_send` — service id of an invokable `(array $event): ?array` to scrub or drop payloads.
+
+Example adapter:
+
+    namespace App\Infrastructure\Beacon;
+
+    use App\Application\ErrorReporter;          // your port
+    use Nowo\BeaconBundle\Client\BeaconClientInterface;
+
+    final class BeaconErrorReporter implements ErrorReporter
+    {
+        public function __construct(private readonly BeaconClientInterface $beacon) {}
+
+        public function report(\Throwable $error, array $context = []): void
+        {
+            $this->beacon->captureException($error, $context);
+        }
+    }
+
+**Known limitations**
+
+- The trace middleware is added only to `messenger.bus.default`. With custom buses (command/query/event), add
+  `Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware` to their `middleware` list yourself. It adds a
+  `BeaconTraceStamp` to dispatched messages, so a consumer in another service must have the bundle installed (or a
+  serializer that ignores unknown stamps).
+- With `send.stack_vars: true`, `Stringable` arguments are cast to string, which can lazy-load Doctrine proxies.
+- The envelope transport is not a replaceable service; decorate `BeaconClientInterface` to change delivery.
 
 ## Ingest endpoint
 

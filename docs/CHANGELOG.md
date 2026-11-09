@@ -75,6 +75,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- USAGE: new section "Using it from a DDD / hexagonal application" (where the bundle sits in a hexagonal host, the ports, events and DTOs to build an anti-corruption layer on, and the known limitations).
+
 ## [1.21.0] - 2026-11-09
 
 Target: **1.21.0** (new minor). The bundle now builds on the framework-free SDK [`nowo-tech/beacon-php`](https://github.com/nowo-tech/beacon-php) `^0.1`. Three owner decisions of 2026-11-09 are intended behaviour changes. What the builder produces is byte-identical to 1.20.0 apart from the header `dsn` (golden envelopes); what is finally sent also differs where the new scrubber or the `user.ip_address` rule below applies. See [UPGRADING](UPGRADING.md#to-1210).
