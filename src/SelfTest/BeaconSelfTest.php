@@ -10,6 +10,8 @@ use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
+use SensitiveParameter;
+use SensitiveParameterValue;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\SentStamp;
 use Throwable;
@@ -76,10 +78,13 @@ final readonly class BeaconSelfTest
     /** Scope tag carrying the kind. */
     public const TAG_KIND = 'beacon_selftest_kind';
 
+    private SensitiveParameterValue $dsn;
+
     public function __construct(
         private BeaconClientInterface $client,
         private BeaconDsnParser $parser,
-        private mixed $dsn,
+        #[SensitiveParameter]
+        mixed $dsn,
         private bool $reportingEnabled = true,
         private ?MessageBusInterface $bus = null,
         private ?PendingTransportRegistry $pendingTransports = null,
@@ -88,6 +93,8 @@ final readonly class BeaconSelfTest
         private bool $phpWarningHandler = true,
         private bool $messengerListener = true,
     ) {
+        // Like BeaconConnectionTester: dumps, exports and traces never show the DSN secret.
+        $this->dsn = new SensitiveParameterValue(is_string($dsn) ? $dsn : '');
     }
 
     /**
@@ -321,6 +328,6 @@ final readonly class BeaconSelfTest
 
     private function dsnString(): string
     {
-        return is_string($this->dsn) ? trim($this->dsn) : '';
+        return trim((string) $this->dsn->getValue());
     }
 }

@@ -31,6 +31,8 @@ final class BeaconClientScrubberTest extends TestCase
     /** @var list<string> */
     private array $bodies = [];
 
+    private Scope $scope;
+
     public function testEventPayloadIsScrubbedBeforeBeforeSend(): void
     {
         $seen   = null;
@@ -80,10 +82,38 @@ final class BeaconClientScrubberTest extends TestCase
         self::assertStringNotContainsString('tx-key', $this->bodies[0]);
     }
 
+    public function testUserIpIsRemovedAfterBeforeSendWithoutSendClient(): void
+    {
+        // JQ-L3: the inherited Scope::setUser() promises that ip_address is dropped unless send.client is on.
+        $client = $this->client(static function (array $event): array {
+            $event['user']['ip_address'] = '203.0.113.5';
+
+            return $event;
+        });
+        $this->scope->setUser(['id' => '7', 'ip_address' => '198.51.100.9']);
+        $client->captureMessage('who');
+        self::assertSame(['id' => '7'], $this->sentPayload()['user']);
+
+        $this->bodies = [];
+        $plain        = $this->client(null);
+        $this->scope->setUser(['id' => '8', 'ip_address' => '198.51.100.9']);
+        $plain->captureMessage('who');
+        self::assertSame(['id' => '8'], $this->sentPayload()['user']);
+    }
+
+    public function testUserIpIsKeptWithSendClient(): void
+    {
+        $client = $this->client(null, new SendOptions(stacktrace: false, client: true));
+        $this->scope->setUser(['id' => '7', 'ip_address' => '198.51.100.9']);
+        $client->captureMessage('who');
+
+        self::assertSame(['id' => '7', 'ip_address' => '198.51.100.9'], $this->sentPayload()['user']);
+    }
+
     /**
      * @param (callable(array<string, mixed>): ?array<string, mixed>)|null $beforeSend
      */
-    private function client(?callable $beforeSend): BeaconClient
+    private function client(?callable $beforeSend, ?SendOptions $send = null): BeaconClient
     {
         $http = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
             $this->bodies[] = (string) $options['body'];
@@ -91,9 +121,9 @@ final class BeaconClientScrubberTest extends TestCase
             return new MockResponse('', ['http_code' => 200]);
         });
         $dsn     = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/1');
-        $scope   = new Scope();
+        $scope   = $this->scope = new Scope();
         $crumbs  = new BreadcrumbBuffer();
-        $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(stacktrace: false), null, $crumbs, null, 5, $scope);
+        $builder = new EnvelopeBuilder('test', null, 'ci', $send ?? new SendOptions(stacktrace: false), null, $crumbs, null, 5, $scope);
 
         return new BeaconClient(new EnvelopeTransport($http, $dsn), $builder, true, $crumbs, $scope, null, $beforeSend);
     }

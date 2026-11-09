@@ -278,6 +278,16 @@ final class EnvelopeBuilder
     }
 
     /**
+     * Whether `send.client` is on (client IP / User-Agent may be sent).
+     *
+     * @internal used by {@see BeaconClient} to strip `user.ip_address`
+     */
+    public function sendsClientAddress(): bool
+    {
+        return $this->sendOptions->client;
+    }
+
+    /**
      * NDJSON body (`header\nitem\npayload\n`) with the bundle's JSON flags.
      *
      * @throws RuntimeException when a line cannot be encoded (e.g. invalid UTF-8)

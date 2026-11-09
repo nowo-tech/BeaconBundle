@@ -274,7 +274,7 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
     {
         $payload = (new PayloadScrubber())->scrub($envelope->payload);
         if (!is_callable($this->beforeSend)) {
-            return EnvelopeBuilder::encode($envelope->withPayload($payload));
+            return EnvelopeBuilder::encode($envelope->withPayload($this->stripUserIp($payload)));
         }
 
         // The hook receives the payload as decoded from its JSON line (as before).
@@ -293,7 +293,24 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
 
         return EnvelopeBuilder::encodeLine($envelope->header) . "\n"
             . EnvelopeBuilder::encodeLine($envelope->itemHeader) . "\n"
-            . json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+            . json_encode($this->stripUserIp($result), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+    }
+
+    /**
+     * Without `send.client`, `user.ip_address` is removed after `before_send` (as beacon-php's `IpStripper` does for
+     * the user), whoever set it: `Scope::setUser()`, a user provider or the hook.
+     *
+     * @param array<array-key, mixed> $payload
+     *
+     * @return array<array-key, mixed>
+     */
+    private function stripUserIp(array $payload): array
+    {
+        if (!$this->envelopeBuilder->sendsClientAddress() && isset($payload['user']) && is_array($payload['user'])) {
+            unset($payload['user']['ip_address']);
+        }
+
+        return $payload;
     }
 
     /**

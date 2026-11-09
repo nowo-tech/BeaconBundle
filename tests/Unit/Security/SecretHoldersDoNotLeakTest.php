@@ -7,11 +7,13 @@ namespace Nowo\BeaconBundle\Tests\Unit\Security;
 use Exception;
 use LogicException;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
+use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteRetryCredentials;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\WorkerKey;
+use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\RemoteRetryFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -59,6 +61,7 @@ final class SecretHoldersDoNotLeakTest extends TestCase
         yield 'RemoteRetryCredentials (unresolved)' => [new RemoteRetryCredentials(new BeaconDsnParser(), self::dsn(), RemoteRetryFixtures::WORKER_KEY), [self::secret(), RemoteRetryFixtures::WORKER_KEY]];
         $credentials->problem();
         yield 'RemoteRetryCredentials (resolved)' => [$credentials, [self::secret(), RemoteRetryFixtures::WORKER_KEY]];
+        yield 'BeaconSelfTest' => [new BeaconSelfTest(new NullBeaconClient(), new BeaconDsnParser(), self::dsn()), [self::secret()]];
         yield 'BeaconConnectionTester' => [new BeaconConnectionTester(new BeaconDsnParser(), new MockHttpClient(), true, self::dsn()), [self::secret()]];
     }
 
