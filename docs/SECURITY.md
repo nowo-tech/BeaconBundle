@@ -43,7 +43,7 @@
 The bundle already includes several defensive defaults:
 
 - **Disabled by empty DSN**: if `dsn` is empty, the bundle injects `NullBeaconClient` and does not send anything.
-- **Secret required**: incomplete DSNs (public key only) fail at parse time instead of sending unauthenticated envelopes that Beacon would reject with 403.
+- **Secret required**: incomplete DSNs (public key only) fail at parse time instead of sending unauthenticated envelopes that Beacon would reject with 401.
 - **Dual auth on the wire**: `X-Beacon-Auth` (key + secret) plus the full DSN in the envelope header.
 - **TLS verification on by default and explicit**: `verify_peer` defaults to `true` and is sent with every ingest / remote-command request (with `verify_host`), so host-wide HttpClient defaults cannot weaken it.
 - **No redirects**: ingest and remote-command requests never follow a redirect (`max_redirects: 0`); a 3xx is a failed send.

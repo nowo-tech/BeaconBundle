@@ -13,7 +13,7 @@
     {% if fingerprint is not empty %}
         <p>Fingerprint: <code>{{ fingerprint|join(', ') }}</code></p>
     {% endif %}
-    <p class="text-muted small mb-3">Event ids are generated locally before transport. For TLS failures, missing DSN secret, or rejected keys (401/403), verify delivery in Beacon Issues / Performance or in application logs. Auth uses <code>X-Beacon-Auth</code> (<code>beacon_key</code> + <code>beacon_secret</code>).</p>
+    <p class="text-muted small mb-3">Event ids are generated locally before transport. For TLS failures, missing DSN secret, rejected keys (401) or suspended project ingestion (403), verify delivery in Beacon Issues / Performance or in application logs. Auth uses <code>X-Beacon-Auth</code> (<code>beacon_key</code> + <code>beacon_secret</code>).</p>
     <p><a href="{{ path('homepage') }}">Home</a> · <a href="{{ path('demo_status') }}">Status JSON</a></p>
 </div>
 {% endblock %}

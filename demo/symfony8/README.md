@@ -20,7 +20,7 @@ Configure `BEACON_DSN` in `.env` before testing real delivery. Format:
 http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID
 ```
 
-Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejected (parse error / Beacon HTTP 403).
+Leave `BEACON_DSN` empty to test disabled mode. Public-key-only DSNs are rejected (parse error / Beacon HTTP 401). Beacon answers 403 only when the project's ingestion is suspended.
 
 ## Included dev stack
 
