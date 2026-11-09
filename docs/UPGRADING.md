@@ -551,7 +551,7 @@ Dev / CI tooling only. **No consumer API or config changes.**
 
 ### Breaking: DSN secret required
 
-Symfony Beacon stores a secret on every generated API key and rejects public-key-only ingest with **HTTP 403**. BeaconBundle now requires the secret in `BEACON_DSN`:
+Symfony Beacon stores a secret on every generated API key and rejects public-key-only ingest with **HTTP 401** (an unknown or invalid key; `403` means the project's ingestion is suspended). BeaconBundle now requires the secret in `BEACON_DSN`:
 
 ```env
 # Before (1.4.x — no longer accepted)

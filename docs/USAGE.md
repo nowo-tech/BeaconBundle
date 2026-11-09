@@ -743,7 +743,8 @@ when@dev:
 | Monolog | `monolog_handler.enabled: true` | `GET /monolog` | Error log is forwarded to Beacon. |
 | TLS failure | Self-signed HTTPS with `verify_peer: true` | `GET /report` | Demo may still render a local event id, but Beacon does not ingest it; transport logs an error. |
 | Empty DSN | `BEACON_DSN=` | `GET /report` or `GET /status` | Client is disabled, event id is `null`, and status shows `enabled: false`. |
-| Missing secret / 403 | Public-key-only DSN or wrong secret | `GET /report` | Client parse failure or Beacon rejects the envelope; no event in the UI. |
-| Wrong key / 403 | DSN host/project valid but public key invalid | `GET /report` | Demo may still render a local event id, but Beacon rejects the envelope and no event appears in the Beacon UI. |
+| Missing secret / 401 | Public-key-only DSN or wrong secret | `GET /report` | Client parse failure or Beacon rejects the envelope with `401`; no event in the UI. |
+| Wrong key / 401 | DSN host/project valid but public key unknown or invalid | `GET /report` | Demo may still render a local event id, but Beacon rejects the envelope with `401` and no event appears in the Beacon UI. |
+| Suspended ingestion / 403 | Valid DSN, but the project's ingestion is suspended in Beacon | `GET /report` | Demo may still render a local event id, but Beacon refuses the envelope with `403` until ingestion is resumed. |
 
-The key operational detail is that event ids are generated before transport. Delivery success should be verified in Beacon itself or in server/client logs, especially for TLS and 403 scenarios.
+The key operational detail is that event ids are generated before transport. Delivery success should be verified in Beacon itself or in server/client logs, especially for TLS, `401` and `403` scenarios.

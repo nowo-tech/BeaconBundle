@@ -74,6 +74,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- Ingest status codes corrected: Beacon answers **401** for an unknown or invalid key (including a wrong secret or a public-key-only DSN) and **403** when the project's ingestion is suspended. `GETTING_STARTED.md`, `USAGE.md` (troubleshooting table, new suspended-ingestion row), `SECURITY.md`, `UPGRADING.md` (1.5.0 note) and the Symfony 8 demo said an unknown key gets `403`.
+
 ## [1.20.0] - 2026-11-09
 
 Target: **1.20.0** (new options).

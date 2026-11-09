@@ -220,8 +220,9 @@ public function report(): void
 ### Quick HTTP checks (server side)
 
 Successful ingest (valid key + envelope) → `200`.  
-Unknown key → `403`.  
+Unknown or invalid key (including a wrong secret) → `401`.  
 Missing auth → `401`.  
+Project ingestion suspended (valid key) → `403`.  
 Empty/invalid body → `400`.
 
 BeaconBundle logs transport failures (`warning` for non-2xx, `error` for network/TLS errors) without breaking the user request.
