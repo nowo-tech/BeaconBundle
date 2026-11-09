@@ -9,6 +9,7 @@ use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+use function array_keys;
 use function count;
 use function explode;
 use function file_get_contents;
@@ -193,8 +194,9 @@ final class EnvelopeGoldenShapeTest extends TestCase
         self::assertTrue(is_array($header) && is_array($item) && is_array($payload));
         self::assertSame('event', $item['type']);
         self::assertSame('application/json', $item['content_type']);
-        self::assertTrue(is_string($header['dsn']));
-        self::assertSame($dsn->toString(), $header['dsn']);
+        // Since 1.21 the header carries no DSN: the secret travels only in X-Beacon-Auth.
+        self::assertSame(['event_id', 'sent_at'], array_keys($header));
+        self::assertStringNotContainsString($dsn->getSecretKey(), $body);
         self::assertSame('Something broke', $payload['message']);
         self::assertSame('php', $payload['platform']);
         self::assertArrayHasKey('timestamp', $payload);

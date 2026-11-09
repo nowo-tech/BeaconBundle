@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use Closure;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Throwable;
 
 use function error_reporting;
@@ -205,7 +206,8 @@ final class BeaconPhpWarningHandler
             [
                 'php-warning',
                 $label,
-                $message,
+                // Beacon stores the fingerprint as is (the scrubber does not see it): no secret may survive in it.
+                SensitiveValueRedactor::redactMessage($message),
                 $file . ':' . $line,
             ],
         );

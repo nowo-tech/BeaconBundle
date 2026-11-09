@@ -4,21 +4,27 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Envelope;
 
+use Nowo\Beacon\Transport\IngestResponseHandler;
+use Nowo\Beacon\Transport\SymfonyHttpClientTransport;
+use Nowo\Beacon\Transport\TransportResult as CoreTransportResult;
 use Nowo\BeaconBundle\Client\ClientUserAgent;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Monolog\BeaconMonologHandler;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Throwable;
 
 /**
  * Synchronous HTTP transport that POSTs Envelope bodies to Beacon ingest.
  *
- * Authentication uses both:
- * - `X-Beacon-Auth` with `beacon_key` + `beacon_secret` (preferred by Symfony Beacon)
- * - the full DSN (including secret) embedded in the envelope header
+ * Wraps beacon-php's {@see SymfonyHttpClientTransport}: one POST with `X-Beacon-Auth` (`beacon_key` +
+ * `beacon_secret`, the only place the secret is sent since 1.21), the bundle's `User-Agent`, `timeout` /
+ * `max_duration`, redirects never followed (a 3xx is a failed send), `verify_peer` / `verify_host` always explicit
+ * ({@see ExplicitTlsHttpClient}). Responses are logged by beacon-php's {@see IngestResponseHandler} (same messages and
+ * context keys as before; transport error texts have the secret removed) and never throw.
+ *
+ * {@see startRequest()} / {@see finalizeResponse()} split the same request for {@see AsyncEnvelopeTransport}.
  */
 final class EnvelopeTransport implements EnvelopeTransportInterface
 {
@@ -29,11 +35,15 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      * "Beacon ingest transport failed." to Beacon would queue a new send to the same unreachable
      * receiver, fail again and log again — one endless chain per failure while the receiver is down.
      */
-    public const LOG_CONTEXT_FLAG = 'nowo_beacon_transport';
+    public const LOG_CONTEXT_FLAG = IngestResponseHandler::LOG_CONTEXT_FLAG;
 
     private readonly string $clientName;
 
-    private ?string $lastStartError = null;
+    private readonly HttpClientInterface $tlsHttpClient;
+
+    private readonly IngestResponseHandler $responses;
+
+    private readonly SymfonyHttpClientTransport $core;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -43,15 +53,18 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
         private readonly ?LoggerInterface $logger = null,
         ?string $clientName = null,
     ) {
-        $this->clientName = $clientName ?? ClientUserAgent::resolve();
-    }
-
-    /**
-     * Logger used for ingest failures (NullLogger when none was injected).
-     */
-    private function logger(): LoggerInterface
-    {
-        return $this->logger ?? new NullLogger();
+        $this->clientName    = $clientName ?? ClientUserAgent::resolve();
+        $this->tlsHttpClient = new ExplicitTlsHttpClient($this->httpClient, $this->verifyPeer);
+        $this->responses     = new IngestResponseHandler($this->dsn, $this->logger);
+        $this->core          = new SymfonyHttpClientTransport(
+            $this->tlsHttpClient,
+            $this->dsn,
+            $this->verifyPeer,
+            $this->timeout,
+            $this->logger,
+            $this->clientName,
+            maxRedirects: 0,
+        );
     }
 
     /**
@@ -67,18 +80,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function sendDetailed(string $envelopeBody): TransportResult
     {
-        // @igor-ignore - Not shared worker service state.
-        $this->lastStartError = null;
-        $response             = $this->startRequest($envelopeBody);
-        if (!$response instanceof ResponseInterface) {
-            return new TransportResult(
-                false,
-                null,
-                $this->lastStartError ?? 'HTTP client could not start the ingest request.',
-            );
-        }
-
-        return $this->finalizeResponseDetailed($response);
+        return $this->fromCore($this->core->send($envelopeBody));
     }
 
     /**
@@ -88,6 +90,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function startRequest(string $envelopeBody): ?ResponseInterface
     {
+        // Same request as SymfonyHttpClientTransport::send().
         $options = [
             'headers' => [
                 'Content-Type'  => 'application/x-beacon-envelope',
@@ -99,21 +102,12 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             'max_duration' => $this->timeout,
             // Never follow a redirect: it would carry the Beacon credentials to another host.
             'max_redirects' => 0,
-            // Always explicit, so a host-wide framework.http_client `verify_peer: false` cannot weaken TLS here.
-            'verify_peer' => $this->verifyPeer,
-            'verify_host' => $this->verifyPeer,
         ];
 
         try {
-            return $this->httpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
-        } catch (TransportExceptionInterface $exception) {
-            // @igor-ignore - Not shared worker service state.
-            $this->lastStartError = $exception->getMessage();
-            $this->logger()->error('Beacon ingest transport failed.', [
-                'exception'            => $exception->getMessage(),
-                'url'                  => $this->dsn->getEnvelopeUrl(),
-                self::LOG_CONTEXT_FLAG => true,
-            ]);
+            return $this->tlsHttpClient->request('POST', $this->dsn->getEnvelopeUrl(), $options);
+        } catch (Throwable $exception) {
+            $this->responses->fromFailure($exception);
 
             return null;
         }
@@ -138,57 +132,21 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     {
         try {
             $status = $response->getStatusCode();
-        } catch (TransportExceptionInterface $exception) {
-            $this->logger()->error('Beacon ingest transport failed.', [
-                'exception'            => $exception->getMessage(),
-                'url'                  => $this->dsn->getEnvelopeUrl(),
-                self::LOG_CONTEXT_FLAG => true,
-            ]);
-
-            return new TransportResult(false, null, $exception->getMessage());
+        } catch (Throwable $exception) {
+            return $this->fromCore($this->responses->fromFailure($exception));
         }
 
-        if ($status >= 200 && $status < 300) {
-            return new TransportResult(true, $status);
-        }
-
-        $this->logRejectedResponse($status, $response);
-
-        return new TransportResult(false, $status);
-    }
-
-    /**
-     * @param int $status HTTP status from Beacon ingest
-     */
-    private function logRejectedResponse(int $status, ResponseInterface $response): void
-    {
-        $context = [
-            'status'               => $status,
-            'url'                  => $this->dsn->getEnvelopeUrl(),
-            self::LOG_CONTEXT_FLAG => true,
-        ];
-
-        if ($status === 429) {
-            $retryAfter = $response->getHeaders(false)['retry-after'][0] ?? null;
-            if ($retryAfter !== null && $retryAfter !== '') {
-                $context['retry_after'] = $retryAfter;
-            }
-
-            $this->logger()->warning('Beacon ingest rate limited (HTTP 429). Respect Retry-After before retrying.', $context);
-
-            return;
-        }
-
-        if ($status === 401 || $status === 403) {
-            $this->logger()->warning(
-                'Beacon ingest authentication rejected. Confirm BEACON_DSN includes public:secret and matches the project.',
-                $context,
-            );
-
-            return;
-        }
-
-        $this->logger()->warning('Beacon ingest rejected envelope.', $context);
+        return $this->fromCore($this->responses->fromStatus(
+            $status,
+            // @igor-ignore - Per-call header reader passed to the handler and dropped; nothing is stored on the service.
+            static function (string $name) use ($response): ?string {
+                try {
+                    return $response->getHeaders(false)[$name][0] ?? null;
+                } catch (Throwable) {
+                    return null;
+                }
+            },
+        ));
     }
 
     /**
@@ -197,5 +155,11 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     public function getDsn(): BeaconDsn
     {
         return $this->dsn;
+    }
+
+    private function fromCore(CoreTransportResult $result): TransportResult
+    {
+        // As before, an error text only accompanies transport failures (no HTTP status); a 3xx keeps a null text.
+        return new TransportResult($result->accepted, $result->statusCode, $result->statusCode === null ? $result->errorMessage : null);
     }
 }

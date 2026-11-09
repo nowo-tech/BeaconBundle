@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Dsn;
 
 use LogicException;
+use Nowo\Beacon\Dsn\Dsn;
 use SensitiveParameter;
 use SensitiveParameterValue;
-
-use function is_int;
 
 /**
  * Parsed Beacon DSN (authority + project id).
@@ -22,98 +21,37 @@ use function is_int;
  * - `https://PUBLIC:SECRET@localhost:9447/019fea2d-507b-7890-8b33-ca488db6f696`
  * - `http://PUBLIC:SECRET@beacon.internal:9081/2`
  *
- * The secret is held in a {@see SensitiveParameterValue}, so `var_dump()`, `print_r()`, `var_export()`, Symfony
- * VarDumper (`dump()`, profiler) and exception traces never show it, and the object cannot be serialized.
+ * Extends beacon-php's {@see Dsn}, so the core transports and builders accept it. The secret is held here in a
+ * {@see SensitiveParameterValue} (the parent only ever stores an empty string), so `var_dump()`, `print_r()`,
+ * `var_export()`, Symfony VarDumper (`dump()`, profiler) and exception traces never show it, and the object cannot be
+ * serialized.
  */
-final class BeaconDsn
+final class BeaconDsn extends Dsn
 {
-    private readonly string $projectId;
-
-    private readonly SensitiveParameterValue $secretKey;
+    private readonly SensitiveParameterValue $secret;
 
     /**
      * @param int|string $projectId Positive numeric legacy id or canonical project UUID
      */
     public function __construct(
-        private readonly string $scheme,
-        private readonly string $publicKey,
+        string $scheme,
+        string $publicKey,
         #[SensitiveParameter]
         string $secretKey,
-        private readonly string $host,
-        private readonly ?int $port,
+        string $host,
+        ?int $port,
         string|int $projectId,
     ) {
-        $this->projectId = is_int($projectId) ? (string) $projectId : $projectId;
-        $this->secretKey = new SensitiveParameterValue($secretKey);
+        parent::__construct($scheme, $publicKey, '', $host, $port, $projectId);
+        $this->secret = new SensitiveParameterValue($secretKey);
     }
 
     /**
-     * URL scheme (`http` or `https`).
-     */
-    public function getScheme(): string
-    {
-        return $this->scheme;
-    }
-
-    /**
-     * Public key (DSN userinfo username).
-     */
-    public function getPublicKey(): string
-    {
-        return $this->publicKey;
-    }
-
-    /**
-     * Secret key (DSN userinfo password). Required by Symfony Beacon ingest.
+     * Secret key (DSN userinfo password). Required by Beacon ingest.
      */
     public function getSecretKey(): string
     {
-        return (string) $this->secretKey->getValue();
-    }
-
-    /**
-     * Hostname from the DSN authority.
-     */
-    public function getHost(): string
-    {
-        return $this->host;
-    }
-
-    /**
-     * Explicit port when present in the DSN.
-     */
-    public function getPort(): ?int
-    {
-        return $this->port;
-    }
-
-    /**
-     * Beacon project id (positive numeric legacy string or canonical UUID).
-     */
-    public function getProjectId(): string
-    {
-        return $this->projectId;
-    }
-
-    /**
-     * Base origin including scheme, host, and optional port (no path).
-     */
-    public function getOrigin(): string
-    {
-        $authority = $this->host;
-        if ($this->port !== null) {
-            $authority .= ':' . $this->port;
-        }
-
-        return $this->scheme . '://' . $authority;
-    }
-
-    /**
-     * Envelope ingest URL: `{origin}/api/{projectId}/envelope/`.
-     */
-    public function getEnvelopeUrl(): string
-    {
-        return $this->getOrigin() . '/api/' . $this->projectId . '/envelope/';
+        return (string) $this->secret->getValue();
     }
 
     /**
@@ -121,17 +59,18 @@ final class BeaconDsn
      */
     public function getBeaconAuthHeader(): string
     {
-        return 'Beacon beacon_key=' . $this->publicKey . ', beacon_secret=' . $this->getSecretKey();
+        return 'Beacon beacon_key=' . $this->getPublicKey() . ', beacon_secret=' . $this->getSecretKey();
     }
 
     /**
-     * Rebuild a canonical DSN string (always includes the secret).
+     * Rebuild a canonical DSN string. It includes the secret: never log or send it (the Envelope header no longer
+     * carries it since 1.21).
      */
     public function toString(): string
     {
-        return $this->scheme . '://' . $this->publicKey . ':' . $this->getSecretKey() . '@' . $this->host
-            . ($this->port !== null ? ':' . $this->port : '')
-            . '/' . $this->projectId;
+        return $this->getScheme() . '://' . $this->getPublicKey() . ':' . $this->getSecretKey() . '@' . $this->getHost()
+            . ($this->getPort() !== null ? ':' . $this->getPort() : '')
+            . '/' . $this->getProjectId();
     }
 
     /**
@@ -139,7 +78,7 @@ final class BeaconDsn
      */
     public function __debugInfo(): array
     {
-        return ['origin' => $this->getOrigin(), 'project_id' => $this->projectId, 'public_key' => $this->publicKey, 'secret_key' => '***'];
+        return ['origin' => $this->getOrigin(), 'project_id' => $this->getProjectId(), 'public_key' => $this->getPublicKey(), 'secret_key' => '***'];
     }
 
     /**

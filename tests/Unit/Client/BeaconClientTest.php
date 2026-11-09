@@ -118,7 +118,9 @@ final class BeaconClientTest extends TestCase
         self::assertSame('application/x-beacon-envelope', $contentType);
 
         $body = (string) ($requests[0]['options']['body'] ?? '');
-        self::assertStringContainsString('"dsn":"https://pubkey:secret@beacon.example.com:9444/5"', $body);
+        // Since 1.21 the DSN (and its secret) is not in the body; the secret travels only in X-Beacon-Auth.
+        self::assertStringNotContainsString('"dsn"', $body);
+        self::assertStringNotContainsString('secret', $body);
     }
 
     public function testBreadcrumbsAndTransaction(): void
@@ -206,13 +208,14 @@ final class BeaconClientTest extends TestCase
         $client->clearTags();
     }
 
-    public function testBeforeSendEdgeCasesViaReflection(): void
+    public function testBeforeSendReturningANonArrayDropsTheEvent(): void
     {
-        $dsn = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
-        // Invalid return type exercises the fail-soft path in applyBeforeSend.
+        $dsn  = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/9');
+        $http = new MockHttpClient(new MockResponse('', ['http_code' => 200]));
+        // Invalid return type exercises the fail-soft path of the before_send hook.
         $beforeSend = static fn (array $event): mixed => 'not-an-array';
         $client     = new BeaconClient(
-            new EnvelopeTransport(new MockHttpClient(new MockResponse('', ['http_code' => 200])), $dsn),
+            new EnvelopeTransport($http, $dsn),
             new EnvelopeBuilder('test'),
             true,
             null,
@@ -222,15 +225,8 @@ final class BeaconClientTest extends TestCase
             $beforeSend,
         );
 
-        $apply = new ReflectionMethod($client, 'applyBeforeSend');
-        $apply->setAccessible(true);
-
-        self::assertSame("only-one-line\n", $apply->invoke($client, "only-one-line\n"));
-        self::assertSame(
-            "h\ni\nnot-json\n",
-            $apply->invoke($client, "h\ni\nnot-json\n"),
-        );
-        self::assertNull($apply->invoke($client, "h\ni\n{\"message\":\"x\"}\n"));
+        self::assertNull($client->captureMessage('x'));
+        self::assertSame(0, $http->getRequestsCount());
     }
 
     public function testBeforeSendDropsCaptureException(): void

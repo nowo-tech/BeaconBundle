@@ -272,4 +272,66 @@ final class EnvelopeTransportTest extends TestCase
         self::assertFalse($result->isAccepted());
         self::assertSame('status failed', $result->getErrorMessage());
     }
+
+    public function testRateLimitWithUnreadableHeadersIsStillARejection(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger
+            ->expects(self::once())
+            ->method('warning')
+            ->with(
+                'Beacon ingest rate limited (HTTP 429). Respect Retry-After before retrying.',
+                self::callback(static fn (array $context): bool => $context['status'] === 429 && !isset($context['retry_after'])),
+            );
+
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(429);
+        $response
+            ->method('getHeaders')
+            ->willThrowException(new class('headers failed') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $result = (new EnvelopeTransport(new MockHttpClient(), $dsn, true, 5.0, $logger))->finalizeResponseDetailed($response);
+
+        self::assertFalse($result->isAccepted());
+        self::assertSame(429, $result->getStatusCode());
+    }
+
+    public function testARedirectIsLoggedAsNotFollowed(): void
+    {
+        $dsn    = (new BeaconDsnParser())->parse('https://pubkey:secret@beacon.example.com/5');
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger
+            ->expects(self::once())
+            ->method('warning')
+            ->with('Beacon ingest answered with a redirect, which is not followed. Point BEACON_DSN at the final Beacon URL.');
+
+        $transport = new EnvelopeTransport(
+            new MockHttpClient(new MockResponse('', ['http_code' => 308, 'response_headers' => ['Location: https://elsewhere.example.net/']])),
+            $dsn,
+            true,
+            5.0,
+            $logger,
+        );
+
+        $result = $transport->sendDetailed("envelope\n");
+        self::assertFalse($result->isAccepted());
+        self::assertSame(308, $result->getStatusCode());
+        self::assertNull($result->getErrorMessage());
+    }
+
+    public function testTransportErrorTextsNeverCarryTheSecret(): void
+    {
+        $dsn        = (new BeaconDsnParser())->parse('https://pubkey:s3cr3t-value@beacon.example.com/5');
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient
+            ->method('request')
+            ->willThrowException(new class('echoed X-Beacon-Auth: Beacon beacon_key=pubkey, beacon_secret=s3cr3t-value') extends RuntimeException implements TransportExceptionInterface {
+            });
+
+        $result = (new EnvelopeTransport($httpClient, $dsn))->sendDetailed("envelope\n");
+
+        self::assertStringNotContainsString('s3cr3t-value', (string) $result->getErrorMessage());
+    }
 }
