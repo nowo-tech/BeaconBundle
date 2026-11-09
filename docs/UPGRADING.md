@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.21.0](#to-1210)
 - [To 1.20.0](#to-1200)
 - [To 1.19.2](#to-1192)
 - [To 1.19.1](#to-1191)
@@ -90,6 +91,31 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.21.0
+
+From **1.20.0** (target **1.21.0**, not yet released):
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+The bundle now requires [`nowo-tech/beacon-php`](https://github.com/nowo-tech/beacon-php) `^0.1` (installed automatically, with `psr/http-client`, `psr/http-factory`, `psr/http-message` and `symfony/polyfill-mbstring`). No configuration key changed and no service was renamed or removed.
+
+Intended behaviour changes (owner decisions 2026-11-09):
+
+- **No DSN in the Envelope body.** The first NDJSON line is now `{"event_id":"…","sent_at":"…"}`; the secret is sent only in the `X-Beacon-Auth` header. Symfony Beacon authenticates with that header first and needs nothing else. If something between your app and Beacon strips custom `X-*` request headers (a proxy or WAF rule), ingest that only worked thanks to the header `dsn` now fails with **401**: let `X-Beacon-Auth` through. Code that parsed the header `dsn` out of envelopes (custom `before_send` does not see the header; a custom transport or a Messenger middleware might) must read the DSN from configuration instead. Envelopes stored by `transport.mode: messenger` no longer contain the secret.
+- **Client-side scrubbing before `before_send`.** Sensitive keys in `extra`, `contexts`, `tags` and breadcrumb `data` (`password`, `token`, `secret`, `auth*`, `session*`, `cookie`, `csrf`, `card*`, `cvv`, `iban`, `ssn`, …), credential patterns and Luhn-valid card numbers in strings, credential headers and cookies are replaced with `[Filtered]` before your `before_send` runs. Keys such as `author` or `session_count` match too: rename them in your `extra` / tags if you need the value in Beacon.
+- **PHP-warning fingerprints are redacted.** A warning whose message contained a secret (`password=…`, a bearer token, a DSN) gets a new fingerprint, so it opens a new issue once; resolve the old one.
+- **Redirects are not followed** (unchanged since 1.19.2). A 3xx is now logged as `Beacon ingest answered with a redirect, which is not followed. Point BEACON_DSN at the final Beacon URL.`
+
+Other differences, visible only in edge cases:
+
+- An exception thrown by the HTTP client that is not a `TransportExceptionInterface` is now logged as `Beacon ingest transport failed.` and the send returns `false`, instead of propagating.
+- Transport error texts in logs and `TransportResult::getErrorMessage()` have the DSN secret, the auth header value and credential-shaped substrings replaced by `[Filtered]`.
+- `BeaconDsn`, `InvalidBeaconDsnException`, `Scope`, `BreadcrumbBuffer`, `TraceIdProvider`, `SpanBuffer` and `UserContextProviderInterface` now extend / implement their beacon-php counterparts (`instanceof` checks against the bundle classes still hold). `Scope` inherits `setUser()` and `setExtra()`: a user set there is sent as the event `user` even when `send.user` is off.
+
+Everything else in the envelopes is byte-identical to 1.20.0 for the same input (golden tests in `tests/Contract/EnvelopeGoldenBytesTest.php` and `EnvelopeLiveParityTest.php`).
 
 ## To 1.20.0
 

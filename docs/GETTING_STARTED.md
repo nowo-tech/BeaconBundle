@@ -28,7 +28,7 @@ All steps below assume English UI labels where applicable.
 ```text
 Your Symfony app (BeaconBundle)
         │  POST /api/{projectId}/envelope/
-        │  Auth: DSN in envelope header
+        │  Auth: X-Beacon-Auth header (key + secret)
         ▼
 Symfony Beacon server
         │  HTTP 200 ACK
