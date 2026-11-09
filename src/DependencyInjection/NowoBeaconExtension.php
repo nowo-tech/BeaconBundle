@@ -75,6 +75,7 @@ use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_map;
+use function array_unique;
 use function array_values;
 use function class_exists;
 use function interface_exists;
@@ -322,6 +323,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $listener->setArgument('$sendRequest', (bool) ($send['request'] ?? true));
             $listener->setArgument('$ignorePaths', $config['ignore_paths']);
             $listener->setArgument('$sendClient', (bool) ($send['client'] ?? false));
+            $listener->setArgument('$ignoreHttpClientErrors', (bool) ($config['ignore_http_client_errors'] ?? false));
         } else {
             $container->removeDefinition(BeaconExceptionListener::class);
         }
@@ -425,6 +427,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $handler = new Definition(BeaconMonologHandler::class, [
                 '$client' => new Reference(BeaconClientInterface::class),
                 '$level'  => (string) ($monolog['level'] ?? 'error'),
+                // Same matcher as the exception listener: main ignore list + handler-only extras.
+                '$ignoreExceptions' => array_values(array_unique([
+                    ...$config['ignore_exceptions'],
+                    ...($monolog['ignore_exceptions'] ?? []),
+                ])),
+                '$ignoreHttpClientErrors' => (bool) ($monolog['ignore_http_client_errors'] ?? true),
             ]);
             $handler->setPublic(false);
             $container->setDefinition(BeaconMonologHandler::class, $handler);

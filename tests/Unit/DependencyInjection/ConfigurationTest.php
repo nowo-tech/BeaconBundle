@@ -45,7 +45,10 @@ final class ConfigurationTest extends TestCase
         self::assertFalse($config['instrumentation']['http_client']);
         self::assertFalse($config['monolog_handler']['enabled']);
         self::assertSame('error', $config['monolog_handler']['level']);
+        self::assertSame([], $config['monolog_handler']['ignore_exceptions']);
+        self::assertTrue($config['monolog_handler']['ignore_http_client_errors']);
         self::assertSame([], $config['ignore_exceptions']);
+        self::assertFalse($config['ignore_http_client_errors']);
         self::assertSame([
             '/_profiler',
             '/_wdt',

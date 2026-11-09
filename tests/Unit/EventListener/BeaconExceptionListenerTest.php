@@ -7,10 +7,14 @@ namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
+use Nowo\BeaconBundle\Tests\Fixtures\RecordingBeaconClient;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Throwable;
@@ -81,6 +85,27 @@ final class BeaconExceptionListenerTest extends TestCase
         $kernel   = $this->createMock(HttpKernelInterface::class);
         $event    = new ExceptionEvent($kernel, Request::create('/boom'), HttpKernelInterface::MAIN_REQUEST, new RuntimeException('boom'));
         $listener->onKernelException($event);
+    }
+
+    public function testReportsHttpClientErrorsByDefault(): void
+    {
+        $client = new RecordingBeaconClient();
+        (new BeaconExceptionListener($client, true, []))->onKernelException($this->createEvent(new NotFoundHttpException('nope')));
+
+        self::assertCount(1, $client->exceptions);
+    }
+
+    public function testSkipsHttpClientErrorsWhenConfiguredButReportsServerErrors(): void
+    {
+        $client   = new RecordingBeaconClient();
+        $listener = new BeaconExceptionListener($client, true, [], true, IgnoredRequestPath::DEFAULTS, false, true);
+        $listener->onKernelException($this->createEvent(new NotFoundHttpException('nope')));
+        $listener->onKernelException($this->createEvent(new AccessDeniedHttpException('no')));
+        $listener->onKernelException($this->createEvent(new HttpException(500, 'boom')));
+
+        self::assertCount(1, $client->exceptions);
+        self::assertInstanceOf(HttpException::class, $client->exceptions[0]['throwable']);
+        self::assertSame(500, $client->exceptions[0]['throwable']->getStatusCode());
     }
 
     public function testDoesNothingWhenListenerIsDisabled(): void

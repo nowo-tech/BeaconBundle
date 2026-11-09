@@ -9,6 +9,7 @@ use Monolog\Level;
 use Monolog\LogRecord;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
+use Nowo\BeaconBundle\Support\IgnoredException;
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Throwable;
 
@@ -18,6 +19,13 @@ use Throwable;
  * Records written by the bundle's own transport (context flag {@see EnvelopeTransport::LOG_CONTEXT_FLAG})
  * are never forwarded: they describe a failed send to Beacon, and reporting them through the same
  * transport while the receiver is down would loop forever. They still reach the other handlers.
+ *
+ * Records whose `context.exception` matches the shared ignore rule ({@see IgnoredException}:
+ * `nowo_beacon.ignore_exceptions` + `monolog_handler.ignore_exceptions`, and HTTP 4xx when
+ * `monolog_handler.ignore_http_client_errors` is true) are not sent either. Symfony's ErrorListener
+ * logs every uncaught 4xx at ERROR, so without this a 404 would become a Beacon issue even though
+ * the exception listener skips it. The record still bubbles to the other handlers; records without
+ * an exception are unaffected.
  */
 final class BeaconMonologHandler extends AbstractProcessingHandler
 {
@@ -25,6 +33,9 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
         private readonly BeaconClientInterface $client,
         int|string|Level $level = Level::Error,
         bool $bubble = true,
+        /** @var list<string> */
+        private readonly array $ignoreExceptions = [],
+        private readonly bool $ignoreHttpClientErrors = true,
     ) {
         parent::__construct($level, $bubble);
     }
@@ -54,6 +65,10 @@ final class BeaconMonologHandler extends AbstractProcessingHandler
         }
 
         if ($exception instanceof Throwable) {
+            if (IgnoredException::matches($exception, $this->ignoreExceptions, $this->ignoreHttpClientErrors)) {
+                return;
+            }
+
             $this->client->captureException($exception, $extra);
 
             return;

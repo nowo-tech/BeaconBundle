@@ -73,6 +73,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Target: **1.20.0** (new options).
+
+### Fixed
+
+- **Monolog handler honours the ignore rules (BB-1).** `BeaconMonologHandler` (`monolog_handler`) captured `context.exception` from every record without applying `nowo_beacon.ignore_exceptions`. Symfony's `ErrorListener` logs every uncaught 4xx at ERROR, so `NotFoundHttpException` and `AccessDeniedHttpException` became Beacon issues even when the exception listener skipped them. The handler now uses the same matcher as the listeners (`Support\IgnoredException`): the main `ignore_exceptions` list always applies, and by default any `HttpExceptionInterface` with a status code below 500 is skipped. 5xx `HttpException`s and every other exception are still sent; records without an exception are unchanged; skipped records still bubble to the other Monolog handlers.
+
+### Added
+
+- `monolog_handler.ignore_http_client_errors` (default `true`): skip `HttpExceptionInterface` with status < 500 in the Monolog handler.
+- `monolog_handler.ignore_exceptions` (default `[]`): extra FQCNs skipped by the Monolog handler only, on top of the main `ignore_exceptions`.
+- `ignore_http_client_errors` (default `false`): the same 4xx rule for the HTTP exception listener (`BeaconExceptionListener`). Off by default, so the listener keeps its current behaviour.
+- `Support\IgnoredException`: the single ignore matcher now shared by the HTTP, console and Messenger listeners and the Monolog handler (`MessengerContext::isIgnored()` delegates to it).
+
 ## [1.19.2] - 2026-11-02
 
 Security hardening: fail-closed redaction with bounded cost (camelCase names, quoted JSON, URL passwords, cards), strict remote-command lifetime, explicit TLS verification, secret holders never dumped or serialized. Rotate the DSN secret if your Beacon URL ever redirected. See [UPGRADING](https://github.com/nowo-tech/BeaconBundle/blob/v1.19.2/docs/UPGRADING.md#to-1192).

@@ -6,12 +6,12 @@ namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
+use Nowo\BeaconBundle\Support\IgnoredException;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Throwable;
 
 /**
  * Reports uncaught HTTP exceptions to Beacon when enabled.
@@ -27,6 +27,7 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         /** @var list<string> */
         private readonly array $ignorePaths = IgnoredRequestPath::DEFAULTS,
         private readonly bool $sendClient = false,
+        private readonly bool $ignoreHttpClientErrors = false,
     ) {
     }
 
@@ -54,7 +55,7 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         }
 
         $throwable = $event->getThrowable();
-        if ($this->shouldIgnore($throwable)) {
+        if (IgnoredException::matches($throwable, $this->ignoreExceptions, $this->ignoreHttpClientErrors)) {
             return;
         }
 
@@ -72,19 +73,5 @@ final class BeaconExceptionListener implements EventSubscriberInterface
         }
 
         $this->client->captureException($throwable, $extra);
-    }
-
-    /**
-     * Whether `$throwable` matches any configured ignore class.
-     */
-    private function shouldIgnore(Throwable $throwable): bool
-    {
-        foreach ($this->ignoreExceptions as $class) {
-            if ($throwable instanceof $class) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

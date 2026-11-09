@@ -104,6 +104,7 @@ nowo_beacon:
         doctrine: false
         http_client: false
     ignore_exceptions: []
+    ignore_http_client_errors: false   # 1.20+: listener also skips HttpExceptionInterface with status < 500
     ignore_paths:
         - '/_profiler'
         - '/_wdt'
@@ -114,6 +115,8 @@ nowo_beacon:
     monolog_handler:
         enabled: false
         level: error
+        ignore_exceptions: []            # 1.20+: extra FQCNs, on top of the main ignore_exceptions
+        ignore_http_client_errors: true  # 1.20+: skip HttpExceptionInterface with status < 500
     send:
         environment: true
         release: true
@@ -180,10 +183,13 @@ nowo_beacon:
 | `before_send` | `null` | Optional **service id** of an invokable `(array $event): ?array`. Return a mutated payload, or `null` to drop the send. If the hook throws, the event is dropped (fail soft). |
 | `instrumentation.doctrine` | `false` | When true and `doctrine/dbal` is installed, register a DBAL middleware that records `db.sql.query` spans and breadcrumbs (string, double-quoted and numeric literals scrubbed to `?`; truncated). |
 | `instrumentation.http_client` | `false` | When true, decorate `http_client` to record `http.client` spans and breadcrumbs. Beacon Envelope ingest and remote Messenger command URLs are skipped. |
-| `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners. |
+| `ignore_exceptions` | `[]` | List of exception FQCNs skipped by HTTP/console/Messenger automatic listeners and (1.20+) the Monolog handler. `instanceof` match. |
+| `ignore_http_client_errors` | `false` | 1.20+: the HTTP exception listener also skips any `HttpExceptionInterface` with status < 500. |
 | `ignore_paths` | `IgnoredRequestPath::DEFAULTS` | HTTP path prefixes skipped by the exception listener and auto HTTP transactions (trailing slashes ignored). Defaults: `/_profiler`, `/_wdt`, `/build`, `/assets`, `/health`, Chrome DevTools Appspecific probe — aligned with Symfony Beacon security/PWA/site-backup/setup exclusions. Replacing the list removes defaults; use `[]` to report every path. |
 | `monolog_handler.enabled` | `false` | Register `BeaconMonologHandler` and prepend it into `monolog.handlers` as `type: service` (requires `monolog/monolog` + MonologBundle). |
 | `monolog_handler.level` | `error` | Minimum Monolog level forwarded to Beacon. |
+| `monolog_handler.ignore_exceptions` | `[]` | 1.20+: extra exception FQCNs skipped by the Monolog handler only. The main `ignore_exceptions` list always applies to the handler too. |
+| `monolog_handler.ignore_http_client_errors` | `true` | 1.20+: skip records whose `context.exception` is an `HttpExceptionInterface` with status < 500 (Symfony's `ErrorListener` logs every uncaught 4xx at ERROR). |
 
 The self-test routes come from the `nowo_beacon` route loader instead of `#[Route]` attributes on the controller: they exist only when `self_test.http.enabled` is true and their path is configurable (`self_test.http.path`), which static attributes cannot express. The import file only points at the loader; route names (`nowo_beacon_self_test`, `nowo_beacon_self_test_trigger`) are stable.
 
@@ -241,9 +247,10 @@ nowo_beacon:
 ## Important behavior
 
 - Empty `dsn` means the bundle wires `NullBeaconClient`.
-- `ignore_exceptions` only affects the automatic listener. Manual `captureException()` calls still send unless your own code avoids them.
+- `ignore_exceptions` only affects the automatic listeners and the Monolog handler. Manual `captureException()` calls still send unless your own code avoids them.
 - `ignore_paths` only affects the HTTP exception listener and `auto_http_transaction`. Console / Messenger listeners are unaffected.
 - `ignore_routes` and `http_transaction_sample_rate` only affect `auto_http_transaction`; exceptions on those routes are still reported.
+- `monolog_handler` applies the same ignore rule as the listeners (`Support\IgnoredException`): the main `ignore_exceptions`, plus `monolog_handler.ignore_exceptions`, plus HTTP 4xx when `monolog_handler.ignore_http_client_errors` is true. Only Beacon skips the record; it still bubbles to the other handlers. Records without `context.exception` are forwarded as messages as before.
 - `monolog_handler` never forwards the bundle transport's own logs (context flag `nowo_beacon_transport`, `EnvelopeTransport::LOG_CONTEXT_FLAG`): reporting a failed send through the same transport would loop while the receiver is down. Other handlers still receive them.
 - `timeout` applies to the synchronous HTTP request path.
 - `verify_peer: false` also disables host verification in the underlying HTTP client and should stay limited to local dev.
