@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.20.0](#to-1200)
 - [To 1.19.2](#to-1192)
 - [To 1.19.1](#to-1191)
 - [To 1.19.0](#to-1190)
@@ -90,6 +91,14 @@
 
 ## Unreleased
 
+## To 1.20.0
+
+From **1.19.2**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
 Target: **1.20.0**.
 
 ```bash
@@ -110,6 +119,8 @@ New options (all optional):
 - `ignore_http_client_errors` (default `false`): apply the same 4xx rule to the HTTP exception listener. If you list `NotFoundHttpException` / `AccessDeniedHttpException` in `ignore_exceptions` only to silence 4xx, you can set this to `true` instead.
 
 Hosts that construct `BeaconMonologHandler` or `BeaconExceptionListener` by hand: the new constructor arguments are appended with defaults, so existing calls still work (a hand-built `BeaconMonologHandler` now skips 4xx by default).
+
+**Broad ignore entries now also cover logged errors (audit IZ-I2):** `ignore_exceptions` applies to `BeaconMonologHandler` too, including exceptions the application catches and logs itself. An entry such as `RuntimeException` therefore also stops a 5xx `HttpException` and those logged errors from reaching Beacon; keep the list narrow. With `monolog_handler.ignore_http_client_errors: true` (default) a 4xx that wraps a real cause (for example the 400 HttpKernel builds from a bad request, or a 422 from `MapRequestPayload`) is skipped by the handler as well (IZ-I3).
 
 ## To 1.19.2
 
