@@ -4,6 +4,7 @@
 
 - [Unreleased](#unreleased)
 - [To 1.22.0](#to-1220)
+- [To 1.22.0](#to-1220-1)
 - [To 1.21.0](#to-1210)
 - [To 1.21.0](#to-1210-1)
 - [To 1.20.0](#to-1200)
@@ -93,6 +94,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.22.0
+
+From **1.21.0**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 ## To 1.22.0
 

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.22.0] - 2026-11-10](#1220---2026-11-10)
 - [[1.21.0] - 2026-11-09](#1210---2026-11-09)
 - [[1.20.0] - 2026-11-09](#1200---2026-11-09)
 - [[1.19.2] - 2026-11-02](#1192---2026-11-02)
@@ -74,6 +75,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [[1.0.0] - 2026-07-20](#100---2026-07-20)
 
 ## [Unreleased]
+
+## [1.22.0] - 2026-11-10
 
 Target: **1.22.0** (new minor). Additive; the defaults keep today's behaviour. See [UPGRADING](UPGRADING.md#to-1220).
 
@@ -839,7 +842,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.22.0...HEAD
 [1.13.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.1...v1.12.0
