@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.22.0](#to-1220)
 - [To 1.21.0](#to-1210)
 - [To 1.21.0](#to-1210-1)
 - [To 1.20.0](#to-1200)
@@ -92,6 +93,31 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.22.0
+
+From **1.21.0** (target **1.22.0**, not yet released):
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+Nothing to change: with the default configuration the trace middleware is prepended to `messenger.bus.default`
+exactly as before. New optional keys:
+
+```yaml
+nowo_beacon:
+    messenger:
+        trace_middleware:
+            enabled: true                       # false = no bus gets BeaconTraceMiddleware
+            buses: ['messenger.bus.default']    # e.g. [command.bus, event.bus]
+```
+
+- `buses` replaces the default list; keep `messenger.bus.default` in it if you still want that bus stamped.
+  List only buses your `framework.messenger.buses` declares: like the default, each listed name is merged into the
+  Messenger configuration, so an undeclared name becomes an extra (empty) bus.
+- With `enabled: false`, messages no longer carry a `BeaconTraceStamp`, so events from handlers are not correlated
+  with the request that dispatched them. A middleware you listed yourself in a bus keeps working.
 
 ## To 1.21.0
 

@@ -91,7 +91,8 @@ use function is_string;
 final class NowoBeaconExtension extends Extension implements PrependExtensionInterface
 {
     /**
-     * Prepends MonologBundle handler config when `monolog_handler.enabled` is true.
+     * Prepends MonologBundle handler config when `monolog_handler.enabled` is true, and the Messenger trace middleware
+     * on `messenger.trace_middleware.buses` unless `messenger.trace_middleware.enabled` is false.
      */
     public function prepend(ContainerBuilder $container): void
     {
@@ -113,18 +114,14 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             }
         }
 
-        if ($container->hasExtension('framework') && interface_exists(MessageBusInterface::class)) {
-            $container->prependExtensionConfig('framework', [
-                'messenger' => [
-                    'buses' => [
-                        'messenger.bus.default' => [
-                            'middleware' => [
-                                BeaconTraceMiddleware::class,
-                            ],
-                        ],
-                    ],
-                ],
-            ]);
+        $traceMiddleware = $config['messenger']['trace_middleware'];
+        if ((bool) $traceMiddleware['enabled'] && $container->hasExtension('framework') && interface_exists(MessageBusInterface::class)) {
+            $buses = [];
+            foreach (array_values(array_unique(array_map('strval', $traceMiddleware['buses']))) as $bus) {
+                $buses[$bus] = ['middleware' => [BeaconTraceMiddleware::class]];
+            }
+
+            $container->prependExtensionConfig('framework', ['messenger' => ['buses' => $buses]]);
         }
     }
 
