@@ -36,6 +36,7 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
   - [Service API (custom admin pages)](#service-api-custom-admin-pages)
 - [HTTP extras](#http-extras)
 - [Trace correlation](#trace-correlation)
+  - [Messenger buses (1.22+)](#messenger-buses-122)
 - [Fatal PHP errors](#fatal-php-errors)
 - [Automatic HTTP transactions](#automatic-http-transactions)
 - [Monolog](#monolog)
@@ -633,9 +634,31 @@ Every outbound event gets a correlation id via `TraceIdProvider`:
 
 - `extra.trace_id` and tag `trace_id` on the payload
 - HTTP: `BeaconTraceRequestListener` seeds from inbound `X-Beacon-Trace-Id` (or generates one) and stores it on the request attribute `_beacon_trace_id`
-- Messenger: `BeaconTraceMiddleware` is prepended on `messenger.bus.default` — stamps `BeaconTraceStamp` on dispatch and restores the id on consume
+- Messenger: `BeaconTraceMiddleware` is prepended on `messenger.bus.default` by default (see [Messenger buses](#messenger-buses-122)) — stamps `BeaconTraceStamp` on dispatch and restores the id on consume
 
 Ids must match `^[A-Za-z0-9._-]{8,128}$`; invalid inbound values are ignored and a new id is generated.
+
+### Messenger buses (1.22+)
+
+Choose the buses that get the middleware, or switch it off:
+
+```yaml
+nowo_beacon:
+    messenger:
+        trace_middleware:
+            enabled: true                        # false: no bus is touched, messages carry no stamp
+            buses: [command.bus, event.bus]      # default: [messenger.bus.default]
+```
+
+`buses` replaces the default list. List only buses declared in `framework.messenger.buses`: each listed name is
+merged into the Messenger configuration, so a name you never declared becomes an extra bus. You can also leave
+`enabled: false` and add `Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware` to a bus `middleware` list yourself; the
+service exists whenever Messenger is installed.
+
+Wire shape: the stamp is `Nowo\BeaconBundle\Messenger\BeaconTraceStamp` with one public string property `traceId`.
+Messenger serializes stamps with the message (`X-Message-Stamp-Nowo\BeaconBundle\Messenger\BeaconTraceStamp` header with
+the default serializer). A consumer in another service must either have the bundle installed, use a serializer that
+skips unknown stamps, or you switch the middleware off for the buses whose messages leave the application.
 
 ## Fatal PHP errors
 
@@ -730,10 +753,9 @@ Example adapter:
 
 **Known limitations**
 
-- The trace middleware is added only to `messenger.bus.default`. With custom buses (command/query/event), add
-  `Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware` to their `middleware` list yourself. It adds a
-  `BeaconTraceStamp` to dispatched messages, so a consumer in another service must have the bundle installed (or a
-  serializer that ignores unknown stamps).
+- Messages dispatched on the traced buses carry a `BeaconTraceStamp`, so a consumer in another service must have the
+  bundle installed or a serializer that skips unknown stamps. Choose the buses (or switch the middleware off) with
+  `messenger.trace_middleware` (1.22+, see [Messenger buses](#messenger-buses-122)).
 - With `send.stack_vars: true`, `Stringable` arguments are cast to string, which can lazy-load Doctrine proxies.
 - The envelope transport is not a replaceable service; decorate `BeaconClientInterface` to change delivery.
 

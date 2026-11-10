@@ -82,6 +82,9 @@ nowo_beacon:
         retry_sample_rate: 1.0
         worker_memory_warning_ratio: null   # e.g. 0.8
         failure_transports: ['failed']
+        trace_middleware:                  # 1.22+: Messenger trace correlation
+            enabled: true                  # false = no bus gets BeaconTraceMiddleware
+            buses: ['messenger.bus.default']
         remote_retry:                      # Retry / discard from the Beacon UI (1.16+), off by default
             enabled: false
             worker_key: '%env(default::BEACON_WORKER_KEY)%'   # bwk_…, required when enabled
@@ -162,6 +165,8 @@ nowo_beacon:
 | `messenger.retry_sample_rate` | `1.0` | Fraction of retry / recovered events sent (0.0–1.0). |
 | `messenger.worker_memory_warning_ratio` | `null` | When set (0.05–1.0), warn once per worker process when memory reaches that fraction of PHP `memory_limit` (`extra.messenger_worker`). |
 | `messenger.ignore_message_classes` | `[]` | Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon's own `SendBeaconEnvelopeMessage` is always skipped, so `transport.mode: messenger` cannot loop on its own telemetry. |
+| `messenger.trace_middleware.enabled` | `true` | 1.22+: prepend `BeaconTraceMiddleware` to `messenger.trace_middleware.buses` (stamps `BeaconTraceStamp` on dispatch, restores the trace id on consume). `false` leaves every bus untouched. See [Usage → Trace correlation](USAGE.md#trace-correlation). |
+| `messenger.trace_middleware.buses` | `['messenger.bus.default']` | 1.22+: bus names (`framework.messenger.buses` keys) that get the middleware; at least one. Replaces the default, so keep `messenger.bus.default` if you still want it. List only buses you declare (an undeclared name becomes an extra bus). |
 | `messenger.failure_transports` | `['failed']` | Transport names flagged as failure transports by `nowo:beacon:messenger-report`; also the default of `messenger.remote_retry.failure_transports`. |
 | `messenger.remote_retry.enabled` | `false` | Poll Beacon for signed retry / discard commands on one failed message (outbound HTTPS only, no inbound endpoint). Needs `symfony/messenger`, a non-empty DSN and a worker key; ignored while reporting is off. See [Usage → Remote retry from Beacon](USAGE.md#remote-retry-from-beacon). |
 | `messenger.remote_retry.worker_key` | `%env(default::BEACON_WORKER_KEY)%` | Beacon worker key (`bwk_…`, Beacon → Settings → Alerts → Remote Messenger commands). Required when enabled; a literal value must look like `bwk_…` (compile error otherwise), an env value is checked at runtime (empty / invalid → feature off with one warning per worker). |

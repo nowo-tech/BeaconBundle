@@ -75,7 +75,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Target: **1.22.0** (new minor). Additive; the defaults keep today's behaviour. See [UPGRADING](UPGRADING.md#to-1220).
+
+### Added
+
+- **`messenger.trace_middleware`** (DDD P2): `enabled` (default `true`) and `buses` (default `['messenger.bus.default']`). With `enabled: false` the bundle no longer prepends `BeaconTraceMiddleware` to any bus, so messages leave without a `BeaconTraceStamp`. `buses` lists the buses that get the middleware, for hosts with their own command / query / event buses. The middleware service stays registered whenever Messenger is installed, so it can still be listed by hand in a bus `middleware`.
+
 ### Documentation
+
+- USAGE "Trace correlation": the `BeaconTraceStamp` wire shape, how to pick the buses or switch the middleware off; the DDD section's known limitations no longer list the hard-wired bus.
 
 - USAGE: new section "Using it from a DDD / hexagonal application" (where the bundle sits in a hexagonal host, the ports, events and DTOs to build an anti-corruption layer on, and the known limitations).
 

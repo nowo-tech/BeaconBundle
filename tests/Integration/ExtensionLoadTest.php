@@ -55,6 +55,8 @@ use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -437,6 +439,58 @@ final class ExtensionLoadTest extends TestCase
         );
     }
 
+    public function testPrependSkipsTraceMiddlewareWhenDisabled(): void
+    {
+        $container = $this->createContainer();
+        $this->registerFrameworkExtension($container);
+        $container->prependExtensionConfig('nowo_beacon', [
+            'messenger' => ['trace_middleware' => ['enabled' => false]],
+        ]);
+
+        (new NowoBeaconExtension())->prepend($container);
+
+        self::assertSame([], $container->getExtensionConfig('framework'));
+    }
+
+    public function testPrependWiresTraceMiddlewareOnConfiguredBuses(): void
+    {
+        $container = $this->createContainer();
+        $this->registerFrameworkExtension($container);
+        $container->prependExtensionConfig('nowo_beacon', [
+            'messenger' => ['trace_middleware' => ['buses' => ['command.bus', 'event.bus', 'command.bus']]],
+        ]);
+
+        (new NowoBeaconExtension())->prepend($container);
+
+        $framework = $container->getExtensionConfig('framework');
+        self::assertSame(
+            [
+                'command.bus' => ['middleware' => [BeaconTraceMiddleware::class]],
+                'event.bus'   => ['middleware' => [BeaconTraceMiddleware::class]],
+            ],
+            $framework[0]['messenger']['buses'],
+        );
+    }
+
+    public function testTraceMiddlewareBusesMustNotBeEmpty(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+
+        (new Processor())->processConfiguration(new Configuration(), [
+            ['messenger' => ['trace_middleware' => ['buses' => []]]],
+        ]);
+    }
+
+    public function testTraceMiddlewareDefaults(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[]]);
+
+        self::assertSame(
+            ['enabled' => true, 'buses' => ['messenger.bus.default']],
+            $config['messenger']['trace_middleware'],
+        );
+    }
+
     public function testRegisterNullClientRemovesOptionalListenersWhenPresent(): void
     {
         $container = $this->createContainer();
@@ -717,6 +771,20 @@ final class ExtensionLoadTest extends TestCase
         $container->setParameter('kernel.environment', 'test');
 
         return $container;
+    }
+
+    private function registerFrameworkExtension(ContainerBuilder $container): void
+    {
+        $container->registerExtension(new class extends Extension {
+            public function getAlias(): string
+            {
+                return 'framework';
+            }
+
+            public function load(array $configs, ContainerBuilder $container): void
+            {
+            }
+        });
     }
 
     private function registerMonologExtension(ContainerBuilder $container): void

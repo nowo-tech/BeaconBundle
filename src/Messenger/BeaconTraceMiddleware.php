@@ -12,8 +12,10 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 /**
  * Propagates {@see BeaconTraceStamp} on dispatch and restores it on consume.
  *
- * The bundle prepends this middleware to `messenger.bus.default` whenever Messenger is installed, so the service is
- * registered in every configuration; with `$enabled` false (bundle disabled or empty DSN) it only passes the envelope on.
+ * The bundle prepends this middleware to the buses in `nowo_beacon.messenger.trace_middleware.buses` (default
+ * `messenger.bus.default`) unless `messenger.trace_middleware.enabled` is false. The service is registered whenever
+ * Messenger is installed, so a host can also list it in a bus `middleware` itself; with `$enabled` false (bundle
+ * disabled or empty DSN) it only passes the envelope on.
  */
 final class BeaconTraceMiddleware implements MiddlewareInterface
 {
