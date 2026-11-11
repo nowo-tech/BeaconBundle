@@ -14,7 +14,7 @@ This bundle is **FrankenPHP worker mode friendly**.
 
 - DSN-driven ingest with host, optional port, public key, **required secret**, and project id
 - Empty DSN disables reporting without changing application code
-- Envelope transport to `POST /api/{project_id}/envelope/` with `X-Beacon-Auth` + envelope DSN auth
+- Envelope transport to `POST /api/ingest/v1/{project_id}/envelope/` (Beacon ≥ 1.147; one-time fallback to the legacy `/api/{project_id}/envelope/` on older Beacon, `ingest_paths`) with `X-Beacon-Auth` + envelope DSN auth
 - Delivery modes: `transport.mode` `sync` (default), `async` (finalize on terminate), or `messenger` (queue)
 - Versioned `User-Agent` (`beacon-bundle/{composer-version}`)
 - Manual APIs through `BeaconClientInterface`

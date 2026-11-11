@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Tests\Unit\Envelope;
 
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
+use Nowo\BeaconBundle\Ingest\IngestPaths;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -48,7 +49,7 @@ final class EnvelopeTransportTest extends TestCase
 
         self::assertFalse($result->isAccepted());
         self::assertSame(302, $result->getStatusCode());
-        self::assertSame([['url' => 'https://beacon.example.com:9444/api/5/envelope/', 'max_redirects' => 0]], $requests);
+        self::assertSame([['url' => 'https://beacon.example.com:9444/api/ingest/v1/5/envelope/', 'max_redirects' => 0]], $requests);
     }
 
     public function testSendReturnsTrueForSuccessfulResponses(): void
@@ -66,7 +67,7 @@ final class EnvelopeTransportTest extends TestCase
         self::assertTrue($transport->send("header\nitem\npayload\n"));
         self::assertSame($dsn, $transport->getDsn());
         self::assertSame('POST', $requests[0]['method']);
-        self::assertSame('https://beacon.example.com:9444/api/5/envelope/', $requests[0]['url']);
+        self::assertSame('https://beacon.example.com:9444/api/ingest/v1/5/envelope/', $requests[0]['url']);
         self::assertContains(
             'X-Beacon-Auth: Beacon beacon_key=pubkey, beacon_secret=secret',
             $requests[0]['options']['headers'],
@@ -84,7 +85,7 @@ final class EnvelopeTransportTest extends TestCase
                 'Beacon ingest rate limited (HTTP 429). Respect Retry-After before retrying.',
                 self::callback(static function (array $context) use ($dsn): bool {
                     return $context['status'] === 429
-                        && $dsn->getEnvelopeUrl() === $context['url']
+                        && IngestPaths::envelopeUrl($dsn, true) === $context['url']
                         && ($context['retry_after'] ?? null) === '60';
                 }),
             );
@@ -114,7 +115,7 @@ final class EnvelopeTransportTest extends TestCase
                 'Beacon ingest authentication rejected. Confirm BEACON_DSN includes public:secret and matches the project.',
                 self::callback(static function (array $context) use ($dsn): bool {
                     return $context['status'] === 403
-                        && $dsn->getEnvelopeUrl() === $context['url'];
+                        && IngestPaths::envelopeUrl($dsn, true) === $context['url'];
                 }),
             );
 
@@ -140,7 +141,7 @@ final class EnvelopeTransportTest extends TestCase
                 'Beacon ingest transport failed.',
                 self::callback(static function (array $context) use ($dsn): bool {
                     return $context['exception'] === 'network down'
-                        && $dsn->getEnvelopeUrl() === $context['url'];
+                        && IngestPaths::envelopeUrl($dsn, true) === $context['url'];
                 }),
             );
 
@@ -192,7 +193,7 @@ final class EnvelopeTransportTest extends TestCase
             ->method('request')
             ->with(
                 'POST',
-                $dsn->getEnvelopeUrl(),
+                'https://beacon.example.com:9444/api/ingest/v1/5/envelope/',
                 self::callback(static function (array $options) use (&$capturedOptions): bool {
                     $capturedOptions = $options;
 
@@ -305,7 +306,10 @@ final class EnvelopeTransportTest extends TestCase
         $logger
             ->expects(self::once())
             ->method('warning')
-            ->with('Beacon ingest answered with a redirect, which is not followed. Point BEACON_DSN at the final Beacon URL.');
+            ->with(
+                'Beacon ingest answered with a redirect, which is not followed. Point BEACON_DSN at the final Beacon URL.',
+                self::callback(static fn (array $context): bool => $context['url'] === IngestPaths::envelopeUrl($dsn, true)),
+            );
 
         $transport = new EnvelopeTransport(
             new MockHttpClient(new MockResponse('', ['http_code' => 308, 'response_headers' => ['Location: https://elsewhere.example.net/']])),

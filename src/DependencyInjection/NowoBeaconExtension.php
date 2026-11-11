@@ -38,6 +38,7 @@ use Nowo\BeaconBundle\EventListener\BeaconSchedulerCheckInListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
+use Nowo\BeaconBundle\Ingest\IngestPathResolver;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
@@ -161,6 +162,16 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yaml');
 
+        $container->setParameter('nowo.beacon.ingest_paths', (string) ($config['ingest_paths'] ?? 'auto'));
+        // Shared ingest path decision per origin + project id: a server capability only, bounded to 32 entries.
+        // Intentionally not `kernel.reset` (audit LO-L4): no request state, and Messenger resets services after every
+        // message, which would re-probe an older Beacon once per message.
+        $ingestPaths = new Definition(IngestPathResolver::class, [
+            '$mode' => (string) ($config['ingest_paths'] ?? 'auto'),
+        ]);
+        $ingestPaths->setPublic(false);
+        $container->setDefinition(IngestPathResolver::class, $ingestPaths);
+
         $this->registerConnectionTestCommand(
             $container,
             $enabledFlag,
@@ -253,6 +264,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$clock'               => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$traceIdProvider'     => new Reference(TraceIdProvider::class),
             '$syncHttpClient'      => new Reference('nowo.beacon.ingest_http_client.sync'),
+            '$ingestPaths'         => new Reference(IngestPathResolver::class),
         ]);
         $factory->setAutowired(false);
         $factory->setPublic(false);
@@ -696,6 +708,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$environment' => $config['environment'],
             '$verifyPeer'  => (bool) $config['verify_peer'],
             '$clock'       => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$ingestPaths' => new Reference(IngestPathResolver::class),
         ]);
         $client->setPublic(false);
         $container->setDefinition(RemoteCommandClient::class, $client);
@@ -869,6 +882,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$release'          => $release,
             '$serverName'       => $serverName,
             '$logger'           => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$ingestPaths'      => new Reference(IngestPathResolver::class),
         ]);
         $tester->setAutowired(false);
         $tester->setPublic(false);

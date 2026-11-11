@@ -53,13 +53,13 @@ final class RemoteCommandClientTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{MockResponse|TransportException, string, ?int}>
+     * @return iterable<string, array{list<MockResponse>|MockResponse|TransportException, string, ?int}>
      */
     public static function claimFailures(): iterable
     {
         yield '401' => [new MockResponse('{"error":"unauthorized"}', ['http_code' => 401]), RemoteCommandException::KIND_AUTH, null];
         yield '403' => [new MockResponse('', ['http_code' => 403]), RemoteCommandException::KIND_AUTH, null];
-        yield '404 older Beacon' => [new MockResponse('', ['http_code' => 404]), RemoteCommandException::KIND_AUTH, null];
+        yield '404 on both paths' => [[new MockResponse('', ['http_code' => 404]), new MockResponse('', ['http_code' => 404])], RemoteCommandException::KIND_AUTH, null];
         yield '429 seconds' => [new MockResponse('', ['http_code' => 429, 'response_headers' => ['Retry-After: 90']]), RemoteCommandException::KIND_RATE_LIMITED, 90];
         yield '429 huge' => [new MockResponse('', ['http_code' => 429, 'response_headers' => ['Retry-After: 999999']]), RemoteCommandException::KIND_RATE_LIMITED, RemoteCommandClient::MAX_DELAY];
         yield '503 date' => [new MockResponse('', ['http_code' => 503, 'response_headers' => ['Retry-After: Sat, 17 Oct 2026 10:05:00 GMT']]), RemoteCommandException::KIND_RATE_LIMITED, 120];
@@ -73,8 +73,11 @@ final class RemoteCommandClientTest extends TestCase
         yield 'network' => [new TransportException('dns'), RemoteCommandException::KIND_UNAVAILABLE, null];
     }
 
+    /**
+     * @param list<MockResponse>|MockResponse|TransportException $response
+     */
     #[DataProvider('claimFailures')]
-    public function testClaimFailures(MockResponse|TransportException $response, string $kind, ?int $retryAfter): void
+    public function testClaimFailures(MockResponse|array|TransportException $response, string $kind, ?int $retryAfter): void
     {
         $http = $response instanceof TransportException
             ? new MockHttpClient(static fn () => throw $response)
@@ -109,7 +112,8 @@ final class RemoteCommandClientTest extends TestCase
     {
         $this->expectExceptionObject(new RemoteCommandException($kind, 'Beacon answered HTTP ' . $status . '.'));
 
-        $this->client(new MockResponse('', ['http_code' => $status]))
+        // A 404 on the versioned path is retried once on the legacy path, which answers the same.
+        $this->client(httpClient: new MockHttpClient([new MockResponse('', ['http_code' => $status]), new MockResponse('', ['http_code' => $status])]))
             ->postResult(RemoteRetryFixtures::command(), CommandResult::done(CommandResult::OUTCOME_REMOVED, new DateTimeImmutable()));
     }
 

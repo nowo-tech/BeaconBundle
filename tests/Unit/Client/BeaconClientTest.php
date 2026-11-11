@@ -99,7 +99,7 @@ final class BeaconClientTest extends TestCase
         self::assertNotNull($eventId);
         self::assertCount(1, $requests);
         self::assertSame('POST', $requests[0]['method']);
-        self::assertSame('https://beacon.example.com:9444/api/5/envelope/', $requests[0]['url']);
+        self::assertSame('https://beacon.example.com:9444/api/ingest/v1/5/envelope/', $requests[0]['url']);
 
         $headers     = $requests[0]['options']['headers'] ?? [];
         $contentType = '';

@@ -35,6 +35,7 @@ use Nowo\BeaconBundle\EventListener\BeaconRequestTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconSchedulerCheckInListener;
 use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
 use Nowo\BeaconBundle\EventListener\FlushPendingTransportsListener;
+use Nowo\BeaconBundle\Ingest\IngestPathResolver;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
 use Nowo\BeaconBundle\Instrumentation\TraceableBeaconHttpClient;
 use Nowo\BeaconBundle\Messenger\BeaconTraceMiddleware;
@@ -555,6 +556,34 @@ final class ExtensionLoadTest extends TestCase
             ['failed', 'failed_high'],
             $container->getDefinition(MessengerReportCommand::class)->getArgument('$failureTransports'),
         );
+    }
+
+    public function testIngestPathResolverIsSharedAndNotResetWithTheKernel(): void
+    {
+        $container = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => 'https://pk:sk@beacon.example.com/5']], $container);
+
+        $resolver = $container->getDefinition(IngestPathResolver::class);
+        self::assertSame('auto', $resolver->getArgument('$mode'));
+        // LO-L4: process-wide server capability, not request state; a reset per Messenger message would re-probe.
+        self::assertFalse($resolver->hasTag('kernel.reset'));
+        self::assertSame('auto', $container->getParameter('nowo.beacon.ingest_paths'));
+        foreach ([BeaconClientFactory::class, BeaconConnectionTester::class] as $service) {
+            $reference = $container->getDefinition($service)->getArgument('$ingestPaths');
+            self::assertInstanceOf(Reference::class, $reference);
+            self::assertSame(IngestPathResolver::class, (string) $reference);
+        }
+
+        $legacy = $this->createContainer();
+        (new NowoBeaconExtension())->load([['dsn' => '', 'ingest_paths' => 'legacy']], $legacy);
+        self::assertSame('legacy', $legacy->getDefinition(IngestPathResolver::class)->getArgument('$mode'));
+    }
+
+    public function testUnknownIngestPathsValueIsRejected(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+
+        (new Processor())->processConfiguration(new Configuration(), [['ingest_paths' => 'v2']]);
     }
 
     public function testMessengerReportCommandIsRegisteredWithNullClient(): void

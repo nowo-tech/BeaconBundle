@@ -95,6 +95,30 @@
 
 ## Unreleased
 
+From **1.22.0** (target **1.23.0**, not yet released):
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+Nothing to change. The bundle now calls Beacon's versioned ingest paths (`/api/ingest/v1/{projectId}/…`, Beacon
+1.147) and, against an older Beacon, falls back once per Beacon target (origin + project id) to the unversioned paths it used before (they stay as
+permanent aliases on every Beacon). A long-running process (FrankenPHP worker, Messenger consumer) sends one extra
+request (answered 404) per older Beacon; under **PHP-FPM** or for short console commands every request or run that
+sends something pays that 404, so set `ingest_paths: legacy` until your Beacon runs 1.147.
+
+```yaml
+nowo_beacon:
+    ingest_paths: auto   # default; versioned = always /api/ingest/v1 (Beacon >= 1.147); legacy = previous paths only
+```
+
+- Firewalls, proxies or egress allow-lists that only let `/api/{projectId}/envelope/` or
+  `/api/{projectId}/messenger/commands/…` through: allow `/api/ingest/v1/` as well, or set `ingest_paths: legacy`.
+  A proxy that answers the versioned path with something other than 404 / 405 (for example 403) is not treated as an
+  older Beacon.
+- Tests that assert the exact ingest URL see `/api/ingest/v1/…` now; mock HTTP clients that answer 404 receive a second
+  request on the legacy path.
+
 ## To 1.22.0
 
 From **1.21.0**:

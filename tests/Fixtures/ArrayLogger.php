@@ -15,7 +15,7 @@ use function strtr;
  */
 final class ArrayLogger extends AbstractLogger
 {
-    /** @var list<array{level: string, message: string}> */
+    /** @var list<array{level: string, message: string, context: array<array-key, mixed>}> */
     public array $records = [];
 
     public function log($level, string|Stringable $message, array $context = []): void
@@ -25,7 +25,7 @@ final class ArrayLogger extends AbstractLogger
             $replace['{' . $key . '}'] = is_scalar($value) ? (string) $value : '';
         }
 
-        $this->records[] = ['level' => (string) $level, 'message' => strtr((string) $message, $replace)];
+        $this->records[] = ['level' => (string) $level, 'message' => strtr((string) $message, $replace), 'context' => $context];
     }
 
     /**

@@ -6,6 +6,7 @@
 - [DSN format](#dsn-format)
 - [YAML reference](#yaml-reference)
   - [`send.*` context switches](#send-context-switches)
+- [Ingest paths (versioned, legacy fallback)](#ingest-paths-versioned-legacy-fallback)
 - [Timeout hierarchy (REQ-RUNTIME-001)](#timeout-hierarchy-req-runtime-001)
 - [Important behavior](#important-behavior)
 - [Development with self-signed certificates](#development-with-self-signed-certificates)
@@ -55,6 +56,7 @@ nowo_beacon:
     server_name: null
     verify_peer: true
     timeout: 5.0
+    ingest_paths: auto   # auto | versioned | legacy
     transport:
         mode: sync   # sync | async | messenger
         retry:       # Beacon answered 5xx → wait and retry (0 retries = off)
@@ -142,6 +144,7 @@ nowo_beacon:
 | `server_name` | `null` | Optional server/host tag. When null, the bundle falls back to the host name. |
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
 | `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
+| `ingest_paths` | `auto` | Which Beacon ingest paths are called. `auto`: the versioned `/api/ingest/v1/…` path first, once more on the legacy path after a 404 / 405 (older Beacon), remembered per Beacon target (origin + project id). `versioned`: always the versioned paths (Beacon ≥ 1.147). `legacy`: always the unversioned paths. See [Ingest paths](#ingest-paths-versioned-legacy-fallback). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `transport.retry.max_retries` | `2` | Extra attempts when Beacon answers with one of `transport.retry.status_codes` (0 … 10; `0` disables retries). Applies to `sync`, `async` and the Messenger handler. See [Retries](#retries-on-beacon-server-errors). |
 | `transport.retry.delay_ms` | `500` | Wait before the first retry, in milliseconds. |
@@ -197,6 +200,59 @@ nowo_beacon:
 | `monolog_handler.ignore_http_client_errors` | `true` | 1.20+: skip records whose `context.exception` is an `HttpExceptionInterface` with status < 500 (Symfony's `ErrorListener` logs every uncaught 4xx at ERROR). |
 
 The self-test routes come from the `nowo_beacon` route loader instead of `#[Route]` attributes on the controller: they exist only when `self_test.http.enabled` is true and their path is configurable (`self_test.http.path`), which static attributes cannot express. The import file only points at the loader; route names (`nowo_beacon_self_test`, `nowo_beacon_self_test_trigger`) are stable.
+
+## Ingest paths (versioned, legacy fallback)
+
+Beacon 1.147 serves versioned canonical ingest paths (decision D-20261110-04) and keeps the unversioned paths as
+permanent aliases:
+
+| Call | Versioned (canonical, Beacon ≥ 1.147) | Legacy (every Beacon) |
+| --- | --- | --- |
+| Envelope | `POST {origin}/api/ingest/v1/{projectId}/envelope/` | `POST {origin}/api/{projectId}/envelope/` |
+| Remote commands claim | `POST {origin}/api/ingest/v1/{projectId}/messenger/commands/claim` | `POST {origin}/api/{projectId}/messenger/commands/claim` |
+| Remote command result | `POST {origin}/api/ingest/v1/{projectId}/messenger/commands/{id}/result` | `POST {origin}/api/{projectId}/messenger/commands/{id}/result` |
+
+Same authentication, limits and answers on both. With `ingest_paths: auto` (default) the bundle works against any
+Beacon version:
+
+- A call to a Beacon target (origin + project id) goes to the versioned path unless the target is known to serve the
+  legacy paths only.
+- HTTP **404 or 405** there (an older Beacon has no such route): the same request is sent **once** more to the legacy
+  path. The 404 that triggered the retry is not logged. A 404 / 405 means nothing was processed, so this never
+  duplicates a request.
+- The answer is remembered per target (`IngestPathResolver`, shared by the Envelope transports, remote commands and
+  `nowo:beacon:test`); the newest answer replaces the older one:
+
+  | Answer | Learned | Re-sent to the legacy path |
+  | --- | --- | --- |
+  | versioned 2xx, or a Beacon 400 / 401 / 403 / 413 / 415 / 422 | versioned | no |
+  | versioned 404 / 405 | (forgotten if it was versioned: self-heal) | once |
+  | versioned 408 / 429 / 5xx / any other status, or a network failure | nothing (the next call probes again) | no |
+  | legacy 2xx, or a Beacon 400 / 401 / 403 / 413 / 415 / 422 | legacy | — |
+  | legacy 404 / 405 too (unknown project or command) | versioned | — |
+  | legacy 408 / 429 / 5xx / other, or a network failure | nothing | — |
+
+  A transient 503 from a proxy or a load balancer in front of an older Beacon therefore never pins the versioned path,
+  and a target known as versioned that starts answering 404 (Beacon downgrade, a remote-command `not_found` on both
+  paths) heals itself on the next call. The project id in the key keeps an unknown project from pinning the versioned
+  path for other projects or tenants on the same older Beacon.
+- **No other status is re-sent** by this logic (429 and 5xx keep their usual handling, retries of the retrying HTTP
+  client included), and a network failure (no HTTP answer) is neither re-sent nor remembered.
+- `async` mode keeps a reference to the body of each pending versioned request (at most 100 pending requests) and does
+  the legacy retry at flush.
+- Log records carry the URL actually used (`url` context: versioned or legacy).
+
+Worker mode (FrankenPHP without kernel reset): the remembered map only holds a server capability (origin + project id
+→ versioned or legacy), never keys, secrets, request, user or tenant data. It is bounded to 32 targets
+(`MAX_ENTRIES`), lives for the process and is intentionally **not** tagged `kernel.reset`, so a long-running worker or
+Messenger consumer probes an older Beacon once (again only after a transient error or a self-heal).
+
+Cost against Beacon < 1.147: one extra 404 per probe. Under **PHP-FPM** (one container per request) and for short
+console commands, every request or run that sends something probes again: set `ingest_paths: legacy` until Beacon is
+1.147, then remove it.
+
+Use `ingest_paths: versioned` once every Beacon you send to runs 1.147 or later, or `legacy` to keep the previous
+paths (for example behind a proxy that only allows them).
 
 ## Timeout hierarchy (REQ-RUNTIME-001)
 

@@ -16,6 +16,7 @@ use Nowo\BeaconBundle\Envelope\EnvelopeTransportInterface;
 use Nowo\BeaconBundle\Envelope\MessengerEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendOptions;
+use Nowo\BeaconBundle\Ingest\IngestPathResolver;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
@@ -32,6 +33,8 @@ use function interface_exists;
  */
 final class BeaconClientFactory
 {
+    private readonly IngestPathResolver $ingestPaths;
+
     public function __construct(
         private readonly BeaconDsnParser $parser,
         private readonly HttpClientInterface $httpClient,
@@ -46,7 +49,9 @@ final class BeaconClientFactory
         private readonly ?ClockInterface $clock = null,
         private readonly ?TraceIdProvider $traceIdProvider = null,
         private readonly ?HttpClientInterface $syncHttpClient = null,
+        ?IngestPathResolver $ingestPaths = null,
     ) {
+        $this->ingestPaths = $ingestPaths ?? new IngestPathResolver();
     }
 
     /**
@@ -67,6 +72,7 @@ final class BeaconClientFactory
             $verifyPeer,
             $timeout,
             $this->logger,
+            ingestPaths: $this->ingestPaths,
         );
     }
 
@@ -128,6 +134,7 @@ final class BeaconClientFactory
             $verifyPeer,
             $timeout,
             $this->logger,
+            ingestPaths: $this->ingestPaths,
         );
         $transport = $this->wrapTransport($sync, $transportMode);
 

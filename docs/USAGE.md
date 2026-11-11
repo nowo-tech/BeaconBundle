@@ -361,9 +361,9 @@ Reason codes (closed list): `not_found`, `transport_not_allowed`, `transport_not
 
 ### Wire format
 
-Both calls go to the DSN origin with `Authorization: Bearer bwk_…`, `Content-Type: application/json`, a 3-second timeout (independent of `timeout`) and the bundle `User-Agent`; they are direct HttpClient requests (never the Envelope transport nor a Messenger message), identical under every `transport.mode`.
+Both calls go to the DSN origin with `Authorization: Bearer bwk_…`, `Content-Type: application/json`, a 3-second timeout (independent of `timeout`) and the bundle `User-Agent`; they are direct HttpClient requests (never the Envelope transport nor a Messenger message), identical under every `transport.mode`. Paths: `/api/ingest/v1/{project}/messenger/commands/…` (Beacon ≥ 1.147), with a one-time fallback to the legacy `/api/{project}/messenger/commands/…` on 404 / 405 (see [Ingest paths](CONFIGURATION.md#ingest-paths-versioned-legacy-fallback)).
 
-`POST {origin}/api/{project}/messenger/commands/claim`
+`POST {origin}/api/ingest/v1/{project}/messenger/commands/claim`
 
 ```json
 {"server_name":"worker-2","environment":"prod","bundle_version":"1.16.0","failure_transports":[{"name":"failed","listable":true}],"max":1}
@@ -377,7 +377,7 @@ Both calls go to the DSN origin with `Authorization: Bearer bwk_…`, `Content-T
   "claim_token":"…","signature":"v1=00f625d9…"}],"poll_after":30}
 ```
 
-`POST {origin}/api/{project}/messenger/commands/{id}/result`
+`POST {origin}/api/ingest/v1/{project}/messenger/commands/{id}/result`
 
 ```json
 {"claim_token":"…","status":"done","outcome":"requeued","reason_code":null,"exception_class":null,"executed_at":"2026-10-17T10:02:41Z","server_name":"worker-2"}
@@ -764,8 +764,11 @@ Example adapter:
 The client POSTs Envelope bodies to:
 
 ```text
-{scheme}://{host}[:{port}]/api/{project_id}/envelope/
+{scheme}://{host}[:{port}]/api/ingest/v1/{project_id}/envelope/
 ```
+
+(Beacon ≥ 1.147; against an older Beacon the bundle falls back once to the legacy `/api/{project_id}/envelope/`,
+see `ingest_paths` in [CONFIGURATION](CONFIGURATION.md#ingest-paths-versioned-legacy-fallback).)
 
 with:
 
