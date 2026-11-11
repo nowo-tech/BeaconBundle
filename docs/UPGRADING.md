@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+  - [To 1.23.1](#to-1231)
 - [To 1.23.0](#to-1230)
 - [To 1.22.0](#to-1220)
 - [To 1.22.0](#to-1220-1)
@@ -95,6 +96,26 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+### To 1.23.1
+
+From **1.23.0**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+Nothing to change in configuration. Breadcrumbs, spans, scope tags and the trace id are now also cleared at the
+Messenger boundaries (message received, handled, failed) and at `console.terminate`, not only at the main request, so
+the bundle no longer depends on the services resetter for consumers started with `--no-reset` or for long-running
+commands.
+
+- Breadcrumbs or tags added **before** a message is received (a `WorkerMessageReceivedEvent` listener with a
+  priority above 4096) or **after** it is handled / failed (priority below -4096) are cleared; add them from the
+  handler or from a listener between those priorities.
+- `BeaconRequestScopeResetListener` is internal: its constructor now takes two iterables (the scope services and the
+  pending-transport registry) instead of five services. Only code that builds the listener by hand is affected; the
+  bundle wires it itself.
 
 ## To 1.23.0
 

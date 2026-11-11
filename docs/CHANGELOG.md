@@ -77,6 +77,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Next patch: 1.23.1.
+
+### Security
+
+- **Breadcrumbs, scope tags, spans and the trace id carried over between Messenger messages and long-running
+  console commands when the services resetter does not run (REQ-RUNTIME-002).** `BeaconRequestScopeResetListener`
+  cleared them only at the main `kernel.request`; the Messenger boundary relied on `kernel.reset`. With the stock
+  Symfony kernel and `messenger:consume` without `--no-reset`, the services resetter runs before every request and
+  after every message, so a standard host was not affected. Where it does not run (a host that removes, replaces or
+  bypasses `services_resetter` or drives `http_kernel` directly, Messenger consumers started with `--no-reset`, and
+  long-running console commands), an error captured for message B could carry the breadcrumbs (normalized SQL,
+  outbound hosts, application data), tags (for example a user or tenant id) and trace id of message A or of the last
+  HTTP request; the data went to the operator's own Beacon project, never to another end user. The listener now also
+  clears them at `WorkerMessageReceivedEvent` (priority 4096) and at `WorkerMessageHandledEvent` /
+  `WorkerMessageFailedEvent` / `console.terminate` (priority -4096: after the bundle's failure capture (-150),
+  Scheduler check-in (-512), message transaction (-1024) and pending flush (-2048), so the event of a failed message
+  still carries that message's scope). `ResetInterface` / `kernel.reset` stay. Affected: 1.4.0 – 1.23.0 for Messenger
+  consumers (the automatic failure capture), 1.1.0 – 1.23.0 for events captured in long-running console commands.
+
+### Changed
+
+- `BeaconRequestScopeResetListener` (internal, registered by the bundle) takes lazy iterators of
+  `IGNORE_ON_UNINITIALIZED_REFERENCE` references to the four scope services and the pending-transport registry: a
+  boundary only clears instances that already exist and never builds one. See [UPGRADING](UPGRADING.md#to-1231).
+- Tests: `WorkerScopeIsolationTest` boots one kernel and never calls the services resetter: 1,000 iterations of an
+  HTTP request (`http_kernel` directly), a succeeding and a failing Messenger message (a `Worker` without
+  `ResetServicesListener`, i.e. `--no-reset`), two users, every captured event checked for its own breadcrumbs, tags and
+  a fresh trace id, memory margin 4 MiB; plus `console.terminate` and a direct `services_resetter->reset()` test.
+
 ## [1.23.0] - 2026-11-11
 
 Versioned ingest paths (Beacon 1.147) for envelopes, OTLP and remote commands, with a safe fallback. See [UPGRADING](UPGRADING.md#to-1230). Audit: Appendix LO and Delta LO, clean.

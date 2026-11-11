@@ -3,11 +3,11 @@
 | Field | Value |
 |-------|-------|
 | Package | `nowo-tech/beacon-bundle` (`symfony-bundle`) |
-| Audited revision | `v1.8.2` (worker scenario B complete) |
-| Audit date | 2026-09-24 |
+| Audited revision | `v1.8.2` (worker scenario B complete); 1.23.1 (unreleased): Messenger / console boundaries (W-08, REQ-RUNTIME-002) |
+| Audit date | 2026-09-24; 2026-11-11 (W-08) |
 | Method | Manual review of every file under `src/` (client, transports, listeners, instrumentation, Monolog handler, DI extension, `Resources/config/services.yaml`) |
 | **Verdict** | ✅ **Compatible with FrankenPHP worker + kernel not reset (scenario B)** — request-scoped buffers, trace id, auto HTTP transaction Request, and leftover async POSTs are cleared/drained without relying on `services_resetter` |
-| Remediation | W-01/W-02: `BeaconRequestScopeResetListener` (+ pending flush). W-03: LRU 64 in `EnvelopeBuilder`. W-04: fatal handler via `NowoBeaconBundle::boot()`. W-05 accepted. W-06: transaction listener resets on every main request. W-07: flush terminate priority `-2048` (after transaction `-1024`). |
+| Remediation | W-01/W-02: `BeaconRequestScopeResetListener` (+ pending flush). W-08: the same listener also clears at Messenger received / handled / failed and `console.terminate`. W-03: LRU 64 in `EnvelopeBuilder`. W-04: fatal handler via `NowoBeaconBundle::boot()`. W-05 accepted. W-06: transaction listener resets on every main request. W-07: flush terminate priority `-2048` (after transaction `-1024`). |
 
 ## Table of contents
 
@@ -22,6 +22,7 @@
   - [W-05 — Outbound calls block the worker thread (Low)](#w-05--outbound-calls-block-the-worker-thread-low)
   - [W-06 — Auto HTTP transaction Request leaked across requests without reset (Medium)](#w-06--auto-http-transaction-request-leaked-across-requests-without-reset-medium)
   - [W-07 — Async flush ran at the same terminate priority as auto HTTP transactions (Medium)](#w-07--async-flush-ran-at-the-same-terminate-priority-as-auto-http-transactions-medium)
+  - [W-08 — Scope carried over between Messenger messages and console commands without the resetter (Medium)](#w-08--scope-carried-over-between-messenger-messages-and-console-commands-without-the-resetter-medium)
 - [Usage recommendations in worker mode](#usage-recommendations-in-worker-mode)
 - [Re-audit triggers](#re-audit-triggers)
 
@@ -33,6 +34,8 @@ FrankenPHP worker mode boots the Symfony kernel once per worker and serves many 
 - **B — no reset at all:** nothing is reset; any per-request state kept in a service leaks into the next request.
 
 A bundle that is safe under **B** is safe under **A** and under classic mode / PHP-FPM.
+
+**Precondition, precisely (REQ-RUNTIME-002).** With the stock Symfony kernel, `FRANKENPHP_RESET_KERNEL=false` only stops the kernel from being cloned: `Kernel::handle()` still runs `services_resetter` before every request after the first (scenario A). Scenario B happens where the resetter does not run: a host that removes, replaces or bypasses `services_resetter` (or drives `http_kernel` directly), Messenger consumers started with `--no-reset`, and long-running console commands. The bundle covers all of them itself (W-01, W-02, W-08).
 
 ## Summary
 
@@ -55,14 +58,14 @@ A bundle that is safe under **B** is safe under **A** and under classic mode / P
 
 | Service | Shared | Mutable state | Scenario A | Scenario B |
 |---------|--------|---------------|------------|------------|
-| `Breadcrumb\BreadcrumbBuffer` | yes (`kernel.reset`) | `$items` (max 50) | ✅ | ✅ (reset per main request) |
-| `Instrumentation\SpanBuffer` | yes (`kernel.reset`) | `$spans` (max 100) | ✅ | ✅ (reset per main request) |
-| `Scope\Scope` | yes (`kernel.reset`) | `$tags` (max 32) | ✅ | ✅ (reset per main request) |
-| `Trace\TraceIdProvider` | yes (`kernel.reset`) | `$traceId` | ✅ | ✅ (reset per main request) |
+| `Breadcrumb\BreadcrumbBuffer` | yes (`kernel.reset`) | `$items` (max 50) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Instrumentation\SpanBuffer` | yes (`kernel.reset`) | `$spans` (max 100) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Scope\Scope` | yes (`kernel.reset`) | `$tags` (max 32) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Trace\TraceIdProvider` | yes (`kernel.reset`) | `$traceId` | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
 | `Ingest\IngestPathResolver` (1.23) | yes | `$known` — target (origin + project id) → versioned / legacy ingest paths, a server capability (no keys, request, user or tenant data), bounded to 32 targets (`MAX_ENTRIES`), learned only from a Beacon answer, self-healing on a 404; intentionally **not** `kernel.reset` (no request state; a reset per Messenger message would re-probe an older Beacon each time); per-project isolation test; 5,000-target test asserts the bound and flat memory | ✅ | ✅ (process-wide by design, like `RemoteCommandPoller`) |
 | `nowo.beacon.client` (`BeaconClient`, built by `BeaconClientFactory`) | yes | none itself; owns an `EnvelopeBuilder` (bounded source-line cache) and a transport | ✅ | ✅ |
 | `AsyncEnvelopeTransport` (inside the client, `transport.mode: async`) | yes (not a container service) | `$pending` responses, at most 100 (1.23: starting one more completes the oldest), drained on terminate (`-2048`) and again at next main request start | ✅ | ✅ |
-| `EventListener\BeaconRequestScopeResetListener` | yes | none; resets four buffers + flushes pending on main `kernel.request` (priority 4096) | ✅ | ✅ |
+| `EventListener\BeaconRequestScopeResetListener` | yes | none; resets the four scope services + flushes pending on main `kernel.request` (4096) and `WorkerMessageReceivedEvent` (4096); resets them on `WorkerMessageHandledEvent` / `WorkerMessageFailedEvent` / `console.terminate` (-4096). Lazy iterators of `IGNORE_ON_UNINITIALIZED_REFERENCE` references (1.23.1): a boundary never builds a service | ✅ | ✅ |
 | `EventListener\BeaconRequestTransactionListener` (opt-in) | yes (`kernel.reset`) | `$startedAt`, `$request`; cleared on every main request start, terminate, and `reset()` | ✅ | ✅ |
 | `EventListener\FlushPendingTransportsListener` | yes | none; terminate priority `-2048` (after transaction) | ✅ | ✅ |
 | `Scheduler\SchedulerRunRegistry` (1.15, opt-in `scheduler.check_ins`) | yes (`kernel.reset`) | `$startedAt`, `$failureEventIds` (run id maps, max 100 each); cleared on worker start / stop and after each handled message (Messenger `ResetServicesListener`) | ✅ | ✅ (only written by Messenger worker events, never by HTTP requests) |
@@ -135,11 +138,18 @@ Value objects (`BeaconDsn`, `SendOptions`, `TransportResult`, `ConnectionTestRes
 - **Worker impact:** with `transport.mode: async` + `auto_http_transaction: true`, the transaction POST could stay in `$pending` until the **next** request's terminate (or forever if terminate never ran again).
 - **Status:** Resolved — flush priority is `-2048`; `BeaconRequestScopeResetListener` also flushes leftover pending at the start of the next main request. Test: `FlushPendingTransportsListenerTest::testSubscribedEventsIncludeKernelAndConsoleTerminate`.
 
+### W-08 — Scope carried over between Messenger messages and console commands without the resetter (Medium)
+
+- **Where:** `BeaconRequestScopeResetListener` subscribed only to the main `kernel.request`; between two Messenger messages, and at the end of a console command, `BreadcrumbBuffer`, `SpanBuffer`, `Scope` and `TraceIdProvider` were cleared only by `kernel.reset` (Messenger's `ResetServicesListener`).
+- **Impact (scenario B only):** in a consumer started with `--no-reset`, or when a host bypasses the resetter, the error captured by `BeaconMessengerFailedListener` for message B carried the breadcrumbs, tags and trace id left by message A (or by the last HTTP request in the same process); events captured in long-running commands carried earlier state as well. Operator-side privacy and attribution problem (the data goes to the operator's Beacon project), like W-01. Affected 1.4.0 – 1.23.0 (Messenger), 1.1.0 – 1.23.0 (console).
+- **Ordering:** the clear at `WorkerMessageFailedEvent` runs at priority -4096, after the failure capture (-150), Scheduler check-in (-512), message transaction (-1024) and pending flush (-2048), so the event of a failed message still carries **that** message's scope. Breadcrumbs of message A never reach an event of message B: they are cleared when A ends and again when B is received (4096, before B is handled and before the message transaction restores the trace id at -1024).
+- **Status:** Resolved in 1.23.1. Tests: `tests/Integration/WorkerScopeIsolationTest.php`: one kernel, the services resetter never called, 1,000 iterations of an HTTP request (`http_kernel` directly), a succeeding and a failing message (Messenger `Worker` without `ResetServicesListener`), users A / B alternating; every captured event has only its own breadcrumb, its own tenant tag, no tag of another unit of work and a trace id never seen before; memory margin 4 MiB after a 50-iteration warm-up (cycle-collected); `console.terminate` and a direct `services_resetter->reset()` (`ResetInterface` kept). `tests/Unit/EventListener/BeaconRequestScopeResetListenerTest.php`: priorities against the failure capture, each Messenger event, `console.terminate`, a direct `clear()` and the uninitialized references (nothing built).
+
 Good patterns observed: every request-scoped service implements `ResetInterface` and is tagged `kernel.reset`, and the buffers have hard size caps. Scenario B is covered by bundle-owned request/terminate listeners without depending on `services_resetter`. The user context is read from the token at send time and is off by default (`send.user: false`).
 
 ## Usage recommendations in worker mode
 
-- Scenario B is supported by the bundle itself. Keeping Symfony's `services_resetter` enabled (default in FrankenPHP's Symfony runtime) is still recommended for the application's own services.
+- Scenario B is supported by the bundle itself (HTTP, Messenger with `--no-reset`, long-running commands). Keeping Symfony's `services_resetter` enabled is still recommended for the application's own services; a host that disables or bypasses it must clear its own entity managers at every boundary (main request, Messenger message, console command; REQ-RUNTIME-002 rule 7).
 - Prefer `transport.mode: async` or `messenger` and a low `timeout` in worker deployments.
 - Set `max_requests` / `FRANKENPHP_LOOP_MAX` to recycle workers periodically, and restart workers on every deploy (cached source lines, W-03).
 - `before_send` services, custom `UserContextProviderInterface` implementations and any code calling `setTag()` / `addBreadcrumb()` must not keep per-request data in their own properties.

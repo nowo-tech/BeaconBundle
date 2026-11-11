@@ -6,17 +6,33 @@ namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
+use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use stdClass;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\Event\ConsoleTerminateEvent;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
+use Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent;
 
 /**
  * Long-running worker (FrankenPHP) without kernel.reset: the same buffer instances serve
@@ -47,11 +63,8 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         $this->dispatcher = new EventDispatcher();
         $this->dispatcher->addSubscriber(new BeaconTraceRequestListener($this->traceIdProvider));
         $this->dispatcher->addSubscriber(new BeaconRequestScopeResetListener(
-            $this->breadcrumbs,
-            $this->spans,
-            $this->scope,
-            $this->traceIdProvider,
-            $this->pendingRegistry,
+            [$this->breadcrumbs, $this->spans, $this->scope, $this->traceIdProvider],
+            [$this->pendingRegistry],
         ));
     }
 
@@ -110,6 +123,98 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         self::assertCount(1, $this->breadcrumbs->all());
         self::assertSame(['tenant' => 't1'], $this->scope->getTags());
         self::assertSame($main->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE), $this->traceIdProvider->get());
+    }
+
+    public function testSubscribesToMessengerAndConsoleBoundariesAfterTheFailureCapture(): void
+    {
+        $events = BeaconRequestScopeResetListener::getSubscribedEvents();
+
+        self::assertSame(['onMessageReceived', 4096], $events[WorkerMessageReceivedEvent::class]);
+        self::assertSame(['clear', -4096], $events[WorkerMessageHandledEvent::class]);
+        self::assertSame(['clear', -4096], $events[WorkerMessageFailedEvent::class]);
+        self::assertSame(['clear', -4096], $events[ConsoleEvents::TERMINATE]);
+        // The failed-message capture, Scheduler check-in and message transaction run first and keep the scope.
+        self::assertLessThan(BeaconMessengerFailedListener::PRIORITY, $events[WorkerMessageFailedEvent::class][1]);
+        self::assertLessThan(-1024, $events[WorkerMessageFailedEvent::class][1]);
+        self::assertLessThan(-2048, $events[WorkerMessageHandledEvent::class][1], 'after the pending flush');
+    }
+
+    public function testMessageBoundariesClearTheScope(): void
+    {
+        $envelope = new Envelope(new stdClass());
+
+        $this->fill('A');
+        $this->dispatcher->dispatch(new WorkerMessageReceivedEvent($envelope, 'async'));
+        $this->assertEmptyScope();
+
+        $this->fill('A');
+        $this->dispatcher->dispatch(new WorkerMessageHandledEvent($envelope, 'async'));
+        $this->assertEmptyScope();
+
+        $this->fill('B');
+        $this->dispatcher->dispatch(new WorkerMessageFailedEvent($envelope, 'async', new RuntimeException('boom')));
+        $this->assertEmptyScope();
+    }
+
+    public function testConsoleTerminateClearsTheScope(): void
+    {
+        $this->fill('A');
+        $this->dispatcher->dispatch(
+            new ConsoleTerminateEvent(new Command('app:long'), new ArrayInput([]), new NullOutput(), 0),
+            ConsoleEvents::TERMINATE,
+        );
+
+        $this->assertEmptyScope();
+    }
+
+    public function testDirectClearResetsEveryService(): void
+    {
+        $this->fill('A');
+        (new BeaconRequestScopeResetListener([$this->breadcrumbs, $this->spans, $this->scope, $this->traceIdProvider]))->clear();
+
+        $this->assertEmptyScope();
+    }
+
+    public function testBoundaryNeverBuildsAnUninitializedService(): void
+    {
+        $container = new ContainerBuilder();
+        $container->register(Scope::class)->setPublic(true);
+        $container->register(PendingTransportRegistry::class)->setPublic(true);
+        $container->register(BeaconRequestScopeResetListener::class)
+            ->setPublic(true)
+            ->setArguments([
+                new IteratorArgument([new Reference(Scope::class, ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE)]),
+                new IteratorArgument([new Reference(PendingTransportRegistry::class, ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE)]),
+            ]);
+        $container->compile(true);
+
+        $listener = $container->get(BeaconRequestScopeResetListener::class);
+        self::assertInstanceOf(BeaconRequestScopeResetListener::class, $listener);
+        $listener->onMessageReceived();
+        self::assertFalse($container->initialized(Scope::class), 'the boundary does not build the scope');
+        self::assertFalse($container->initialized(PendingTransportRegistry::class));
+
+        $scope = $container->get(Scope::class);
+        self::assertInstanceOf(Scope::class, $scope);
+        $scope->setTag('tenant', 'A');
+        $listener->clear();
+        self::assertSame([], $scope->getTags(), 'the same listener instance clears a service built later');
+    }
+
+    private function fill(string $user): void
+    {
+        $this->breadcrumbs->add('breadcrumb of ' . $user, 'probe');
+        $this->spans->add('db.sql.query', 'SELECT 1', 1.0, 2.0);
+        $this->scope->setTag('user_id', $user);
+        $this->traceIdProvider->set('trace-' . $user);
+    }
+
+    private function assertEmptyScope(): void
+    {
+        self::assertSame([], $this->breadcrumbs->all());
+        self::assertSame([], $this->spans->all());
+        self::assertSame([], $this->scope->getTags());
+        self::assertNull($this->traceIdProvider->get());
     }
 
     private function mainRequest(Request $request): Request

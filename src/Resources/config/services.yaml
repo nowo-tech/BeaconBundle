@@ -24,7 +24,17 @@ services:
 
     Nowo\BeaconBundle\Envelope\PendingTransportRegistry: ~
 
+    # REQ-RUNTIME-002: lazy iterators of IGNORE_ON_UNINITIALIZED references ('@!'): a boundary never builds a service.
     Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener:
+        autowire: false
+        arguments:
+            $scopeState: !iterator
+                - '@!Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer'
+                - '@!Nowo\BeaconBundle\Instrumentation\SpanBuffer'
+                - '@!Nowo\BeaconBundle\Scope\Scope'
+                - '@!Nowo\BeaconBundle\Trace\TraceIdProvider'
+            $pendingRegistries: !iterator
+                - '@!Nowo\BeaconBundle\Envelope\PendingTransportRegistry'
         tags:
             - { name: kernel.event_subscriber }
 
