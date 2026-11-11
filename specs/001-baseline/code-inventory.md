@@ -90,7 +90,7 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/EventListener/BeaconWorkerMemoryListener.php` | Opt-in worker memory warning | FR-MQ-004 |
 | `src/EventListener/BeaconPhpWarningHandler.php` | PHP warnings / notices → events (redacted fingerprint) | FR-PW-001, FR-SDK-006 |
 | `src/EventListener/BeaconRequestTransactionListener.php` | Opt-in HTTP transactions | FR-LI-004, FR-LI-005, FR-WK-002 |
-| `src/EventListener/BeaconRequestScopeResetListener.php` | Worker-safe request buffer reset | FR-WK-001, FR-WK-003 |
+| `src/EventListener/BeaconRequestScopeResetListener.php` | Worker-safe scope reset at main request, Messenger message and console terminate (1.24.0) | FR-WK-001, FR-WK-003 |
 | `src/EventListener/BeaconTraceRequestListener.php` | Seed / honour trace id | FR-WK-001 |
 | `src/EventListener/BeaconFatalErrorHandler.php` | Process shutdown fatals | FR-WK-005 |
 | `src/EventListener/FlushPendingTransportsListener.php` | Flush on terminate and after each worker message | FR-TR-002, FR-WK-003, FR-MQ-006 |

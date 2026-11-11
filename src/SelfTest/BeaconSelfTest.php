@@ -268,7 +268,7 @@ final readonly class BeaconSelfTest
 
     private function tagRun(string $kind, string $runToken): void
     {
-        $this->client->setTags([self::TAG => $runToken, self::TAG_KIND => $kind]); // @igor-ignore - Scope is reset per request (BeaconRequestScopeResetListener / kernel.reset).
+        $this->client->setTags([self::TAG => $runToken, self::TAG_KIND => $kind]); // @igor-ignore - Scope is reset per request / message / command (BeaconRequestScopeResetListener / kernel.reset).
     }
 
     private function throwUncaught(string $kind, string $runToken): never
