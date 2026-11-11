@@ -103,7 +103,9 @@ composer update nowo-tech/beacon-bundle
 
 Nothing to change. The bundle now calls Beacon's versioned ingest paths (`/api/ingest/v1/{projectId}/…`, Beacon
 1.147) and, against an older Beacon, falls back once per Beacon target (origin + project id) to the unversioned paths it used before (they stay as
-permanent aliases on every Beacon). Each process sends at most one extra request (answered 404) per older Beacon.
+permanent aliases on every Beacon). A long-running process (FrankenPHP worker, Messenger consumer) sends one extra
+request (answered 404) per older Beacon; under **PHP-FPM** or for short console commands every request or run that
+sends something pays that 404, so set `ingest_paths: legacy` until your Beacon runs 1.147.
 
 ```yaml
 nowo_beacon:

@@ -16,6 +16,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
+use function is_string;
+
 /**
  * Synchronous HTTP transport that POSTs Envelope bodies to Beacon ingest.
  *
@@ -29,8 +31,9 @@ use Throwable;
  *
  * Ingest path (1.23): the versioned `/api/ingest/v1/{projectId}/envelope/` by default; with `ingest_paths: auto` a
  * 404 / 405 there re-sends the same body once to the legacy `/api/{projectId}/envelope/` and the
- * {@see IngestPathResolver} remembers the target's answer. No other status is re-sent here (5xx retries stay with the
- * retrying HTTP client). Log records keep beacon-php's `url` context value (the legacy URL).
+ * {@see IngestPathResolver} remembers the target's answer (a known-versioned target that answers 404 / 405 self-heals the
+ * same way). No other status is re-sent here (5xx retries stay with the retrying HTTP client). Log records carry the
+ * URL actually used in `url`.
  */
 final class EnvelopeTransport implements EnvelopeTransportInterface
 {
@@ -79,14 +82,13 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function sendDetailed(string $envelopeBody): TransportResult
     {
-        $probing   = $this->ingestPaths->isProbing($this->dsn);
         $versioned = $this->ingestPaths->useVersioned($this->dsn);
         $response  = $this->request($envelopeBody, $versioned);
         if ($response instanceof CoreTransportResult) {
             return $this->fromCore($response);
         }
 
-        return $this->finalizeStarted($response, $versioned, $probing ? $envelopeBody : null);
+        return $this->finalizeStarted($response, $versioned, $envelopeBody);
     }
 
     /**
@@ -112,7 +114,8 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
 
     /**
      * Start the HTTP POST and return what {@see finalizeStarted()} needs: the response, whether it went to the
-     * versioned path, and the body while the target is still being probed (null otherwise, so nothing large is kept).
+     * versioned path, and the body when a legacy resend is possible (versioned path in auto mode; null otherwise). The
+     * body is the same string the running request already references, so keeping it costs no copy.
      *
      * @internal
      *
@@ -120,16 +123,17 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function startProbeAwareRequest(string $envelopeBody): ?array
     {
-        $probing   = $this->ingestPaths->isProbing($this->dsn);
         $versioned = $this->ingestPaths->useVersioned($this->dsn);
         $response  = $this->request($envelopeBody, $versioned);
+        $keep      = $versioned && $this->ingestPaths->mayFallBack() ? $envelopeBody : null;
 
-        return $response instanceof ResponseInterface ? [$response, $versioned, $probing ? $envelopeBody : null] : null;
+        return $response instanceof ResponseInterface ? [$response, $versioned, $keep] : null;
     }
 
     /**
-     * Read the status of a started request; when it went to the versioned path, the target is being probed and the
-     * route is missing (404 / 405), re-send `$bodyForFallback` once to the legacy path. Logs exactly one outcome.
+     * Read the status of a started request; when it went to the versioned path in auto mode and the route is missing
+     * (404 / 405, also on a target known as versioned: self-heal), re-send `$bodyForFallback` once to the legacy path.
+     * Logs exactly one outcome, with the URL actually used.
      *
      * @internal
      */
@@ -175,10 +179,11 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             'max_redirects' => 0,
         ];
 
+        $url = IngestPaths::envelopeUrl($this->dsn, $versioned);
         try {
-            return $this->tlsHttpClient->request('POST', IngestPaths::envelopeUrl($this->dsn, $versioned), $options);
+            return $this->tlsHttpClient->request('POST', $url, $options);
         } catch (Throwable $exception) {
-            return $this->responses->fromFailure($exception);
+            return $this->handlerFor($url)->fromFailure($exception);
         }
     }
 
@@ -211,13 +216,15 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function finalizeResponseDetailed(ResponseInterface $response): TransportResult
     {
+        $url       = $response->getInfo('url');
+        $responses = $this->handlerFor(is_string($url) ? $url : null);
         try {
             $status = $response->getStatusCode();
         } catch (Throwable $exception) {
-            return $this->fromCore($this->responses->fromFailure($exception));
+            return $this->fromCore($responses->fromFailure($exception));
         }
 
-        return $this->fromCore($this->responses->fromStatus(
+        return $this->fromCore($responses->fromStatus(
             $status,
             // @igor-ignore - Per-call header reader passed to the handler and dropped; nothing is stored on the service.
             static function (string $name) use ($response): ?string {
@@ -236,6 +243,19 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     public function getDsn(): BeaconDsn
     {
         return $this->dsn;
+    }
+
+    /**
+     * Response handler whose log records carry `$url` (the URL actually used, audit LO-I2) instead of beacon-php's
+     * legacy envelope URL. Built per call; nothing is stored on the service.
+     */
+    private function handlerFor(?string $url): IngestResponseHandler
+    {
+        if ($url === null || $this->logger === null) {
+            return $this->responses;
+        }
+
+        return new IngestResponseHandler($this->dsn, new UsedUrlLogger($this->logger, $url));
     }
 
     private function fromCore(CoreTransportResult $result): TransportResult

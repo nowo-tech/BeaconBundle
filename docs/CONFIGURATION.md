@@ -215,22 +215,41 @@ permanent aliases:
 Same authentication, limits and answers on both. With `ingest_paths: auto` (default) the bundle works against any
 Beacon version:
 
-- The first call to a Beacon target (origin + project id) goes to the versioned path.
+- A call to a Beacon target (origin + project id) goes to the versioned path unless the target is known to serve the
+  legacy paths only.
 - HTTP **404 or 405** there (an older Beacon has no such route): the same request is sent **once** more to the legacy
-  path. The 404 that triggered the retry is not logged.
-- The answer is remembered per target, origin + project id (`IngestPathResolver`, shared by the Envelope transports, remote commands and
-  `nowo:beacon:test`): any other answer on the versioned path → versioned from then on; an answer other than 404 / 405
-  on the legacy path → legacy from then on; 404 on both (unknown project) → versioned, without probing again. The
-  project id in the key keeps that last case from pinning the versioned path for other projects or tenants on the
-  same older Beacon.
-- **No other status is re-sent** by this logic (400, 401, 403, 413, 429, 5xx keep their usual handling, 5xx retries
-  included), and a network failure (no HTTP answer) is neither re-sent nor remembered.
-- `async` mode keeps an Envelope body only while its target is still unknown, and does the legacy retry at flush.
+  path. The 404 that triggered the retry is not logged. A 404 / 405 means nothing was processed, so this never
+  duplicates a request.
+- The answer is remembered per target (`IngestPathResolver`, shared by the Envelope transports, remote commands and
+  `nowo:beacon:test`); the newest answer replaces the older one:
 
-Worker mode (FrankenPHP without kernel reset): the remembered map only holds a server capability (origin + project id → versioned
-or legacy), never keys, secrets, request, user or tenant data. It is bounded to 32 targets (`MAX_ENTRIES`) and lives for the process, so a
-long-running worker probes each Beacon once; it is tagged `kernel.reset`, after which the next call probes again (at
-most one extra 404 against an older Beacon).
+  | Answer | Learned | Re-sent to the legacy path |
+  | --- | --- | --- |
+  | versioned 2xx, or a Beacon 400 / 401 / 403 / 413 / 415 / 422 | versioned | no |
+  | versioned 404 / 405 | (forgotten if it was versioned: self-heal) | once |
+  | versioned 408 / 429 / 5xx / any other status, or a network failure | nothing (the next call probes again) | no |
+  | legacy 2xx, or a Beacon 400 / 401 / 403 / 413 / 415 / 422 | legacy | — |
+  | legacy 404 / 405 too (unknown project or command) | versioned | — |
+  | legacy 408 / 429 / 5xx / other, or a network failure | nothing | — |
+
+  A transient 503 from a proxy or a load balancer in front of an older Beacon therefore never pins the versioned path,
+  and a target known as versioned that starts answering 404 (Beacon downgrade, a remote-command `not_found` on both
+  paths) heals itself on the next call. The project id in the key keeps an unknown project from pinning the versioned
+  path for other projects or tenants on the same older Beacon.
+- **No other status is re-sent** by this logic (429 and 5xx keep their usual handling, retries of the retrying HTTP
+  client included), and a network failure (no HTTP answer) is neither re-sent nor remembered.
+- `async` mode keeps a reference to the body of each pending versioned request (at most 100 pending requests) and does
+  the legacy retry at flush.
+- Log records carry the URL actually used (`url` context: versioned or legacy).
+
+Worker mode (FrankenPHP without kernel reset): the remembered map only holds a server capability (origin + project id
+→ versioned or legacy), never keys, secrets, request, user or tenant data. It is bounded to 32 targets
+(`MAX_ENTRIES`), lives for the process and is intentionally **not** tagged `kernel.reset`, so a long-running worker or
+Messenger consumer probes an older Beacon once (again only after a transient error or a self-heal).
+
+Cost against Beacon < 1.147: one extra 404 per probe. Under **PHP-FPM** (one container per request) and for short
+console commands, every request or run that sends something probes again: set `ingest_paths: legacy` until Beacon is
+1.147, then remove it.
 
 Use `ingest_paths: versioned` once every Beacon you send to runs 1.147 or later, or `legacy` to keep the previous
 paths (for example behind a proxy that only allows them).

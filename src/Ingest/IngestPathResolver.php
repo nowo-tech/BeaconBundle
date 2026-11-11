@@ -5,33 +5,41 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Ingest;
 
 use Nowo\Beacon\Dsn\Dsn;
-use Symfony\Contracts\Service\ResetInterface;
 
-use function array_key_first;
+use function array_slice;
 use function count;
 use function rawurlencode;
 
 /**
  * Remembers, per Beacon target (DSN origin + project id), whether that Beacon serves the versioned ingest paths
- * (`nowo_beacon.ingest_paths: auto`).
+ * (`nowo_beacon.ingest_paths: auto`). Same state machine as beacon-php and beacon-js.
  *
- * In `auto` mode an unknown target is tried on the versioned path. A 404 / 405 there means an older Beacon: the same
- * request goes once more to the legacy path, and the answer is remembered:
+ * In `auto` mode a target that is not known to serve the legacy paths only is sent to the versioned path. The answer
+ * there decides what happens (audit LO-M1):
  *
- * - versioned path answered anything else (2xx, 400, 401, 403, 413, 429, 5xx…) → versioned;
- * - legacy path answered something other than 404 / 405 → legacy;
- * - both answered 404 / 405 (unknown project, not a path problem) → versioned, so the target is probed only once;
- * - a network failure (no HTTP answer) → nothing is learned and nothing is re-sent.
+ * - 2xx, or a 400 / 401 / 403 / 413 / 415 / 422 that Beacon's ingest controllers emit → the route exists: versioned;
+ * - 404 / 405 → the route is missing (Beacon < 1.147): the same request goes once more to the legacy path. When the
+ *   target was known as versioned (a Beacon downgrade, a stale entry, an application 404 on both paths) the entry is
+ *   forgotten first (self-heal);
+ * - anything else (408, 429, 5xx, other statuses from a proxy or a load balancer) or a network failure → nothing is
+ *   learned and nothing is re-sent; the next request probes again.
+ *
+ * The legacy answer after a 404 / 405: 2xx or one of the Beacon 4xx above → legacy; 404 / 405 on both paths (unknown
+ * project or command, not a path problem) → versioned; anything else → nothing learned. The newest answer always
+ * replaces the older one. A 404 / 405 means nothing was processed, so the legacy resend never duplicates a request.
  *
  * The key includes the project id (same key as beacon-php and beacon-js), so a DSN with an unknown project (both paths
  * 404) cannot pin the versioned path for another project or tenant on the same older Beacon.
  *
  * Worker-safe (FrankenPHP worker mode without kernel reset): the map holds only a server capability (target → bool),
- * never keys, secrets, request, user or tenant data, and is bounded to {@see MAX_ENTRIES} entries (oldest dropped). It
- * lives for the process, so a long-running worker probes each target once. {@see reset()} (`kernel.reset`) forgets it;
- * the next request then probes again, which costs at most one extra 404 against an older Beacon.
+ * never keys, secrets, request, user or tenant data, and is bounded to {@see MAX_ENTRIES} entries (oldest dropped).
+ * It is intentionally **not** reset with the kernel (audit LO-L4): it holds no request state, and a reset after every
+ * Messenger message would cost one extra 404 per message against an older Beacon. A long-running worker or consumer
+ * probes an older Beacon once (again only after a transient error or a self-heal). Under PHP-FPM the container lives
+ * for one request, so every request that sends something probes again: set `ingest_paths: legacy` until Beacon is
+ * 1.147. {@see reset()} forgets every target (tests, or after a Beacon upgrade without a restart).
  */
-final class IngestPathResolver implements ResetInterface
+final class IngestPathResolver
 {
     public const MAX_ENTRIES = 32;
 
@@ -74,8 +82,7 @@ final class IngestPathResolver implements ResetInterface
     }
 
     /**
-     * Whether the DSN's target is still unknown (auto mode, not probed yet): a request started now must keep its body
-     * for a possible legacy retry.
+     * Whether the DSN's target is still unknown (auto mode, no answer that proves a path yet).
      */
     public function isProbing(Dsn $dsn): bool
     {
@@ -83,8 +90,17 @@ final class IngestPathResolver implements ResetInterface
     }
 
     /**
+     * Whether a request to the versioned path may have to be re-sent to the legacy path (auto mode): its caller keeps
+     * the body until the status is read.
+     */
+    public function mayFallBack(): bool
+    {
+        return $this->mode === IngestPathMode::Auto;
+    }
+
+    /**
      * Report the HTTP status of a request sent to the versioned path. Returns true when the caller must send the same
-     * request once more to the legacy path (auto mode, route missing, target not known to serve the versioned paths).
+     * request once more to the legacy path (auto mode and 404 / 405, including on a target known as versioned).
      */
     public function versionedAnswered(Dsn $dsn, int $status): bool
     {
@@ -93,13 +109,18 @@ final class IngestPathResolver implements ResetInterface
         }
 
         $key = $this->key($dsn);
-        if (!IngestPaths::isRouteMissing($status)) {
-            $this->learn($key, true);
+        if (IngestPaths::isRouteMissing($status)) {
+            // Self-heal: a target known as versioned that now has no such route is probed again.
+            unset($this->known[$key]);
 
-            return false;
+            return true;
         }
 
-        return ($this->known[$key] ?? null) !== true;
+        if (IngestPaths::provesRoute($status)) {
+            $this->learn($key, true);
+        }
+
+        return false;
     }
 
     /**
@@ -111,8 +132,12 @@ final class IngestPathResolver implements ResetInterface
             return;
         }
 
-        // Both paths missing: the project is unknown, not the path. Keep the canonical path and stop probing.
-        $this->learn($this->key($dsn), IngestPaths::isRouteMissing($status));
+        if (IngestPaths::isRouteMissing($status)) {
+            // Both paths missing: the project (or command) is unknown, not the path. Keep the canonical path.
+            $this->learn($this->key($dsn), true);
+        } elseif (IngestPaths::provesRoute($status)) {
+            $this->learn($this->key($dsn), false);
+        }
     }
 
     /**
@@ -124,7 +149,7 @@ final class IngestPathResolver implements ResetInterface
     }
 
     /**
-     * Forget every target (`kernel.reset`).
+     * Forget every target (tests, or after a Beacon upgrade without a restart). Not tagged `kernel.reset`.
      */
     public function reset(): void
     {
@@ -139,18 +164,19 @@ final class IngestPathResolver implements ResetInterface
         return $dsn->getOrigin() . '/' . rawurlencode($dsn->getProjectId());
     }
 
+    /**
+     * Remember the newest answer (it replaces an older one and becomes the newest entry).
+     */
     private function learn(string $key, bool $versioned): void
     {
-        if (isset($this->known[$key])) {
-            return;
+        unset($this->known[$key]);
+        if (count($this->known) >= self::MAX_ENTRIES) {
+            // Oldest first (insertion order); keys are URLs, never integers, so array_slice keeps them.
+            // @igor-ignore - Bounded server capability per target (no request / user / tenant data), process-wide by design (LO-L4).
+            $this->known = array_slice($this->known, 1 + count($this->known) - self::MAX_ENTRIES, null, true);
         }
 
-        while (count($this->known) >= self::MAX_ENTRIES) {
-            $oldest = array_key_first($this->known);
-            unset($this->known[$oldest]);
-        }
-
-        // @igor-ignore - Server capability per target (no keys, request, user or tenant data), bounded to MAX_ENTRIES and cleared by reset().
+        // @igor-ignore - Server capability per target (no keys, request, user or tenant data), bounded to MAX_ENTRIES; process-wide by design (LO-L4).
         $this->known[$key] = $versioned;
     }
 }

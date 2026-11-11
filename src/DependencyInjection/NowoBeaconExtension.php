@@ -163,11 +163,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $loader->load('services.yaml');
 
         $container->setParameter('nowo.beacon.ingest_paths', (string) ($config['ingest_paths'] ?? 'auto'));
-        // Shared per-origin ingest path decision (server capability only, bounded; reset with the kernel).
+        // Shared ingest path decision per origin + project id: a server capability only, bounded to 32 entries.
+        // Intentionally not `kernel.reset` (audit LO-L4): no request state, and Messenger resets services after every
+        // message, which would re-probe an older Beacon once per message.
         $ingestPaths = new Definition(IngestPathResolver::class, [
             '$mode' => (string) ($config['ingest_paths'] ?? 'auto'),
         ]);
-        $ingestPaths->addTag('kernel.reset', ['method' => 'reset']);
         $ingestPaths->setPublic(false);
         $container->setDefinition(IngestPathResolver::class, $ingestPaths);
 

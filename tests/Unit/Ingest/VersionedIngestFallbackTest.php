@@ -12,6 +12,7 @@ use Nowo\BeaconBundle\Envelope\AsyncEnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Ingest\IngestPathMode;
 use Nowo\BeaconBundle\Ingest\IngestPathResolver;
+use Nowo\BeaconBundle\Ingest\IngestPaths;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\CommandResult;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandClient;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommandException;
@@ -25,6 +26,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function array_column;
 use function array_shift;
+use function constant;
 use function str_contains;
 
 /**
@@ -86,7 +88,7 @@ final class VersionedIngestFallbackTest extends TestCase
      */
     public static function otherStatuses(): iterable
     {
-        foreach ([400, 401, 403, 413, 429, 500, 503] as $status) {
+        foreach ([400, 401, 403, 413, 415, 422, 408, 429, 500, 502, 503, 504] as $status) {
             yield (string) $status => [$status];
         }
     }
@@ -94,15 +96,51 @@ final class VersionedIngestFallbackTest extends TestCase
     #[DataProvider('otherStatuses')]
     public function testNoFallbackOnOtherStatuses(int $status): void
     {
-        $transport       = $this->transport();
+        $resolver        = new IngestPathResolver();
+        $logger          = new ArrayLogger();
+        $transport       = $this->transport($resolver, $logger);
         $this->responses = [$this->answer($status), $this->answer(202)];
 
         $result = $transport->sendDetailed("one\n");
         self::assertFalse($result->isAccepted());
         self::assertSame($status, $result->getStatusCode());
+        self::assertSame(self::VERSIONED, $logger->records[0]['context']['url'] ?? null, 'the log shows the URL actually used');
+        // Only a Beacon answer proves the route (LO-M1).
+        self::assertSame(!IngestPaths::provesRoute($status), $resolver->isProbing($this->dsn()));
         self::assertTrue($transport->send("two\n"));
 
         self::assertSame([self::VERSIONED, self::VERSIONED], $this->urls(), 'never re-sent, and the versioned path is kept');
+    }
+
+    public function testAuditPocTransientFirstAnswerThenOldBeacon(): void
+    {
+        // Audit LO PoC A: a 503 on the first probe must not pin the versioned path against Beacon < 1.147.
+        $logger          = new ArrayLogger();
+        $transport       = $this->transport(logger: $logger);
+        $this->responses = [$this->answer(503), $this->answer(404), $this->answer(202), $this->answer(202)];
+
+        self::assertSame(503, $transport->sendDetailed("one\n")->getStatusCode());
+        self::assertTrue($transport->send("two\n"), 'delivered through the legacy path');
+        self::assertTrue($transport->send("three\n"));
+
+        self::assertSame([self::VERSIONED, self::VERSIONED, self::LEGACY, self::LEGACY], $this->urls());
+        self::assertCount(1, $logger->records);
+    }
+
+    public function testAuditPocKnownVersionedTargetSelfHealsOnA404(): void
+    {
+        // Audit LO: 404 after the versioned path was learned (stale entry, Beacon downgrade).
+        $logger          = new ArrayLogger();
+        $transport       = $this->transport(logger: $logger);
+        $this->responses = [$this->answer(202), $this->answer(404), $this->answer(202), $this->answer(401)];
+
+        self::assertTrue($transport->send("one\n"));
+        self::assertTrue($transport->send("two\n"));
+        self::assertFalse($transport->send("three\n"));
+
+        self::assertSame([self::VERSIONED, self::VERSIONED, self::LEGACY, self::LEGACY], $this->urls());
+        self::assertSame(["one\n", "two\n", "two\n", "three\n"], array_column($this->requests, 'body'));
+        self::assertSame(self::LEGACY, $logger->records[0]['context']['url'] ?? null);
     }
 
     public function testNetworkFailureIsNeitherRetriedNorRemembered(): void
@@ -165,14 +203,16 @@ final class VersionedIngestFallbackTest extends TestCase
     {
         $logger          = new ArrayLogger();
         $transport       = $this->transport(logger: $logger);
-        $this->responses = [$this->answer(404), $this->answer(404), $this->answer(404)];
+        $this->responses = [$this->answer(404), $this->answer(404), $this->answer(404), $this->answer(404)];
 
         $result = $transport->sendDetailed("one\n");
         self::assertSame(404, $result->getStatusCode());
         self::assertCount(1, $logger->records);
+        self::assertSame(self::LEGACY, $logger->records[0]['context']['url'] ?? null);
         self::assertFalse($transport->send("two\n"));
 
-        self::assertSame([self::VERSIONED, self::LEGACY, self::VERSIONED], $this->urls());
+        // The versioned path is kept; its next 404 self-heals into one more legacy attempt.
+        self::assertSame([self::VERSIONED, self::LEGACY, self::VERSIONED, self::LEGACY], $this->urls());
     }
 
     public function testForcedModes(): void
@@ -295,6 +335,59 @@ final class VersionedIngestFallbackTest extends TestCase
 
         self::assertCount(1, $this->requests);
         self::assertTrue(str_contains($this->urls()[0], '/api/ingest/v1/'));
+    }
+
+    public function testAuditLoL1ResultNotFoundOnBothPathsDoesNotStopClaimsOnAnOlderBeacon(): void
+    {
+        // LO-L1: against Beacon < 1.147, a result posted while the target is unknown gets a routing 404 on the versioned
+        // path and an application 404 `not_found` on the legacy one. That keeps the versioned path, and the next claim
+        // self-heals back to the legacy path instead of dropping.
+        $resolver        = new IngestPathResolver();
+        $client          = $this->remoteClient($resolver);
+        $prefix          = 'https://beacon.example.com:9447/api/';
+        $project         = RemoteRetryFixtures::PROJECT;
+        $command         = RemoteRetryFixtures::command();
+        $this->responses = [
+            $this->answer(404),
+            new MockResponse('{"error":"not_found"}', ['http_code' => 404]),
+            $this->answer(404),
+            new MockResponse('{"commands":[],"poll_after":15}'),
+            new MockResponse('{"commands":[]}'),
+        ];
+
+        try {
+            $client->postResult($command, CommandResult::done(CommandResult::OUTCOME_REMOVED, new DateTimeImmutable()));
+            self::fail('Expected RemoteCommandException');
+        } catch (RemoteCommandException $e) {
+            self::assertSame(404, $e->statusCode);
+        }
+        self::assertSame(15, $client->claim([])->pollAfter);
+        $client->claim([]);
+
+        self::assertSame([
+            $prefix . 'ingest/v1/' . $project . '/messenger/commands/' . $command->id . '/result',
+            $prefix . $project . '/messenger/commands/' . $command->id . '/result',
+            $prefix . 'ingest/v1/' . $project . '/messenger/commands/claim',
+            $prefix . $project . '/messenger/commands/claim',
+            $prefix . $project . '/messenger/commands/claim',
+        ], $this->urls());
+    }
+
+    public function testAsyncTransportKeepsAtMostMaxPendingRequests(): void
+    {
+        // LO-L3: a long console command in async mode never accumulates responses or bodies without bound.
+        $async           = new AsyncEnvelopeTransport($this->transport(new IngestPathResolver()), 2);
+        $this->responses = [$this->answer(404), $this->answer(404), $this->answer(202), $this->answer(202), $this->answer(202)];
+
+        self::assertTrue($async->send("one\n"));
+        self::assertTrue($async->send("two\n"));
+        self::assertTrue($async->send("three\n")); // starts, then completes "one" (with its legacy resend)
+        self::assertCount(2, (fn (): array => $this->pending)->call($async));
+        self::assertSame([self::VERSIONED, self::VERSIONED, self::VERSIONED, self::LEGACY], $this->urls());
+
+        $async->flush();
+        self::assertSame([self::VERSIONED, self::VERSIONED, self::VERSIONED, self::LEGACY, self::LEGACY], $this->urls());
+        self::assertSame(100, constant(AsyncEnvelopeTransport::class . '::DEFAULT_MAX_PENDING'));
     }
 
     public function testRemoteCommandsLegacyMode(): void

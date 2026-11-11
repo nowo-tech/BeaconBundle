@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Ingest;
 
 use Nowo\Beacon\Dsn\Dsn;
 
+use function in_array;
 use function rawurlencode;
 
 /**
@@ -24,6 +25,9 @@ final class IngestPaths
     public const VERSIONED_PREFIX = '/api/ingest/v1/';
 
     public const LEGACY_PREFIX = '/api/';
+
+    /** 4xx statuses that only a Beacon ingest controller emits, so the route exists ({@see provesRoute()}). */
+    public const ROUTE_PROOF_STATUSES = [400, 401, 403, 413, 415, 422];
 
     /**
      * Envelope ingest URL.
@@ -48,6 +52,16 @@ final class IngestPaths
     public static function isRouteMissing(int $status): bool
     {
         return $status === 404 || $status === 405;
+    }
+
+    /**
+     * Whether an answer proves that the route exists: 2xx, or a 4xx that Beacon's ingest controllers emit (400 bad
+     * envelope, 401 / 403 auth, 413 too large, 415 media type, 422 invalid payload). 408, 429, 5xx and other statuses can
+     * come from a proxy, a load balancer or an outage in front of any Beacon version, so they prove nothing.
+     */
+    public static function provesRoute(int $status): bool
+    {
+        return ($status >= 200 && $status < 300) || in_array($status, self::ROUTE_PROOF_STATUSES, true);
     }
 
     private static function projectUrl(Dsn $dsn, bool $versioned): string

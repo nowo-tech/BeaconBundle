@@ -558,14 +558,15 @@ final class ExtensionLoadTest extends TestCase
         );
     }
 
-    public function testIngestPathResolverIsSharedAndResetWithTheKernel(): void
+    public function testIngestPathResolverIsSharedAndNotResetWithTheKernel(): void
     {
         $container = $this->createContainer();
         (new NowoBeaconExtension())->load([['dsn' => 'https://pk:sk@beacon.example.com/5']], $container);
 
         $resolver = $container->getDefinition(IngestPathResolver::class);
         self::assertSame('auto', $resolver->getArgument('$mode'));
-        self::assertSame([['method' => 'reset']], $resolver->getTag('kernel.reset'));
+        // LO-L4: process-wide server capability, not request state; a reset per Messenger message would re-probe.
+        self::assertFalse($resolver->hasTag('kernel.reset'));
         self::assertSame('auto', $container->getParameter('nowo.beacon.ingest_paths'));
         foreach ([BeaconClientFactory::class, BeaconConnectionTester::class] as $service) {
             $reference = $container->getDefinition($service)->getArgument('$ingestPaths');
