@@ -3,7 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
-  - [To 1.23.1](#to-1231)
+  - [To 1.24.0](#to-1240)
 - [To 1.23.0](#to-1230)
 - [To 1.22.0](#to-1220)
 - [To 1.22.0](#to-1220-1)
@@ -97,7 +97,7 @@
 
 ## Unreleased
 
-### To 1.23.1
+### To 1.24.0
 
 From **1.23.0**:
 
@@ -106,7 +106,8 @@ composer update nowo-tech/beacon-bundle
 ```
 
 Nothing to change in configuration. Breadcrumbs, spans, scope tags and the trace id are now also cleared at the
-Messenger boundaries (message received, handled, failed) and at `console.terminate`, not only at the main request, so
+Messenger boundaries (message received, handled, failed) and at `console.terminate` of the outermost command (not of
+a command run in-process from another command or a message handler), not only at the main request, so
 the bundle no longer depends on the services resetter for consumers started with `--no-reset` or for long-running
 commands.
 

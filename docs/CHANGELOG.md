@@ -77,7 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Next patch: 1.23.1.
+Next minor: 1.24.0 (the constructor of the internal `BeaconRequestScopeResetListener` changes).
 
 ### Security
 
@@ -93,14 +93,17 @@ Next patch: 1.23.1.
   clears them at `WorkerMessageReceivedEvent` (priority 4096) and at `WorkerMessageHandledEvent` /
   `WorkerMessageFailedEvent` / `console.terminate` (priority -4096: after the bundle's failure capture (-150),
   Scheduler check-in (-512), message transaction (-1024) and pending flush (-2048), so the event of a failed message
-  still carries that message's scope). `ResetInterface` / `kernel.reset` stay. Affected: 1.4.0 – 1.23.0 for Messenger
-  consumers (the automatic failure capture), 1.1.0 – 1.23.0 for events captured in long-running console commands.
+  still carries that message's scope). `console.terminate` clears only when the outermost command ends and no message
+  is in flight (depth counted on `console.command` / `console.terminate`), so a command run in-process from another
+  command or from a message handler (`Application::doRun()`) never clears the outer unit's scope.
+  `ResetInterface` / `kernel.reset` stay. Affected: 1.1.0 – 1.23.0 for any event captured in a `--no-reset` consumer
+  or a long-running command (automatic failure capture since 1.4.0).
 
 ### Changed
 
 - `BeaconRequestScopeResetListener` (internal, registered by the bundle) takes lazy iterators of
   `IGNORE_ON_UNINITIALIZED_REFERENCE` references to the four scope services and the pending-transport registry: a
-  boundary only clears instances that already exist and never builds one. See [UPGRADING](UPGRADING.md#to-1231).
+  boundary only clears instances that already exist and never builds one. See [UPGRADING](UPGRADING.md#to-1240).
 - Tests: `WorkerScopeIsolationTest` boots one kernel and never calls the services resetter: 1,000 iterations of an
   HTTP request (`http_kernel` directly), a succeeding and a failing Messenger message (a `Worker` without
   `ResetServicesListener`, i.e. `--no-reset`), two users, every captured event checked for its own breadcrumbs, tags and

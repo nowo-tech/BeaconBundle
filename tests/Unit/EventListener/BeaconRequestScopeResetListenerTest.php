@@ -17,6 +17,7 @@ use RuntimeException;
 use stdClass;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
@@ -33,6 +34,8 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent;
+use Symfony\Component\Messenger\Event\WorkerStoppedEvent;
+use Symfony\Component\Messenger\Worker;
 
 /**
  * Long-running worker (FrankenPHP) without kernel.reset: the same buffer instances serve
@@ -130,9 +133,11 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         $events = BeaconRequestScopeResetListener::getSubscribedEvents();
 
         self::assertSame(['onMessageReceived', 4096], $events[WorkerMessageReceivedEvent::class]);
-        self::assertSame(['clear', -4096], $events[WorkerMessageHandledEvent::class]);
-        self::assertSame(['clear', -4096], $events[WorkerMessageFailedEvent::class]);
-        self::assertSame(['clear', -4096], $events[ConsoleEvents::TERMINATE]);
+        self::assertSame(['onMessageFinished', -4096], $events[WorkerMessageHandledEvent::class]);
+        self::assertSame(['onMessageFinished', -4096], $events[WorkerMessageFailedEvent::class]);
+        self::assertSame(['onWorkerStopped', -4096], $events[WorkerStoppedEvent::class]);
+        self::assertSame(['onConsoleCommand', 4096], $events[ConsoleEvents::COMMAND]);
+        self::assertSame(['onConsoleTerminate', -4096], $events[ConsoleEvents::TERMINATE]);
         // The failed-message capture, Scheduler check-in and message transaction run first and keep the scope.
         self::assertLessThan(BeaconMessengerFailedListener::PRIORITY, $events[WorkerMessageFailedEvent::class][1]);
         self::assertLessThan(-1024, $events[WorkerMessageFailedEvent::class][1]);
@@ -163,6 +168,66 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
             new ConsoleTerminateEvent(new Command('app:long'), new ArrayInput([]), new NullOutput(), 0),
             ConsoleEvents::TERMINATE,
         );
+
+        $this->assertEmptyScope();
+    }
+
+    public function testNestedCommandDoesNotClearTheOuterCommandScope(): void
+    {
+        $this->consoleCommand();
+        $this->fill('outer');
+        $this->consoleCommand();
+        $this->consoleTerminate();
+
+        self::assertCount(1, $this->breadcrumbs->all(), 'a nested in-process command keeps the outer scope');
+        self::assertSame(['user_id' => 'outer'], $this->scope->getTags());
+        self::assertSame('trace-outer', $this->traceIdProvider->get());
+
+        $this->consoleTerminate();
+        $this->assertEmptyScope();
+    }
+
+    public function testCommandRunFromAMessageHandlerDoesNotClearTheMessageScope(): void
+    {
+        $envelope = new Envelope(new stdClass());
+        $this->consoleCommand(); // messenger:consume
+        $this->dispatcher->dispatch(new WorkerMessageReceivedEvent($envelope, 'async'));
+        $this->fill('message');
+        $this->consoleCommand(); // Application::doRun() inside the handler
+        $this->consoleTerminate();
+
+        self::assertCount(1, $this->breadcrumbs->all(), 'the message keeps its scope until it is handled');
+        self::assertSame('trace-message', $this->traceIdProvider->get());
+
+        $this->dispatcher->dispatch(new WorkerMessageFailedEvent($envelope, 'async', new RuntimeException('boom')));
+        $this->assertEmptyScope();
+
+        // A command run outside any message, with no outer command, clears at its own terminate.
+        $this->consoleTerminate(); // messenger:consume ends
+        $this->fill('after');
+        $this->consoleCommand();
+        $this->consoleTerminate();
+        $this->assertEmptyScope();
+    }
+
+    public function testSkippedMessageDoesNotBlockTheClearAfterTheWorkerStops(): void
+    {
+        $worker = $this->createStub(Worker::class);
+        $this->consoleCommand();
+        // Received without a handled / failed event (a listener chose not to handle it).
+        $this->dispatcher->dispatch(new WorkerMessageReceivedEvent(new Envelope(new stdClass()), 'async'));
+        $this->dispatcher->dispatch(new WorkerStoppedEvent($worker));
+        $this->fill('A');
+        $this->consoleTerminate();
+
+        $this->assertEmptyScope();
+    }
+
+    public function testTerminateWithoutCommandEventStillClears(): void
+    {
+        $this->fill('A');
+        $this->consoleTerminate();
+        $this->consoleTerminate();
 
         $this->assertEmptyScope();
     }
@@ -199,6 +264,19 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         $scope->setTag('tenant', 'A');
         $listener->clear();
         self::assertSame([], $scope->getTags(), 'the same listener instance clears a service built later');
+    }
+
+    private function consoleCommand(): void
+    {
+        $this->dispatcher->dispatch(new ConsoleCommandEvent(new Command('app:probe'), new ArrayInput([]), new NullOutput()), ConsoleEvents::COMMAND);
+    }
+
+    private function consoleTerminate(): void
+    {
+        $this->dispatcher->dispatch(
+            new ConsoleTerminateEvent(new Command('app:probe'), new ArrayInput([]), new NullOutput(), 0),
+            ConsoleEvents::TERMINATE,
+        );
     }
 
     private function fill(string $user): void
