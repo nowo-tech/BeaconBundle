@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.23.0](#to-1230)
 - [To 1.22.0](#to-1220)
 - [To 1.22.0](#to-1220-1)
 - [To 1.21.0](#to-1210)
@@ -95,7 +96,9 @@
 
 ## Unreleased
 
-From **1.22.0** (target **1.23.0**, not yet released):
+## To 1.23.0
+
+From **1.22.0**:
 
 ```bash
 composer update nowo-tech/beacon-bundle
