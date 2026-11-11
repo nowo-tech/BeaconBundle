@@ -135,13 +135,13 @@ final class VersionedIngestFallbackTest extends TestCase
         $failed = $transport->sendDetailed("one\n");
         self::assertNull($failed->getStatusCode());
         self::assertStringContainsString('connection reset', (string) $failed->getErrorMessage());
-        self::assertTrue($resolver->isProbing('https://beacon.example.com:9444'));
+        self::assertTrue($resolver->isProbing($this->dsn()));
 
         // The legacy retry fails to read, then fails to start: nothing is learned either way.
         self::assertNull($transport->sendDetailed("two\n")->getStatusCode());
-        self::assertTrue($resolver->isProbing('https://beacon.example.com:9444'));
+        self::assertTrue($resolver->isProbing($this->dsn()));
         self::assertNull($transport->sendDetailed("three\n")->getStatusCode());
-        self::assertTrue($resolver->isProbing('https://beacon.example.com:9444'));
+        self::assertTrue($resolver->isProbing($this->dsn()));
 
         self::assertSame([self::VERSIONED, self::VERSIONED, self::LEGACY, self::VERSIONED, self::LEGACY], $this->urls());
     }
@@ -149,8 +149,8 @@ final class VersionedIngestFallbackTest extends TestCase
     public function testStartRequestUsesTheKnownPath(): void
     {
         $resolver = new IngestPathResolver();
-        $resolver->versionedAnswered('https://beacon.example.com:9444', 404);
-        $resolver->legacyAnswered('https://beacon.example.com:9444', 202);
+        $resolver->versionedAnswered($this->dsn(), 404);
+        $resolver->legacyAnswered($this->dsn(), 202);
         $transport       = $this->transport($resolver);
         $this->responses = [$this->answer(202), new TransportException('connection refused')];
 
@@ -201,11 +201,11 @@ final class VersionedIngestFallbackTest extends TestCase
 
         self::assertSame([self::VERSIONED, self::VERSIONED, self::LEGACY, self::LEGACY], $this->urls());
         self::assertSame(["one\n", "two\n", "one\n", "two\n"], array_column($this->requests, 'body'));
-        self::assertFalse($resolver->useVersioned('https://beacon.example.com:9444'));
+        self::assertFalse($resolver->useVersioned($this->dsn()));
 
         self::assertTrue($async->send("three\n"));
         $pending = (fn (): array => $this->pending)->call($async);
-        self::assertNull($pending[0][2], 'no body is kept once the origin is known');
+        self::assertNull($pending[0][2], 'no body is kept once the target is known');
         $async->flush();
         self::assertSame(self::LEGACY, $this->urls()[4]);
     }
@@ -217,7 +217,7 @@ final class VersionedIngestFallbackTest extends TestCase
         $this->responses = [$this->answer(404), $this->answer(202), new MockResponse('{"commands":[]}'), $this->answer(202)];
 
         self::assertTrue($transport->send("one\n"));
-        // Same Beacon origin as the Envelope DSN: the claim goes straight to the legacy path.
+        // Same Beacon target (origin + project) as the Envelope DSN: the claim goes straight to the legacy path.
         $claim = $this->remoteClient($resolver, 'https://pk:sk@beacon.example.com:9444/5')->claim([]);
         self::assertSame([], $claim->commands);
 
@@ -232,6 +232,29 @@ final class VersionedIngestFallbackTest extends TestCase
             'https://beacon.example.com:9444/api/5/messenger/commands/claim',
             self::LEGACY,
         ], $this->urls());
+    }
+
+    public function testAnUnknownProjectDoesNotPinThePathForAnotherProjectOnTheSameBeacon(): void
+    {
+        // Two tenants, one shared resolver (worker without kernel reset), one older Beacon without /api/ingest/v1.
+        $resolver        = new IngestPathResolver();
+        $unknown         = new EnvelopeTransport($this->http(), (new BeaconDsnParser())->parse('https://pk:sk@beacon.example.com:9444/99'), true, 2.0, null, 'beacon-bundle/test', $resolver);
+        $tenant          = $this->transport($resolver);
+        $this->responses = [$this->answer(404), $this->answer(404), $this->answer(404), $this->answer(202), $this->answer(202)];
+
+        self::assertFalse($unknown->send("one\n"));
+        self::assertTrue($tenant->send("two\n"));
+        self::assertTrue($tenant->send("three\n"));
+
+        self::assertSame([
+            'https://beacon.example.com:9444/api/ingest/v1/99/envelope/',
+            'https://beacon.example.com:9444/api/99/envelope/',
+            self::VERSIONED,
+            self::LEGACY,
+            self::LEGACY,
+        ], $this->urls());
+        self::assertTrue($resolver->useVersioned((new BeaconDsnParser())->parse('https://pk:sk@beacon.example.com:9444/99')));
+        self::assertFalse($resolver->useVersioned($this->dsn()));
     }
 
     public function testConnectionTesterShowsTheVersionedUrlByDefault(): void

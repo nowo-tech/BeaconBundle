@@ -29,7 +29,7 @@ use Throwable;
  *
  * Ingest path (1.23): the versioned `/api/ingest/v1/{projectId}/envelope/` by default; with `ingest_paths: auto` a
  * 404 / 405 there re-sends the same body once to the legacy `/api/{projectId}/envelope/` and the
- * {@see IngestPathResolver} remembers the origin's answer. No other status is re-sent here (5xx retries stay with the
+ * {@see IngestPathResolver} remembers the target's answer. No other status is re-sent here (5xx retries stay with the
  * retrying HTTP client). Log records keep beacon-php's `url` context value (the legacy URL).
  */
 final class EnvelopeTransport implements EnvelopeTransportInterface
@@ -79,8 +79,8 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function sendDetailed(string $envelopeBody): TransportResult
     {
-        $probing   = $this->ingestPaths->isProbing($this->dsn->getOrigin());
-        $versioned = $this->ingestPaths->useVersioned($this->dsn->getOrigin());
+        $probing   = $this->ingestPaths->isProbing($this->dsn);
+        $versioned = $this->ingestPaths->useVersioned($this->dsn);
         $response  = $this->request($envelopeBody, $versioned);
         if ($response instanceof CoreTransportResult) {
             return $this->fromCore($response);
@@ -94,7 +94,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function getEnvelopeUrl(): string
     {
-        return IngestPaths::envelopeUrl($this->dsn, $this->ingestPaths->useVersioned($this->dsn->getOrigin()));
+        return IngestPaths::envelopeUrl($this->dsn, $this->ingestPaths->useVersioned($this->dsn));
     }
 
     /**
@@ -105,14 +105,14 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function startRequest(string $envelopeBody): ?ResponseInterface
     {
-        $response = $this->request($envelopeBody, $this->ingestPaths->useVersioned($this->dsn->getOrigin()));
+        $response = $this->request($envelopeBody, $this->ingestPaths->useVersioned($this->dsn));
 
         return $response instanceof ResponseInterface ? $response : null;
     }
 
     /**
      * Start the HTTP POST and return what {@see finalizeStarted()} needs: the response, whether it went to the
-     * versioned path, and the body while the origin is still being probed (null otherwise, so nothing large is kept).
+     * versioned path, and the body while the target is still being probed (null otherwise, so nothing large is kept).
      *
      * @internal
      *
@@ -120,16 +120,15 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     public function startProbeAwareRequest(string $envelopeBody): ?array
     {
-        $origin    = $this->dsn->getOrigin();
-        $probing   = $this->ingestPaths->isProbing($origin);
-        $versioned = $this->ingestPaths->useVersioned($origin);
+        $probing   = $this->ingestPaths->isProbing($this->dsn);
+        $versioned = $this->ingestPaths->useVersioned($this->dsn);
         $response  = $this->request($envelopeBody, $versioned);
 
         return $response instanceof ResponseInterface ? [$response, $versioned, $probing ? $envelopeBody : null] : null;
     }
 
     /**
-     * Read the status of a started request; when it went to the versioned path, the origin is being probed and the
+     * Read the status of a started request; when it went to the versioned path, the target is being probed and the
      * route is missing (404 / 405), re-send `$bodyForFallback` once to the legacy path. Logs exactly one outcome.
      *
      * @internal
@@ -138,7 +137,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     {
         if ($versioned && $bodyForFallback !== null) {
             $status = $this->statusOf($response);
-            if ($status !== null && $this->ingestPaths->versionedAnswered($this->dsn->getOrigin(), $status)) {
+            if ($status !== null && $this->ingestPaths->versionedAnswered($this->dsn, $status)) {
                 $response->cancel();
                 $legacy = $this->request($bodyForFallback, false);
                 if ($legacy instanceof CoreTransportResult) {
@@ -147,7 +146,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
 
                 $legacyStatus = $this->statusOf($legacy);
                 if ($legacyStatus !== null) {
-                    $this->ingestPaths->legacyAnswered($this->dsn->getOrigin(), $legacyStatus);
+                    $this->ingestPaths->legacyAnswered($this->dsn, $legacyStatus);
                 }
 
                 return $this->finalizeResponseDetailed($legacy);

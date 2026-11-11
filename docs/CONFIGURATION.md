@@ -144,7 +144,7 @@ nowo_beacon:
 | `server_name` | `null` | Optional server/host tag. When null, the bundle falls back to the host name. |
 | `verify_peer` | `true` | TLS verification for HTTPS ingest. |
 | `timeout` | `5.0` | HTTP timeout in seconds. See [Timeout hierarchy](#timeout-hierarchy-req-runtime-001). |
-| `ingest_paths` | `auto` | Which Beacon ingest paths are called. `auto`: the versioned `/api/ingest/v1/…` path first, once more on the legacy path after a 404 / 405 (older Beacon), remembered per Beacon origin. `versioned`: always the versioned paths (Beacon ≥ 1.147). `legacy`: always the unversioned paths. See [Ingest paths](#ingest-paths-versioned-legacy-fallback). |
+| `ingest_paths` | `auto` | Which Beacon ingest paths are called. `auto`: the versioned `/api/ingest/v1/…` path first, once more on the legacy path after a 404 / 405 (older Beacon), remembered per Beacon target (origin + project id). `versioned`: always the versioned paths (Beacon ≥ 1.147). `legacy`: always the unversioned paths. See [Ingest paths](#ingest-paths-versioned-legacy-fallback). |
 | `transport.mode` | `sync` | `sync` blocks on HTTP; `async` finalizes on terminate; `messenger` queues via Symfony Messenger (`SendBeaconEnvelopeMessage`). Without a message bus, `messenger` falls back to `async`. |
 | `transport.retry.max_retries` | `2` | Extra attempts when Beacon answers with one of `transport.retry.status_codes` (0 … 10; `0` disables retries). Applies to `sync`, `async` and the Messenger handler. See [Retries](#retries-on-beacon-server-errors). |
 | `transport.retry.delay_ms` | `500` | Wait before the first retry, in milliseconds. |
@@ -215,18 +215,20 @@ permanent aliases:
 Same authentication, limits and answers on both. With `ingest_paths: auto` (default) the bundle works against any
 Beacon version:
 
-- The first call to a Beacon origin goes to the versioned path.
+- The first call to a Beacon target (origin + project id) goes to the versioned path.
 - HTTP **404 or 405** there (an older Beacon has no such route): the same request is sent **once** more to the legacy
   path. The 404 that triggered the retry is not logged.
-- The answer is remembered per origin (`IngestPathResolver`, shared by the Envelope transports, remote commands and
+- The answer is remembered per target, origin + project id (`IngestPathResolver`, shared by the Envelope transports, remote commands and
   `nowo:beacon:test`): any other answer on the versioned path → versioned from then on; an answer other than 404 / 405
-  on the legacy path → legacy from then on; 404 on both (unknown project) → versioned, without probing again.
+  on the legacy path → legacy from then on; 404 on both (unknown project) → versioned, without probing again. The
+  project id in the key keeps that last case from pinning the versioned path for other projects or tenants on the
+  same older Beacon.
 - **No other status is re-sent** by this logic (400, 401, 403, 413, 429, 5xx keep their usual handling, 5xx retries
   included), and a network failure (no HTTP answer) is neither re-sent nor remembered.
-- `async` mode keeps an Envelope body only while its origin is still unknown, and does the legacy retry at flush.
+- `async` mode keeps an Envelope body only while its target is still unknown, and does the legacy retry at flush.
 
-Worker mode (FrankenPHP without kernel reset): the remembered map only holds a server capability (origin → versioned
-or legacy), never request, user or tenant data. It is bounded to 32 origins and lives for the process, so a
+Worker mode (FrankenPHP without kernel reset): the remembered map only holds a server capability (origin + project id → versioned
+or legacy), never keys, secrets, request, user or tenant data. It is bounded to 32 targets (`MAX_ENTRIES`) and lives for the process, so a
 long-running worker probes each Beacon once; it is tagged `kernel.reset`, after which the next call probes again (at
 most one extra 404 against an older Beacon).
 

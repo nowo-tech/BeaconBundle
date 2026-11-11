@@ -84,10 +84,13 @@ Target: **1.23.0** (new minor). See [UPGRADING](UPGRADING.md#unreleased).
   remote Messenger commands to `/api/ingest/v1/{projectId}/messenger/commands/claim` and `…/{id}/result`.
 - **`ingest_paths`** (`auto` | `versioned` | `legacy`, default `auto`). With `auto` a 404 / 405 on the versioned path
   sends the same request once more to the legacy unversioned path (permanent alias on every Beacon) and the answer is
-  remembered per Beacon origin, so the bundle keeps working against Beacon servers older than 1.147. Other statuses
-  (400, 401, 403, 413, 429, 5xx) and network failures are never re-sent by this logic.
-- `Ingest\IngestPathResolver` (shared, bounded to 32 origins, `kernel.reset`), `Ingest\IngestPaths` (URL builder) and
-  `EnvelopeTransport::getEnvelopeUrl()` (the URL the next send starts with).
+  remembered per Beacon target (origin + project id, same key as beacon-php and beacon-js), so the bundle keeps
+  working against Beacon servers older than 1.147. Other statuses (400, 401, 403, 413, 429, 5xx) and network failures
+  are never re-sent by this logic.
+- `Ingest\IngestPathResolver` (shared, bounded to 32 targets via `MAX_ENTRIES`, `kernel.reset`; `MAX_ORIGINS` is a
+  deprecated alias). Keyed by origin + project id, so a DSN with an unknown project (404 on both paths) never pins the
+  versioned path for another project or tenant on the same older Beacon.
+- `Ingest\IngestPaths` (URL builder) and `EnvelopeTransport::getEnvelopeUrl()` (the URL the next send starts with).
 
 ### Changed
 

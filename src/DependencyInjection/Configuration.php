@@ -64,7 +64,7 @@ final class Configuration implements ConfigurationInterface
                     ->min(0.1)
                 ->end()
                 ->enumNode('ingest_paths')
-                    ->info('Beacon ingest paths: auto = versioned /api/ingest/v1/{projectId}/… first, once more on the legacy /api/{projectId}/… path after a 404/405 (older Beacon), remembered per origin; versioned = always /api/ingest/v1 (Beacon >= 1.147); legacy = always the unversioned paths.')
+                    ->info('Beacon ingest paths: auto = versioned /api/ingest/v1/{projectId}/… first, once more on the legacy /api/{projectId}/… path after a 404/405 (older Beacon), remembered per origin + project id; versioned = always /api/ingest/v1 (Beacon >= 1.147); legacy = always the unversioned paths.')
                     ->values(['auto', 'versioned', 'legacy'])
                     ->defaultValue('auto')
                 ->end()

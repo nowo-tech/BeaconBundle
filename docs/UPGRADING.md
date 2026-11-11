@@ -102,7 +102,7 @@ composer update nowo-tech/beacon-bundle
 ```
 
 Nothing to change. The bundle now calls Beacon's versioned ingest paths (`/api/ingest/v1/{projectId}/…`, Beacon
-1.147) and, against an older Beacon, falls back once per origin to the unversioned paths it used before (they stay as
+1.147) and, against an older Beacon, falls back once per Beacon target (origin + project id) to the unversioned paths it used before (they stay as
 permanent aliases on every Beacon). Each process sends at most one extra request (answered 404) per older Beacon.
 
 ```yaml

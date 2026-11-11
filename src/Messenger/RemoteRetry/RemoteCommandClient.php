@@ -45,7 +45,7 @@ use const JSON_UNESCAPED_UNICODE;
  *
  * Paths (1.23): `/api/ingest/v1/{projectId}/messenger/commands/…` by default; with `ingest_paths: auto` a 404 / 405
  * there re-sends the same call once to the legacy `/api/{projectId}/messenger/commands/…` and the shared
- * {@see IngestPathResolver} remembers the origin's answer. Other statuses are never re-sent.
+ * {@see IngestPathResolver} remembers the target's answer. Other statuses are never re-sent.
  */
 final class RemoteCommandClient
 {
@@ -163,12 +163,11 @@ final class RemoteCommandClient
             'verify_host' => $this->verifyPeer,
         ];
 
-        $origin                    = $dsn->getOrigin();
-        $versioned                 = $this->ingestPaths->useVersioned($origin);
+        $versioned                 = $this->ingestPaths->useVersioned($dsn);
         [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, $versioned), $options);
-        if ($versioned && $this->ingestPaths->versionedAnswered($origin, $status)) {
+        if ($versioned && $this->ingestPaths->versionedAnswered($dsn, $status)) {
             [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, false), $options);
-            $this->ingestPaths->legacyAnswered($origin, $status);
+            $this->ingestPaths->legacyAnswered($dsn, $status);
         }
 
         if ($status === 200) {

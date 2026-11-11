@@ -13,9 +13,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  *
  * Pair with {@see FlushPendingTransportsListener} on kernel/console terminate.
  *
- * While the Beacon origin is still being probed for the versioned ingest paths (`ingest_paths: auto`), each pending
- * request keeps its body so that a 404 / 405 can be re-sent once, synchronously at flush, to the legacy path. Once the
- * origin is known, no body is kept.
+ * While the Beacon target (origin + project id) is still being probed for the versioned ingest paths
+ * (`ingest_paths: auto`), each pending request keeps its body so that a 404 / 405 can be re-sent once, synchronously at
+ * flush, to the legacy path. Once the target is known, no body is kept.
  */
 final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterface
 {

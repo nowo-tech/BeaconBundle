@@ -162,7 +162,7 @@ final class BeaconConnectionTester
             'origin'            => $dsn->getOrigin(),
             'project_id'        => $dsn->getProjectId(),
             'public_key'        => $publicKey,
-            'envelope_url'      => IngestPaths::envelopeUrl($dsn, $this->ingestPaths->useVersioned($dsn->getOrigin())),
+            'envelope_url'      => IngestPaths::envelopeUrl($dsn, $this->ingestPaths->useVersioned($dsn)),
             'reporting_enabled' => $this->reportingEnabled,
         ];
     }
