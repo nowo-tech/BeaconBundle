@@ -15,8 +15,11 @@ Short repository memory for BeaconBundle.
 BeaconBundle is the Symfony client for [`symfony-beacon`](https://github.com/nowo-tech/symfony-beacon). It sends Envelope HTTP requests to:
 
 ```text
-/api/{project_id}/envelope/
+/api/ingest/v1/{project_id}/envelope/
 ```
+
+(versioned canonical path since 1.23; `ingest_paths: auto` falls back once to the legacy `/api/{project_id}/envelope/`
+on Beacon servers older than 1.147.)
 
 The DSN is the source of truth for host, port, project id, public key, and required secret.
 

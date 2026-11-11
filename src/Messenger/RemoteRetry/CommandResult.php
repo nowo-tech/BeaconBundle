@@ -13,7 +13,7 @@ use function is_string;
 use function mb_substr;
 
 /**
- * Outcome of one command, posted to `POST /api/{project}/messenger/commands/{id}/result`.
+ * Outcome of one command, posted to `POST /api/ingest/v1/{project}/messenger/commands/{id}/result` (legacy `/api/{project}/…`).
  *
  * Carries only codes and, optionally, the exception class (≤ 255) — never exception messages,
  * never message bodies.

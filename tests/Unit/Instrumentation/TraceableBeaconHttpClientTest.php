@@ -45,6 +45,10 @@ final class TraceableBeaconHttpClientTest extends TestCase
 
         self::assertSame(200, $client->request('POST', 'https://beacon.example.com/api/1/envelope/')->getStatusCode());
         $client->request('POST', 'https://beacon.example.com/api/1/messenger/commands/claim')->getContent();
+        // Versioned canonical ingest paths (Beacon >= 1.147) are skipped too.
+        $client->request('POST', 'https://beacon.example.com/api/ingest/v1/1/envelope/')->getContent();
+        $client->request('POST', 'https://beacon.example.com/api/ingest/v1/1/messenger/commands/claim')->getContent();
+        $client->request('POST', 'https://beacon.example.com/api/ingest/v1/1/messenger/commands/abc/result')->getContent();
 
         self::assertSame([], $spans->all());
         self::assertSame([], $crumbs->all());

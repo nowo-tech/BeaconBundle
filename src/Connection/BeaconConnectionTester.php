@@ -10,6 +10,8 @@ use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendOptions;
+use Nowo\BeaconBundle\Ingest\IngestPathResolver;
+use Nowo\BeaconBundle\Ingest\IngestPaths;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SensitiveParameter;
@@ -32,6 +34,8 @@ final class BeaconConnectionTester
 {
     private readonly SensitiveParameterValue $dsn;
 
+    private readonly IngestPathResolver $ingestPaths;
+
     public function __construct(
         private readonly BeaconDsnParser $parser,
         private readonly HttpClientInterface $httpClient,
@@ -44,8 +48,10 @@ final class BeaconConnectionTester
         private readonly ?string $release = null,
         private readonly string $serverName = 'unknown',
         private readonly ?LoggerInterface $logger = null,
+        ?IngestPathResolver $ingestPaths = null,
     ) {
-        $this->dsn = new SensitiveParameterValue($dsn);
+        $this->dsn         = new SensitiveParameterValue($dsn);
+        $this->ingestPaths = $ingestPaths ?? new IngestPathResolver();
     }
 
     /**
@@ -100,8 +106,11 @@ final class BeaconConnectionTester
             $this->verifyPeer,
             $this->timeout,
             $this->logger ?? new NullLogger(),
+            ingestPaths: $this->ingestPaths,
         );
         $result = $transport->sendDetailed($body);
+        // The URL the transport settled on (versioned, or legacy after a 404 / 405 from an older Beacon).
+        $target['envelope_url'] = $transport->getEnvelopeUrl();
 
         if ($result->isAccepted()) {
             $suffix = $this->reportingEnabled
@@ -153,7 +162,7 @@ final class BeaconConnectionTester
             'origin'            => $dsn->getOrigin(),
             'project_id'        => $dsn->getProjectId(),
             'public_key'        => $publicKey,
-            'envelope_url'      => $dsn->getEnvelopeUrl(),
+            'envelope_url'      => IngestPaths::envelopeUrl($dsn, $this->ingestPaths->useVersioned($dsn->getOrigin())),
             'reporting_enabled' => $this->reportingEnabled,
         ];
     }

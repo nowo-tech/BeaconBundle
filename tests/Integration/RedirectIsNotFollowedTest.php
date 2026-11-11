@@ -92,7 +92,7 @@ final class RedirectIsNotFollowedTest extends TestCase
 
         self::assertFalse($result->isAccepted());
         self::assertSame(307, $result->getStatusCode());
-        self::assertSame([['host' => '127.0.0.1:' . $this->port, 'path' => '/api/5/envelope/']], $this->requests());
+        self::assertSame([['host' => '127.0.0.1:' . $this->port, 'path' => '/api/ingest/v1/5/envelope/']], $this->requests());
     }
 
     public function testRemoteCommandClientDoesNotFollowTheRedirect(): void

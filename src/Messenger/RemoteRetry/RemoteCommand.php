@@ -11,7 +11,7 @@ use function is_string;
 use function preg_match;
 
 /**
- * One signed command claimed from Beacon (`POST /api/{project}/messenger/commands/claim`).
+ * One signed command claimed from Beacon (`POST /api/ingest/v1/{project}/messenger/commands/claim`, legacy `/api/{project}/…`).
  *
  * Signature: `v1=` + lowercase hex HMAC-SHA256 (key = {@see WorkerKey::signingKey()}) of
  * {@see canonicalString()}: `v1\n{id}\n{project}\n{action}\n{failure_transport}\n{message_id}\n{issued_at}\n{expires_at}`

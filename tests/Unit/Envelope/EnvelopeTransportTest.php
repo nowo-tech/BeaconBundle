@@ -48,7 +48,7 @@ final class EnvelopeTransportTest extends TestCase
 
         self::assertFalse($result->isAccepted());
         self::assertSame(302, $result->getStatusCode());
-        self::assertSame([['url' => 'https://beacon.example.com:9444/api/5/envelope/', 'max_redirects' => 0]], $requests);
+        self::assertSame([['url' => 'https://beacon.example.com:9444/api/ingest/v1/5/envelope/', 'max_redirects' => 0]], $requests);
     }
 
     public function testSendReturnsTrueForSuccessfulResponses(): void
@@ -66,7 +66,7 @@ final class EnvelopeTransportTest extends TestCase
         self::assertTrue($transport->send("header\nitem\npayload\n"));
         self::assertSame($dsn, $transport->getDsn());
         self::assertSame('POST', $requests[0]['method']);
-        self::assertSame('https://beacon.example.com:9444/api/5/envelope/', $requests[0]['url']);
+        self::assertSame('https://beacon.example.com:9444/api/ingest/v1/5/envelope/', $requests[0]['url']);
         self::assertContains(
             'X-Beacon-Auth: Beacon beacon_key=pubkey, beacon_secret=secret',
             $requests[0]['options']['headers'],
@@ -192,7 +192,7 @@ final class EnvelopeTransportTest extends TestCase
             ->method('request')
             ->with(
                 'POST',
-                $dsn->getEnvelopeUrl(),
+                'https://beacon.example.com:9444/api/ingest/v1/5/envelope/',
                 self::callback(static function (array $options) use (&$capturedOptions): bool {
                     $capturedOptions = $options;
 

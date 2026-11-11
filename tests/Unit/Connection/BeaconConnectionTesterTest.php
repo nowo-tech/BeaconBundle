@@ -102,7 +102,7 @@ final class BeaconConnectionTesterTest extends TestCase
         self::assertNotNull($result->getEventId());
         self::assertCount(1, $requests);
         self::assertSame('POST', $requests[0]['method']);
-        self::assertSame('https://beacon.example.com:9444/api/5/envelope/', $requests[0]['url']);
+        self::assertSame('https://beacon.example.com:9444/api/ingest/v1/5/envelope/', $requests[0]['url']);
         self::assertIsString($requests[0]['options']['body']);
         self::assertStringContainsString('custom probe', $requests[0]['options']['body']);
         self::assertStringContainsString('nowo:beacon:test', $requests[0]['options']['body']);
@@ -131,7 +131,8 @@ final class BeaconConnectionTesterTest extends TestCase
         $result = $this->createTester(
             'https://pubkey:secret@beacon.example.com/5',
             true,
-            new MockHttpClient(new MockResponse('', ['http_code' => $status])),
+            // A 404 on the versioned path is retried once on the legacy path, which answers the same here.
+            new MockHttpClient([new MockResponse('', ['http_code' => $status]), new MockResponse('', ['http_code' => $status])]),
         )->test();
 
         self::assertFalse($result->isSuccess());

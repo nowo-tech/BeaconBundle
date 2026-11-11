@@ -59,6 +59,7 @@ A bundle that is safe under **B** is safe under **A** and under classic mode / P
 | `Instrumentation\SpanBuffer` | yes (`kernel.reset`) | `$spans` (max 100) | ✅ | ✅ (reset per main request) |
 | `Scope\Scope` | yes (`kernel.reset`) | `$tags` (max 32) | ✅ | ✅ (reset per main request) |
 | `Trace\TraceIdProvider` | yes (`kernel.reset`) | `$traceId` | ✅ | ✅ (reset per main request) |
+| `Ingest\IngestPathResolver` (1.23) | yes (`kernel.reset`) | `$known` — origin → versioned / legacy ingest paths, a server capability (no request, user or tenant data), bounded to 32 origins; 5,000-origin test asserts the bound and flat memory | ✅ | ✅ (reset only forgets which paths a Beacon serves) |
 | `nowo.beacon.client` (`BeaconClient`, built by `BeaconClientFactory`) | yes | none itself; owns an `EnvelopeBuilder` (bounded source-line cache) and a transport | ✅ | ✅ |
 | `AsyncEnvelopeTransport` (inside the client, `transport.mode: async`) | yes (not a container service) | `$pending` responses, drained on terminate (`-2048`) and again at next main request start | ✅ | ✅ |
 | `EventListener\BeaconRequestScopeResetListener` | yes | none; resets four buffers + flushes pending on main `kernel.request` (priority 4096) | ✅ | ✅ |

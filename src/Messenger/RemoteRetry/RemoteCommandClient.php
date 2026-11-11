@@ -8,6 +8,8 @@ use DateTimeImmutable;
 use JsonException;
 use Nowo\BeaconBundle\Client\ClientUserAgent;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
+use Nowo\BeaconBundle\Ingest\IngestPathResolver;
+use Nowo\BeaconBundle\Ingest\IngestPaths;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -40,6 +42,10 @@ use const JSON_UNESCAPED_UNICODE;
  * Direct HttpClient requests (never the Envelope transport, never a Messenger message), so they behave
  * the same under every `transport.mode`. Both calls send `Authorization: Bearer bwk_…` and JSON, with a
  * 3-second timeout independent of `nowo_beacon.timeout`.
+ *
+ * Paths (1.23): `/api/ingest/v1/{projectId}/messenger/commands/…` by default; with `ingest_paths: auto` a 404 / 405
+ * there re-sends the same call once to the legacy `/api/{projectId}/messenger/commands/…` and the shared
+ * {@see IngestPathResolver} remembers the origin's answer. Other statuses are never re-sent.
  */
 final class RemoteCommandClient
 {
@@ -53,6 +59,8 @@ final class RemoteCommandClient
 
     private readonly string $userAgent;
 
+    private readonly IngestPathResolver $ingestPaths;
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly RemoteRetryCredentials $credentials,
@@ -61,8 +69,10 @@ final class RemoteCommandClient
         private readonly bool $verifyPeer = true,
         private readonly ?ClockInterface $clock = null,
         ?string $userAgent = null,
+        ?IngestPathResolver $ingestPaths = null,
     ) {
-        $this->userAgent = $userAgent ?? ClientUserAgent::resolve();
+        $this->userAgent   = $userAgent ?? ClientUserAgent::resolve();
+        $this->ingestPaths = $ingestPaths ?? new IngestPathResolver();
     }
 
     /**
@@ -153,15 +163,12 @@ final class RemoteCommandClient
             'verify_host' => $this->verifyPeer,
         ];
 
-        $url = $dsn->getOrigin() . '/api/' . rawurlencode($dsn->getProjectId()) . $path;
-
-        try {
-            $response = $this->httpClient->request('POST', $url, $options);
-            $status   = $response->getStatusCode();
-            $headers  = $response->getHeaders(false);
-            $body     = $status === 200 ? $response->getContent(false) : '';
-        } catch (ExceptionInterface $e) {
-            throw new RemoteCommandException(RemoteCommandException::KIND_UNAVAILABLE, 'Beacon unreachable (' . $e::class . ').');
+        $origin                    = $dsn->getOrigin();
+        $versioned                 = $this->ingestPaths->useVersioned($origin);
+        [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, $versioned), $options);
+        if ($versioned && $this->ingestPaths->versionedAnswered($origin, $status)) {
+            [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, false), $options);
+            $this->ingestPaths->legacyAnswered($origin, $status);
         }
 
         if ($status === 200) {
@@ -171,6 +178,27 @@ final class RemoteCommandClient
         $kind = $this->classify($status, $isClaim);
 
         throw new RemoteCommandException($kind, 'Beacon answered HTTP ' . $status . '.', $status, $kind === RemoteCommandException::KIND_RATE_LIMITED ? $this->retryAfter($headers['retry-after'][0] ?? null) : null);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @throws RemoteCommandException when Beacon cannot be reached
+     *
+     * @return array{0: int, 1: array<string, list<string>>, 2: string}
+     */
+    private function send(string $url, array $options): array
+    {
+        try {
+            $response = $this->httpClient->request('POST', $url, $options);
+            $status   = $response->getStatusCode();
+            $headers  = $response->getHeaders(false);
+            $body     = $status === 200 ? $response->getContent(false) : '';
+        } catch (ExceptionInterface $e) {
+            throw new RemoteCommandException(RemoteCommandException::KIND_UNAVAILABLE, 'Beacon unreachable (' . $e::class . ').');
+        }
+
+        return [$status, $headers, $body];
     }
 
     private function classify(int $status, bool $isClaim): string

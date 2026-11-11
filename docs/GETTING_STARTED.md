@@ -27,7 +27,7 @@ All steps below assume English UI labels where applicable.
 
 ```text
 Your Symfony app (BeaconBundle)
-        │  POST /api/{projectId}/envelope/
+        │  POST /api/ingest/v1/{projectId}/envelope/  (legacy /api/{projectId}/envelope/ on Beacon < 1.147)
         │  Auth: X-Beacon-Auth header (key + secret)
         ▼
 Symfony Beacon server

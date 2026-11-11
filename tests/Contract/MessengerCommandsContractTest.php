@@ -84,13 +84,13 @@ final class MessengerCommandsContractTest extends TestCase
         $client->postResult($claim->commands[0], $executor->execute($claim->commands[0]));
 
         self::assertSame('POST', $requests[0]['method']);
-        self::assertSame('https://beacon.example.com:9447/api/' . RemoteRetryFixtures::PROJECT . '/messenger/commands/claim', $requests[0]['url']);
+        self::assertSame('https://beacon.example.com:9447/api/ingest/v1/' . RemoteRetryFixtures::PROJECT . '/messenger/commands/claim', $requests[0]['url']);
         self::assertSame($this->fixture('claim_request.json'), json_decode($requests[0]['options']['body'], true, 512, JSON_THROW_ON_ERROR));
         self::assertContains('Authorization: Bearer ' . RemoteRetryFixtures::WORKER_KEY, $requests[0]['options']['headers']);
         self::assertContains('Content-Type: application/json', $requests[0]['options']['headers']);
 
         self::assertSame(
-            'https://beacon.example.com:9447/api/' . RemoteRetryFixtures::PROJECT . '/messenger/commands/0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e5f6/result',
+            'https://beacon.example.com:9447/api/ingest/v1/' . RemoteRetryFixtures::PROJECT . '/messenger/commands/0192f3c4-5b6a-7c8d-9e0f-a1b2c3d4e5f6/result',
             $requests[1]['url'],
         );
         self::assertSame($this->fixture('result_done.json'), json_decode($requests[1]['options']['body'], true, 512, JSON_THROW_ON_ERROR));

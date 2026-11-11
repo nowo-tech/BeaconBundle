@@ -76,6 +76,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Target: **1.23.0** (new minor). See [UPGRADING](UPGRADING.md#unreleased).
+
+### Added
+
+- **Versioned ingest paths** (Beacon 1.147, D-20261110-04): Envelopes go to `/api/ingest/v1/{projectId}/envelope/` and
+  remote Messenger commands to `/api/ingest/v1/{projectId}/messenger/commands/claim` and `…/{id}/result`.
+- **`ingest_paths`** (`auto` | `versioned` | `legacy`, default `auto`). With `auto` a 404 / 405 on the versioned path
+  sends the same request once more to the legacy unversioned path (permanent alias on every Beacon) and the answer is
+  remembered per Beacon origin, so the bundle keeps working against Beacon servers older than 1.147. Other statuses
+  (400, 401, 403, 413, 429, 5xx) and network failures are never re-sent by this logic.
+- `Ingest\IngestPathResolver` (shared, bounded to 32 origins, `kernel.reset`), `Ingest\IngestPaths` (URL builder) and
+  `EnvelopeTransport::getEnvelopeUrl()` (the URL the next send starts with).
+
+### Changed
+
+- `EnvelopeTransport` builds its request itself instead of through beacon-php's `SymfonyHttpClientTransport` (same
+  headers, timeouts, redirect and TLS options; the beacon-php requirement stays `^0.1`).
+- `nowo:beacon:test` shows the envelope URL the transport settled on (versioned, or legacy after the fallback).
+- Log records of the Envelope transport keep beacon-php's `url` context value (the legacy URL).
+
 ## [1.22.0] - 2026-11-10
 
 Target: **1.22.0** (new minor). Additive; the defaults keep today's behaviour. See [UPGRADING](UPGRADING.md#to-1220).

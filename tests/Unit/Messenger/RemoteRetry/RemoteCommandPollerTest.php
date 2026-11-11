@@ -135,8 +135,9 @@ final class RemoteCommandPollerTest extends TestCase
 
     public function testAuthErrorsPauseForOneHourWithOneWarning(): void
     {
-        $poller          = $this->poller();
-        $this->responses = [new MockResponse('', ['http_code' => 404])];
+        $poller = $this->poller();
+        // 404 on the versioned path, then on the legacy path: an unknown project / key, not an older Beacon.
+        $this->responses = [new MockResponse('', ['http_code' => 404]), new MockResponse('', ['http_code' => 404])];
 
         $report = $poller->poll();
         self::assertSame(PollReport::STATUS_AUTH_ERROR, $report->status);
@@ -146,7 +147,7 @@ final class RemoteCommandPollerTest extends TestCase
         $paused = $poller->poll();
         self::assertSame(PollReport::STATUS_PAUSED, $paused->status);
         self::assertSame(1800.0, $paused->nextPollIn);
-        self::assertCount(1, $this->requests);
+        self::assertCount(2, $this->requests);
         self::assertCount(1, $this->logger->messages('warning'));
 
         $this->now += 1800;

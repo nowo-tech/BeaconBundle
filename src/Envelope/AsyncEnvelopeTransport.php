@@ -12,10 +12,14 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Non-blocking transport: starts the HTTP POST immediately but defers status handling until {@see flush()}.
  *
  * Pair with {@see FlushPendingTransportsListener} on kernel/console terminate.
+ *
+ * While the Beacon origin is still being probed for the versioned ingest paths (`ingest_paths: auto`), each pending
+ * request keeps its body so that a 404 / 405 can be re-sent once, synchronously at flush, to the legacy path. Once the
+ * origin is known, no body is kept.
  */
 final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterface
 {
-    /** @var list<ResponseInterface> */
+    /** @var list<array{0: ResponseInterface, 1: bool, 2: string|null}> response, versioned path, body kept for a legacy retry */
     private array $pending = [];
 
     public function __construct(
@@ -30,13 +34,13 @@ final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterfac
      */
     public function send(string $envelopeBody): bool
     {
-        $response = $this->inner->startRequest($envelopeBody);
-        if (!$response instanceof ResponseInterface) {
+        $started = $this->inner->startProbeAwareRequest($envelopeBody);
+        if ($started === null) {
             return false;
         }
 
         // @igor-ignore - Not shared worker service state.
-        $this->pending[] = $response;
+        $this->pending[] = $started;
 
         return true;
     }
@@ -50,8 +54,8 @@ final class AsyncEnvelopeTransport implements FlushableEnvelopeTransportInterfac
         // @igor-ignore - Not shared worker service state.
         $this->pending = [];
 
-        foreach ($pending as $response) {
-            $this->inner->finalizeResponse($response);
+        foreach ($pending as [$response, $versioned, $body]) {
+            $this->inner->finalizeStarted($response, $versioned, $body);
         }
     }
 
