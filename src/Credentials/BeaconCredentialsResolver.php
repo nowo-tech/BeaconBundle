@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Credentials;
 
+use Closure;
 use DateTimeImmutable;
+use LogicException;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
@@ -61,6 +63,8 @@ final class BeaconCredentialsResolver
 
     private ?ResolvedBeaconCredentials $current = null;
 
+    private ?BeaconCredentialsProviderInterface $builtProvider = null;
+
     private float $expiresAt = 0.0;
 
     private ?float $lastRefreshAt = null;
@@ -89,10 +93,10 @@ final class BeaconCredentialsResolver
         mixed $configDsn,
         #[SensitiveParameter]
         mixed $configWorkerKey = '',
-        private readonly ?BeaconCredentialsProviderInterface $provider = null,
+        private readonly BeaconCredentialsProviderInterface|Closure|null $provider = null,
         private readonly int $cacheTtl = self::DEFAULT_CACHE_TTL,
         private readonly ?ClockInterface $clock = null,
-        private readonly ?LoggerInterface $logger = null,
+        private readonly LoggerInterface|Closure|null $logger = null,
         private readonly array $allowedOrigins = [],
     ) {
         $this->configDsn       = new SensitiveParameterValue(is_string($configDsn) ? trim($configDsn) : '');
@@ -104,7 +108,7 @@ final class BeaconCredentialsResolver
      */
     public function hasProvider(): bool
     {
-        return $this->provider instanceof BeaconCredentialsProviderInterface;
+        return $this->provider !== null;
     }
 
     /**
@@ -141,7 +145,7 @@ final class BeaconCredentialsResolver
             return $this->current ?? $this->build(null, false);
         }
 
-        if ($this->current instanceof ResolvedBeaconCredentials && (!$this->provider instanceof BeaconCredentialsProviderInterface || !$this->armed || $this->seconds() < $this->expiresAt)) {
+        if ($this->current instanceof ResolvedBeaconCredentials && ($this->provider === null || !$this->armed || $this->seconds() < $this->expiresAt)) {
             return $this->current;
         }
 
@@ -154,7 +158,7 @@ final class BeaconCredentialsResolver
      */
     public function refresh(): bool
     {
-        if (!$this->provider instanceof BeaconCredentialsProviderInterface || !$this->armed || $this->reading) {
+        if ($this->provider === null || !$this->armed || $this->reading) {
             return false;
         }
 
@@ -216,18 +220,59 @@ final class BeaconCredentialsResolver
      */
     public function __debugInfo(): array
     {
-        return ['provider' => $this->provider instanceof BeaconCredentialsProviderInterface ? $this->provider::class : null, 'cache_ttl' => $this->cacheTtl, 'current' => $this->current];
+        return ['provider' => $this->provider instanceof BeaconCredentialsProviderInterface ? $this->provider::class : ($this->provider instanceof Closure ? 'lazy' : null), 'cache_ttl' => $this->cacheTtl, 'current' => $this->current];
+    }
+
+    /**
+     * The provider, built on its first read when injected as a closure (1.25.2: the container never builds it together
+     * with the Beacon client, which broke the client → resolver → provider → … → logger → Beacon handler cycle).
+     *
+     * @throws LogicException when the closure does not return a provider
+     */
+    private function provider(): BeaconCredentialsProviderInterface
+    {
+        if ($this->provider instanceof BeaconCredentialsProviderInterface) {
+            return $this->provider;
+        }
+
+        if (!$this->builtProvider instanceof BeaconCredentialsProviderInterface) {
+            $provider = $this->provider instanceof Closure ? ($this->provider)() : null;
+            if (!$provider instanceof BeaconCredentialsProviderInterface) {
+                throw new LogicException('The Beacon credentials provider closure must return a ' . BeaconCredentialsProviderInterface::class . '.');
+            }
+
+            // @igor-ignore - The provider service, built once (no request data).
+            $this->builtProvider = $provider;
+        }
+
+        return $this->builtProvider;
+    }
+
+    /**
+     * The logger, built on first use when injected as a closure (same cycle as {@see provider()}).
+     */
+    private function logger(): ?LoggerInterface
+    {
+        if (!$this->logger instanceof Closure) {
+            return $this->logger;
+        }
+
+        $logger = ($this->logger)();
+
+        return $logger instanceof LoggerInterface ? $logger : null;
     }
 
     private function load(): ResolvedBeaconCredentials
     {
         $record   = null;
-        $consults = $this->provider instanceof BeaconCredentialsProviderInterface && $this->armed;
+        $consults = $this->provider !== null && $this->armed;
         if ($consults) {
             // @igor-ignore - Re-entrancy guard, set and cleared within this call.
             $this->reading = true;
             try {
-                $record = $this->provider->current();
+                // Resolved here, inside the guard: building the provider (InstanceSettings, Doctrine, the logger and its
+                // Beacon handler) may itself report through Beacon, which then gets the configuration.
+                $record = $this->provider()->current();
                 unset($this->warned['provider_failed']);
             } catch (Throwable $exception) {
                 $this->warnOnce('provider_failed', 'Beacon credentials provider failed ({exception}); using the configured credentials.', ['exception' => $exception::class]);
@@ -506,7 +551,7 @@ final class BeaconCredentialsResolver
         $this->warned[$code] = true;
         // @igor-ignore - Fixed set of warning codes, no request data.
         $this->warnedNow[$code] = true;
-        $this->logger?->warning($message, [...$context, EnvelopeTransport::LOG_CONTEXT_FLAG => true]);
+        $this->logger()?->warning($message, [...$context, EnvelopeTransport::LOG_CONTEXT_FLAG => true]);
     }
 
     private function seconds(): float
