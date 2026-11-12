@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Bridge\InstanceSettings;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
+use LogicException;
 use Nowo\BeaconBundle\Credentials\BeaconCredentials;
 use Nowo\BeaconBundle\Credentials\BeaconCredentialsStoreInterface;
 use Nowo\InstanceSettingsBundle\Event\SettingsChangedEvent;
@@ -22,21 +24,45 @@ use function trim;
  */
 final class InstanceSettingsCredentialsStore implements BeaconCredentialsStoreInterface
 {
+    private ?InstanceSettingsInterface $built = null;
+
     public function __construct(
-        private readonly InstanceSettingsInterface $settings,
+        private readonly InstanceSettingsInterface|Closure $settings,
     ) {
+    }
+
+    /**
+     * InstanceSettings, built on first use when injected as a closure (1.25.2: never built together with the resolver).
+     */
+    private function settings(): InstanceSettingsInterface
+    {
+        if ($this->settings instanceof InstanceSettingsInterface) {
+            return $this->settings;
+        }
+
+        if (!$this->built instanceof InstanceSettingsInterface) {
+            $settings = ($this->settings)();
+            if (!$settings instanceof InstanceSettingsInterface) {
+                throw new LogicException('The InstanceSettings closure must return a ' . InstanceSettingsInterface::class . '.');
+            }
+
+            // @igor-ignore - The InstanceSettings service, built once (no request data).
+            $this->built = $settings;
+        }
+
+        return $this->built;
     }
 
     public function current(): ?BeaconCredentials
     {
         $section     = BeaconSettingsSection::NAME . '.';
         $credentials = new BeaconCredentials(
-            $this->settings->getSecret($section . 'dsn'),
-            $this->settings->getSecret($section . 'worker_key'),
-            $this->settings->getSecret($section . 'previous_dsn'),
-            $this->date($this->settings->getString($section . 'previous_dsn_expires_at')),
-            $this->settings->getSecret($section . 'previous_worker_key'),
-            $this->date($this->settings->getString($section . 'previous_worker_key_expires_at')),
+            $this->settings()->getSecret($section . 'dsn'),
+            $this->settings()->getSecret($section . 'worker_key'),
+            $this->settings()->getSecret($section . 'previous_dsn'),
+            $this->date($this->settings()->getString($section . 'previous_dsn_expires_at')),
+            $this->settings()->getSecret($section . 'previous_worker_key'),
+            $this->date($this->settings()->getString($section . 'previous_worker_key_expires_at')),
         );
 
         return $credentials->isEmpty() ? null : $credentials;
@@ -44,7 +70,7 @@ final class InstanceSettingsCredentialsStore implements BeaconCredentialsStoreIn
 
     public function save(BeaconCredentials $credentials): void
     {
-        $this->settings->save(BeaconSettingsSection::NAME, [
+        $this->settings()->save(BeaconSettingsSection::NAME, [
             'dsn'                            => $credentials->dsn(),
             'worker_key'                     => $credentials->workerKey(),
             'previous_dsn'                   => $credentials->previousDsn(),

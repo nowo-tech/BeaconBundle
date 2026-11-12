@@ -25,9 +25,11 @@ use Nowo\BeaconBundle\Tests\Fixtures\Credentials\InMemoryCredentialsStore;
 use Nowo\BeaconBundle\Tests\Fixtures\Credentials\ReadOnlyProvider;
 use Nowo\BeaconBundle\Tests\Fixtures\Credentials\ScriptedIngest;
 use Nowo\InstanceSettingsBundle\Event\SettingsChangedEvent;
+use Nowo\InstanceSettingsBundle\Settings\InstanceSettingsInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
@@ -57,7 +59,9 @@ final class CredentialsWiringTest extends TestCase
         self::assertEquals([new Reference(BeaconClientFactory::class), 'createResolvingSyncTransport'], $sync->getFactory());
 
         $resolver = $container->getDefinition(BeaconCredentialsResolver::class);
-        self::assertEquals(new Reference('app.creds'), $resolver->getArgument('$provider'));
+        // 1.25.2: lazy, so the container never builds the provider (or the logger) together with the client.
+        self::assertEquals(new ServiceClosureArgument(new Reference('app.creds')), $resolver->getArgument('$provider'));
+        self::assertEquals(new ServiceClosureArgument(new Reference('logger', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE)), $resolver->getArgument('$logger'));
         self::assertSame(30, $resolver->getArgument('$cacheTtl'));
         self::assertSame([['method' => 'reset']], $resolver->getTag('kernel.reset'));
 
@@ -88,7 +92,8 @@ final class CredentialsWiringTest extends TestCase
         self::assertSame(NowoBeaconExtension::INSTANCE_SETTINGS_STORE, $container->getParameter('nowo.beacon.credentials_provider'));
         self::assertTrue($container->getDefinition(BeaconSettingsSection::class)->hasTag('nowo_instance_settings.section'));
         self::assertSame([['event' => SettingsChangedEvent::class]], $container->getDefinition(InstanceSettingsCredentialsListener::class)->getTag('kernel.event_listener'));
-        self::assertEquals(new Reference(NowoBeaconExtension::INSTANCE_SETTINGS_STORE), $container->getDefinition(BeaconCredentialsResolver::class)->getArgument('$provider'));
+        self::assertEquals(new ServiceClosureArgument(new Reference(NowoBeaconExtension::INSTANCE_SETTINGS_STORE)), $container->getDefinition(BeaconCredentialsResolver::class)->getArgument('$provider'));
+        self::assertEquals(new ServiceClosureArgument(new Reference(InstanceSettingsInterface::class)), $container->getDefinition(NowoBeaconExtension::INSTANCE_SETTINGS_STORE)->getArgument('$settings'));
 
         $explicit = $this->load(['dsn' => '', 'instance_settings_bridge' => true, 'credentials_provider' => 'app.creds']);
         self::assertSame('app.creds', $explicit->getParameter('nowo.beacon.credentials_provider'), 'an explicit provider wins');

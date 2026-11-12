@@ -71,6 +71,7 @@ use Nowo\InstanceSettingsBundle\Settings\InstanceSettingsInterface;
 use Psr\Clock\ClockInterface;
 use SensitiveParameter;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -900,8 +901,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             $section->addTag('nowo_instance_settings.section');
             $container->setDefinition(BeaconSettingsSection::class, $section);
 
+            // Lazy (1.25.2): InstanceSettings pulls Doctrine and the logger, whose Beacon handler needs the client.
             $store = new Definition(InstanceSettingsCredentialsStore::class, [
-                '$settings' => new Reference(InstanceSettingsInterface::class),
+                '$settings' => new ServiceClosureArgument(new Reference(InstanceSettingsInterface::class)),
             ]);
             $store->setPublic(false);
             $container->setDefinition(self::INSTANCE_SETTINGS_STORE, $store);
@@ -923,11 +925,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$parser'          => new Reference(BeaconDsnParser::class),
             '$configDsn'       => $config['dsn'] ?? '',
             '$configWorkerKey' => $config['messenger']['remote_retry']['worker_key'] ?? '',
-            '$provider'        => $providerId !== null ? new Reference($providerId) : null,
-            '$cacheTtl'        => (int) ($config['credentials_cache_ttl'] ?? BeaconCredentialsResolver::DEFAULT_CACHE_TTL),
-            '$clock'           => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
-            '$logger'          => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
-            '$allowedOrigins'  => array_values(array_map(
+            // Lazy (1.25.2): client → resolver → provider → … → logger → Beacon Monolog handler → client is a cycle.
+            '$provider'       => $providerId !== null ? new ServiceClosureArgument(new Reference($providerId)) : null,
+            '$cacheTtl'       => (int) ($config['credentials_cache_ttl'] ?? BeaconCredentialsResolver::DEFAULT_CACHE_TTL),
+            '$clock'          => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'         => new ServiceClosureArgument(new Reference('logger', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE)),
+            '$allowedOrigins' => array_values(array_map(
                 static fn (mixed $origin): string => strtolower(rtrim(trim((string) $origin), '/')),
                 (array) ($config['credentials_allowed_origins'] ?? []),
             )),
