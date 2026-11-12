@@ -38,6 +38,8 @@ use function str_contains;
 #[CoversClass(BeaconSettingsSection::class)]
 final class AuditNsTest extends TestCase
 {
+    private const ALLOWED = ['https://attacker.example.invalid', 'https://beacon.example.invalid:8443', 'https://beacon.example.invalid'];
+
     private MockClock $clock;
 
     private ArrayLogger $logger;
@@ -178,7 +180,8 @@ final class AuditNsTest extends TestCase
 
     private function resolver(string $configDsn, InMemoryCredentialsStore $store, int $ttl = 0): BeaconCredentialsResolver
     {
-        $resolver = new BeaconCredentialsResolver(new BeaconDsnParser(), $configDsn, F::CONFIG_KEY, $store, $ttl, $this->clock, $this->logger);
+        // The host allows the attacker origins here: the NS-M1 pairing rule must hold on its own (defence in depth).
+        $resolver = new BeaconCredentialsResolver(new BeaconDsnParser(), $configDsn, F::CONFIG_KEY, $store, $ttl, $this->clock, $this->logger, self::ALLOWED);
         $resolver->arm();
 
         return $resolver;

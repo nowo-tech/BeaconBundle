@@ -11,6 +11,8 @@ use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 use function is_string;
+use function parse_url;
+use function preg_match;
 use function str_starts_with;
 use function trim;
 
@@ -75,6 +77,16 @@ final class Configuration implements ConfigurationInterface
                         ->ifTrue(static fn (mixed $v): bool => $v !== null && (!is_string($v) || trim($v) === '' || str_starts_with(trim($v), '@')))
                         ->thenInvalid('nowo_beacon.credentials_provider must be a service id (without "@") or null.')
                     ->end()
+                ->end()
+                ->arrayNode('credentials_allowed_origins')
+                    ->info('1.25.1: origins (scheme://host[:port], exactly as in the DSN) a credentials provider DSN may target. The origin of nowo_beacon.dsn is always allowed; empty list and no configured DSN: every provider DSN is refused.')
+                    ->scalarPrototype()
+                        ->validate()
+                            ->ifTrue(static fn (mixed $v): bool => !is_string($v) || preg_match('#^https?://[^/\s:@?\#]+(:[0-9]{1,5})?/?$#i', trim($v)) !== 1 || parse_url(trim($v)) === false)
+                            ->thenInvalid('Each nowo_beacon.credentials_allowed_origins entry must be an origin such as https://beacon.example.com or https://beacon.example.com:9447 (no path, no credentials).')
+                        ->end()
+                    ->end()
+                    ->defaultValue([])
                 ->end()
                 ->integerNode('credentials_cache_ttl')
                     ->info('Seconds a credentials provider answer is reused (0 = read on every use). The cache also expires on kernel.reset and when the stored credentials change (InstanceSettings bridge).')

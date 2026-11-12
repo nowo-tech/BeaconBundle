@@ -179,7 +179,7 @@ final class RotationTransportTest extends TestCase
     {
         $ingest              = new ScriptedIngest([]);
         $this->store->record = new BeaconCredentials(F::DB_DSN);
-        $resolver            = new BeaconCredentialsResolver(new BeaconDsnParser(), '', '', $this->store, 3600, $this->clock, $this->logger);
+        $resolver            = new BeaconCredentialsResolver(new BeaconDsnParser(), '', '', $this->store, 3600, $this->clock, $this->logger, ['https://beacon.example.invalid']);
         $resolver->arm();
         $transport = $this->factory($ingest)->createResolvingSyncTransport($resolver, true, 1.0);
         self::assertSame('pub-db', $transport->getDsn()->getPublicKey());

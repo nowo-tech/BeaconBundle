@@ -435,6 +435,8 @@ nowo_beacon:
     dsn: '%env(default::BEACON_DSN)%'             # fallback (and boot-time errors)
     instance_settings_bridge: true                 # "beacon" section = credentials provider
     credentials_cache_ttl: 60
+    # 1.25.1: the stored DSN must target an allowed origin; the origin of `dsn` is always allowed.
+    # credentials_allowed_origins: ['https://beacon.example.com']   # required when BEACON_DSN is empty
     messenger:
         remote_retry:
             enabled: true
@@ -520,6 +522,10 @@ Typical sequence: create the new key in Beacon, run the command, wait for `--gra
 **For a compromised key use `--grace=0`, then revoke it in Beacon** (no previous value is kept).
 
 Things to know:
+
+- (1.25.1) A stored DSN on an origin that is neither the origin of `BEACON_DSN` nor listed in
+  `credentials_allowed_origins` is ignored (one warning) and `BEACON_DSN` is used; with an empty `BEACON_DSN` you must
+  list the origin. The rotate command refuses such a DSN.
 
 - The configured `BEACON_WORKER_KEY` is used with a stored DSN only when both target the same origin (scheme, host,
   port); otherwise store the worker key next to the DSN (remote commands stay off until then, with one warning).

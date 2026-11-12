@@ -124,7 +124,7 @@ final class CredentialsKernel extends Kernel implements CompilerPassInterface
             ],
         ]);
 
-        $beacon = ['dsn' => '', 'credentials_cache_ttl' => 0, ...$this->beacon];
+        $beacon = ['dsn' => '', 'credentials_cache_ttl' => 0, 'credentials_allowed_origins' => ['https://beacon.example.invalid'], ...$this->beacon];
         if ($this->host === 'ddd') {
             $beacon['credentials_provider'] = 'app.beacon_credentials';
         } elseif ($this->host === 'standard') {

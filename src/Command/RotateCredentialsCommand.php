@@ -183,6 +183,10 @@ final class RotateCredentialsCommand extends Command
                 return 'Invalid new Beacon DSN: ' . $e->getMessage();
             }
 
+            if (!$this->resolver->isOriginAllowed($parsed->getOrigin())) {
+                return 'The new DSN targets ' . $parsed->getOrigin() . ', which is not in nowo_beacon.credentials_allowed_origins (nor the origin of nowo_beacon.dsn).';
+            }
+
             $old = $current->dsn();
             if ($old instanceof BeaconDsn && ($old->getOrigin() !== $parsed->getOrigin() || $old->getProjectId() !== $parsed->getProjectId())) {
                 return 'The new DSN targets another Beacon origin or project than the current one. A rotation keeps the target; to move the project, change the stored DSN (or BEACON_DSN) instead.';

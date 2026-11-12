@@ -18,6 +18,7 @@ use Throwable;
 
 use function hash_equals;
 use function implode;
+use function in_array;
 use function is_string;
 use function max;
 use function microtime;
@@ -78,6 +79,10 @@ final class BeaconCredentialsResolver
     /** @var array<string, true> warning codes logged by the build in progress */
     private array $warnedNow = [];
 
+    /**
+     * @param list<string> $allowedOrigins `nowo_beacon.credentials_allowed_origins` (`scheme://host[:port]`); the origin of
+     *                                     the configured DSN is always allowed
+     */
     public function __construct(
         private readonly BeaconDsnParser $parser,
         #[SensitiveParameter]
@@ -88,6 +93,7 @@ final class BeaconCredentialsResolver
         private readonly int $cacheTtl = self::DEFAULT_CACHE_TTL,
         private readonly ?ClockInterface $clock = null,
         private readonly ?LoggerInterface $logger = null,
+        private readonly array $allowedOrigins = [],
     ) {
         $this->configDsn       = new SensitiveParameterValue(is_string($configDsn) ? trim($configDsn) : '');
         $this->configWorkerKey = new SensitiveParameterValue(is_string($configWorkerKey) ? trim($configWorkerKey) : '');
@@ -280,7 +286,12 @@ final class BeaconCredentialsResolver
     {
         if ($fromProvider !== null) {
             try {
-                return [$this->parser->parse($fromProvider), $fromProvider, null, ResolvedBeaconCredentials::SOURCE_PROVIDER];
+                $parsed = $this->parser->parse($fromProvider);
+                if ($this->isOriginAllowed($parsed->getOrigin())) {
+                    return [$parsed, $fromProvider, null, ResolvedBeaconCredentials::SOURCE_PROVIDER];
+                }
+
+                $this->warnOnce('provider_dsn_origin_not_allowed', 'The Beacon DSN of the credentials provider targets {origin}, which is not in nowo_beacon.credentials_allowed_origins; using the configured DSN.', ['origin' => $parsed->getOrigin()]);
             } catch (InvalidBeaconDsnException $e) {
                 $this->warnOnce('provider_dsn_invalid', 'The Beacon DSN of the credentials provider is invalid ({reason}); using the configured DSN.', ['reason' => $e->getMessage()]);
             }
@@ -353,6 +364,7 @@ final class BeaconCredentialsResolver
             return null;
         }
 
+        // Same origin as the current DSN, itself allowed (credentials_allowed_origins or the configured DSN).
         if (!$current instanceof BeaconDsn || $previous->getOrigin() !== $current->getOrigin() || $previous->getProjectId() !== $current->getProjectId()) {
             $this->warnOnce('previous_dsn_other_target', 'The previous Beacon DSN targets another Beacon origin or project than the current one: it is ignored.');
 
@@ -400,6 +412,16 @@ final class BeaconCredentialsResolver
     private function expiresTooLate(?DateTimeImmutable $expiresAt): bool
     {
         return $expiresAt instanceof DateTimeImmutable && $expiresAt->getTimestamp() > $this->now()->getTimestamp() + self::MAX_PREVIOUS_LIFETIME;
+    }
+
+    /**
+     * Whether a provider DSN may target `$origin` (`scheme://host[:port]`, compared exactly): an origin listed in
+     * `credentials_allowed_origins` or the configured DSN's origin (owner decision 2026-11-12, 1.25.1). With neither,
+     * every provider DSN is refused.
+     */
+    public function isOriginAllowed(string $origin): bool
+    {
+        return in_array($origin, $this->allowedOrigins, true) || $origin === $this->configOrigin();
     }
 
     /**

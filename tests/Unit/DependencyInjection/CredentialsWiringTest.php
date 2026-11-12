@@ -95,6 +95,22 @@ final class CredentialsWiringTest extends TestCase
         self::assertTrue($explicit->hasDefinition(BeaconSettingsSection::class));
     }
 
+    public function testAllowedOriginsAreNormalizedAndValidated(): void
+    {
+        $container = $this->load(['dsn' => '', 'credentials_provider' => 'app.creds', 'credentials_allowed_origins' => ['HTTPS://Beacon.Example.com:9447/', ' http://beacon.internal ']]);
+        self::assertSame(['https://beacon.example.com:9447', 'http://beacon.internal'], $container->getDefinition(BeaconCredentialsResolver::class)->getArgument('$allowedOrigins'));
+        self::assertSame([], $this->load(['dsn' => ''])->getDefinition(BeaconCredentialsResolver::class)->getArgument('$allowedOrigins'));
+
+        foreach (['beacon.example.com', 'https://beacon.example.com/api', 'https://user:pw@beacon.example.com', 'ftp://beacon.example.com', 'https://beacon.example.com:99999'] as $origin) {
+            try {
+                $this->load(['credentials_allowed_origins' => [$origin]]);
+                self::fail('Expected InvalidConfigurationException for "' . $origin . '"');
+            } catch (InvalidConfigurationException $e) {
+                self::assertStringContainsString('must be an origin', $e->getMessage());
+            }
+        }
+    }
+
     public function testInvalidProviderIdsAreRejected(): void
     {
         foreach (['', '  ', '@app.creds'] as $id) {

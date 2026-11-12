@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.25.1](#to-1251)
 - [To 1.25.0](#to-1250)
 - [To 1.24.1](#to-1241)
 - [To 1.24.0](#to-1240)
@@ -99,6 +100,31 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.25.1
+
+From **1.25.0**: patch with a **behaviour change for hosts that use a credentials provider** (`credentials_provider` or
+`instance_settings_bridge`); nothing changes without one.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- A provider DSN (current or previous) now wins only when its origin is allowed: the origin of `nowo_beacon.dsn`, or
+  one listed in the new `nowo_beacon.credentials_allowed_origins` (`scheme://host[:port]`, exact match). Any other is
+  ignored with one warning and the configured DSN is used.
+- **Action needed** if the stored DSN uses another origin than `BEACON_DSN` (a second Beacon host, another port), or if
+  `BEACON_DSN` is empty: list the origin, e.g.
+
+  ```yaml
+  nowo_beacon:
+      credentials_allowed_origins: ['https://beacon.example.com']
+  ```
+
+  Otherwise reports go to `BEACON_DSN` (or stop, when it is empty) and the warning names the refused origin.
+- `nowo:beacon:credentials:rotate` refuses a new DSN outside the allowed origins.
+- `BeaconCredentialsResolver` (`@internal` service) takes the list as a new last constructor argument and has
+  `isOriginAllowed()`.
 
 ## To 1.25.0
 

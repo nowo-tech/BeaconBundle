@@ -80,6 +80,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Next patch: 1.25.1.
+
+### Security
+
+- **Provider DSNs limited to allowed origins** (owner decision 2026-11-12). New option
+  `nowo_beacon.credentials_allowed_origins` (list of `scheme://host[:port]`, validated and normalised); the origin of
+  `nowo_beacon.dsn` is always allowed; with no configured DSN and no list, every provider DSN is refused. A provider
+  DSN (current or previous) outside the list is ignored with one warning and the configured DSN is used, so a database
+  writer can no longer redirect events to another host. `nowo:beacon:credentials:rotate` refuses a new DSN outside the
+  list. The NS-M1 worker-key pairing rule is unchanged. **Behaviour change** for hosts with a provider whose stored DSN
+  is on another origin than `BEACON_DSN` (see UPGRADING "To 1.25.1").
+
+### Tests
+
+- `AllowedOriginsTest`: attacker origin refused (events only reach the configured DSN), default allow-list, explicit
+  second origin, previous DSN, rotate command refusal; option validation and normalisation in `CredentialsWiringTest`.
+
 ## [1.25.0] - 2026-11-12
 
 Next minor: 1.25.0.
