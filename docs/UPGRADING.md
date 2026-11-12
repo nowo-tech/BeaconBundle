@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.25.2](#to-1252)
 - [To 1.25.1](#to-1251)
 - [To 1.25.0](#to-1250)
 - [To 1.24.1](#to-1241)
@@ -100,6 +101,21 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.25.2
+
+From **1.25.1**: patch, no configuration change.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- Fixes the service instantiation cycle between the Beacon client, the credentials provider (InstanceSettings bridge)
+  and the Beacon Monolog handler: the provider, the resolver's logger and the bridge's InstanceSettings are injected as
+  service closures and built on first use. A `#[AutowireServiceClosure(NowoBeaconExtension::INSTANCE_SETTINGS_STORE)]`
+  workaround in a host provider keeps working and can be removed.
+- `BeaconCredentialsResolver` (`@internal`) accepts a provider or a closure returning one (and a logger or a closure);
+  `InstanceSettingsCredentialsStore` accepts InstanceSettings or a closure returning it. Custom providers need no change.
 
 ## To 1.25.1
 

@@ -81,6 +81,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Next patch: 1.25.2.
+
+### Fixed
+
+- **Service instantiation cycle with `instance_settings_bridge: true` and the Beacon Monolog handler** (reported by
+  Beacon on 1.25.1: `cache:clear` exhausted 512 MB). The chain Beacon client → `BeaconCredentialsResolver` →
+  InstanceSettings store → InstanceSettings (Doctrine, logger) → logger → Beacon Monolog handler → Beacon client was
+  built eagerly. The resolver now receives the credentials provider and the logger as service closures, and the
+  InstanceSettings store receives InstanceSettings as a service closure: each is built on first use (the provider on its
+  first read, inside the re-entrancy guard), so the client never pulls the provider graph. A credentials read nested in
+  the provider's construction or read (e.g. a log record reaching the Beacon handler) gets the configuration. A closure
+  that returns no provider counts as a provider failure (configuration, one warning). Hosts that worked around it with
+  `#[AutowireServiceClosure]` can keep or drop the workaround.
+
+### Tests
+
+- `CredentialsProviderCycleTest`: kernel with the InstanceSettings bridge, the Beacon Monolog handler pushed on the
+  logger (as MonologBundle does) and an InstanceSettings service that needs the logger and logs while it is read; the
+  container builds from InstanceSettings as entry point, `cache:warmup` and `cache:clear` succeed, and the log written
+  during the read goes out with the configured DSN (no recursion) before the request's event uses the stored DSN.
+  `LazyProviderTest` (built once, on first read, nested reads, wrong closure) and wiring assertions.
+
 ## [1.25.1] - 2026-11-12
 
 Next patch: 1.25.1.
