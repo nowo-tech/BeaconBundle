@@ -234,9 +234,15 @@ registered and the client decides per event.
   completed first) and the Messenger handler transport are rebuilt; remote-command calls and signature checks read the
   credentials on every call.
 
+**Pairing (audit NS-M1).** The configured worker key is used with a provider DSN only when that DSN has the same
+origin (scheme, host, port) as `nowo_beacon.dsn`; otherwise there is no worker key (remote commands off, one warning)
+until the provider also returns one. The same rule applies to the previous worker key. Keep `nowo_beacon.dsn` on the
+same Beacon and project as the stored DSN.
+
 **Rotation (current + previous with expiry).** A record can carry the value a rotation replaced, with an expiry
-(ISO 8601). A previous value without an expiry is ignored; a previous DSN must target the same origin and project as
-the current one.
+(ISO 8601). A previous value without an expiry, or expiring more than 30 days ahead, is ignored; a previous DSN must
+target the same origin and project as the current one. Once the previous DSN is rejected too, it is not tried again
+until the credentials change.
 
 - DSN: events are sent with the current DSN. On HTTP 401 the same Envelope is re-sent **once** with the previous DSN
   while it has not expired; without one, the provider is re-read once (at most every 5 s) and, when the DSN changed, the

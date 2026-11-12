@@ -118,6 +118,11 @@ composer update nowo-tech/beacon-bundle
   registered and the client (`ResolvingBeaconClient`, `@internal`) drops events while no DSN is known. Code that checks
   `nowo.beacon.enabled` sees `true` in that case. `messenger.remote_retry.worker_key` may stay empty when the provider
   supplies the key.
+- **Pairing and limits (audit NS):** `BEACON_WORKER_KEY` is never sent to a stored DSN on another origin (store the key
+  with the DSN); previous values expiring more than 30 days ahead are ignored; the bridge fields are not portable
+  (composer `conflict` with `nowo-tech/instance-settings-bundle` < 1.0). Keep `BEACON_DSN` on the same project as the
+  stored DSN: changing the stored project re-targets queued Messenger Envelopes and 401 re-sends. For a compromised key,
+  rotate with `--grace=0` and revoke it in Beacon.
 - New command `nowo:beacon:credentials:rotate` (registered in every configuration; without a writable store it explains
   how to rotate `.env` values and exits 1).
 - New service `Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver` (tagged `kernel.reset`, inert without a

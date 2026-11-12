@@ -442,7 +442,7 @@ nowo_beacon:
 ```
 
 The bundle adds a **Beacon** section to the InstanceSettings admin (`dsn`, `worker_key`, and the `previous_*` values
-written by the rotate command). Secret fields are encrypted at rest by InstanceSettings (DoctrineEncrypt; the
+written by the rotate command; expiry fields read-only, all fields left out of exports and imports). Secret fields are encrypted at rest by InstanceSettings (DoctrineEncrypt; the
 encryption key stays in the environment), never rendered back by the form (write-only: an empty field keeps the
 stored secret) and exported only sealed. Every save dispatches `SettingsChangedEvent`: the bundle expires its cache in
 that process at once and logs a notice with the changed **field names** and the origin (`form`, `import`, `api`),
@@ -517,6 +517,19 @@ New values are never command-line arguments (shell history, process list). The c
 4. on any failure restores the previous record and exits 1. It never prints a secret.
 
 Typical sequence: create the new key in Beacon, run the command, wait for `--grace`, revoke the old key in Beacon.
+**For a compromised key use `--grace=0`, then revoke it in Beacon** (no previous value is kept).
+
+Things to know:
+
+- The configured `BEACON_WORKER_KEY` is used with a stored DSN only when both target the same origin (scheme, host,
+  port); otherwise store the worker key next to the DSN (remote commands stay off until then, with one warning).
+- Keep `BEACON_DSN` (the fallback) on the **same Beacon and project** as the stored DSN, so that a database outage or
+  the kernel boot never reports to another project.
+- Changing the **project** of the stored DSN re-targets everything sent afterwards: Envelopes already queued in
+  Messenger (`transport.mode: messenger`) are sent with the DSN valid when the worker handles them, and a 401 refresh
+  re-sends to the current DSN. Rotate keys within one project; move projects deliberately.
+- The bridge fields are never exported nor imported, and the expiry fields are read-only in the form (the rotate
+  command writes them).
 Credentials kept only in `.env` are rotated by hand (new value in the environment, restart / redeploy).
 
 ## Scheduler check-ins

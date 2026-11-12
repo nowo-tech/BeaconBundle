@@ -108,6 +108,19 @@ Next minor: 1.25.0.
     replaced value as previous, reads it back and sends a test Envelope, restores the old record on failure, never
     prints a secret.
 
+### Security (audit NS on #46, before release)
+
+- **NS-M1 (Medium):** the configured worker key could be sent to a provider DSN on another host (a database writer
+  could then sign retry / discard commands). It is now used with a provider DSN only on the configured DSN's origin
+  (scheme, host, port), otherwise remote commands are off with one warning; same rule for the previous worker key.
+- **NS-L1:** previous values expiring more than 30 days ahead are ignored (the rotate command maximum); the bridge shows
+  the expiry fields read-only.
+- **NS-L3:** the six bridge fields are `notPortable()` (never exported or imported); composer `conflict` with
+  `nowo-tech/instance-settings-bundle` < 1.0.
+- **NS-I3:** once the previous DSN is rejected too, it is not tried again until the credentials change.
+- Docs (NS-L2, NS-I1, NS-I2): `--grace=0` then revoke for a compromised key; a stored project change re-targets queued
+  Messenger Envelopes and 401 re-sends; keep `BEACON_DSN` on the same project.
+
 ### Fixed
 
 - `NowoBeaconBundle::boot()` / `shutdown()` accessed an uninitialised container on bundle instances re-created by
