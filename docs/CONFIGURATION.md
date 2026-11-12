@@ -60,6 +60,7 @@ nowo_beacon:
     ingest_paths: auto   # auto | versioned | legacy
     credentials_provider: null         # 1.25+: service id of a BeaconCredentialsProviderInterface (null = config only)
     credentials_cache_ttl: 60          # 1.25+: seconds a provider answer is reused (0 … 3600)
+    credentials_allowed_origins: []    # 1.25.1+: origins a provider DSN may target (plus the origin of dsn)
     instance_settings_bridge: false    # 1.25+: DSN / worker key in the "beacon" InstanceSettings section
     transport:
         mode: sync   # sync | async | messenger
@@ -214,6 +215,7 @@ Besides `BEACON_DSN` / `BEACON_WORKER_KEY`, the DSN and the worker key can come 
 |-----|---------|-------------|
 | `credentials_provider` | `null` | Service id of a `Nowo\BeaconBundle\Credentials\BeaconCredentialsProviderInterface`. `null`: configuration only, exactly as 1.24 (same services, same arguments; proven by `DefaultWiringEquivalenceTest`). Checked at compile time (service exists and implements the port). |
 | `credentials_cache_ttl` | `60` | Seconds a provider answer is reused (0 … 3600; 0 = read on every use). |
+| `credentials_allowed_origins` | `[]` | 1.25.1+: origins (`scheme://host[:port]`, written exactly as in the DSN: `https://beacon.example.com` and `https://beacon.example.com:443` differ) a provider DSN may target. The origin of `dsn` is always allowed. Empty and no configured DSN: every provider DSN is refused. Lower-cased, trailing `/` removed; paths and credentials are rejected. |
 | `instance_settings_bridge` | `false` | Registers the `beacon` InstanceSettings section, `nowo_beacon.credentials_provider.instance_settings` (provider + store) and a `SettingsChangedEvent` listener; becomes the provider when `credentials_provider` is null. Requires `nowo-tech/instance-settings-bundle`. |
 
 **Resolution (runtime, never at compile time).** For each value, the provider's wins; a missing, invalid or
@@ -233,6 +235,11 @@ registered and the client decides per event.
 - **Change.** When any effective value changes, the client, its transport, its async queue (pending requests are
   completed first) and the Messenger handler transport are rebuilt; remote-command calls and signature checks read the
   credentials on every call.
+
+**Allowed origins (1.25.1, owner decision 2026-11-12).** A provider DSN, current or previous, is used only when its
+origin is in `credentials_allowed_origins` or is the origin of `nowo_beacon.dsn`; otherwise it is ignored with one
+warning (naming the origin, never a secret) and the configured DSN is used. The rotate command refuses a new DSN
+outside the list.
 
 **Pairing (audit NS-M1).** The configured worker key is used with a provider DSN only when that DSN has the same
 origin (scheme, host, port) as `nowo_beacon.dsn`; otherwise there is no worker key (remote commands off, one warning)
