@@ -79,6 +79,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+Next minor: 1.25.0.
+
+### Added
+
+- **Credentials from a database, with rotation** (owner decision 2026-11-10; Beacon request D-20261112-14: "apart from
+  .env, if there is a DB record read it, to ease rotation"). Opt-in; without it nothing changes (wiring identical to
+  1.24.1, `DefaultWiringEquivalenceTest`).
+  - Port `Credentials\BeaconCredentialsProviderInterface::current(): ?BeaconCredentials` and writable
+    `BeaconCredentialsStoreInterface`; `BeaconCredentials` is a framework-free value object (DSN, worker key, previous
+    DSN / worker key with expiry; secrets in `SensitiveParameterValue`, masked dumps, serialization refused).
+  - Options `credentials_provider` (service id, checked at compile time), `credentials_cache_ttl` (default 60 s) and
+    `instance_settings_bridge` (the `beacon` InstanceSettings section: secret fields encrypted at rest, write-only
+    form, `SettingsChangedEvent` audit notice with field names only; no hard dependency, the types are only used when
+    enabled).
+  - `Credentials\BeaconCredentialsResolver`: provider value wins over `nowo_beacon.dsn` / `worker_key`; invalid or
+    unreadable → configuration → disabled; read only after the first request / command / worker start (boot-time
+    errors use the configuration); re-entrant calls never recurse; one warning per failure streak (exception class
+    only); TTL cache, expired by `kernel.reset` and `SettingsChangedEvent`, correct without any reset (worker mode).
+  - Rotation: on HTTP 401 an Envelope is re-sent once with the previous DSN (same origin and project, not expired),
+    else after one re-read of the provider (5 s backoff) when the DSN changed — sync, async (at flush) and Messenger
+    handler; remote commands: signatures of the previous worker key accepted until expiry, a 401 claim / result
+    retried once with the previous (or re-read) key.
+  - Client, transport, async queue and Messenger handler transport are rebuilt when the credentials change
+    (`Client\ResolvingBeaconClient`, `Credentials\RotatingEnvelopeTransport`, `Credentials\ResolvingEnvelopeTransport`,
+    all `@internal`); `nowo:beacon:test` and the self-test use the effective DSN.
+  - Command `nowo:beacon:credentials:rotate` (`--dsn`, `--worker-key`, `--grace`): hidden input or stdin, keeps the
+    replaced value as previous, reads it back and sends a test Envelope, restores the old record on failure, never
+    prints a secret.
+
+### Fixed
+
+- `NowoBeaconBundle::boot()` / `shutdown()` accessed an uninitialised container on bundle instances re-created by
+  `lint:container` (non-debug kernel), which made `Kernel::shutdown()` fail afterwards.
+
+### Tests
+
+- Resolver (provider null / value / null record / throwing / invalid values, TTL, reset, generation, backoff, previous
+  values, re-entrancy, no secret in logs, dumps or serialization), 401 fallbacks in sync, async and Messenger modes,
+  remote-command key rotation, rotate command (success, stdin, rollback, failures), InstanceSettings bridge (dev stubs
+  of the InstanceSettings types under `tests/Stubs`), compiler pass, wiring.
+- `DefaultWiringEquivalenceTest`: container description without provider identical to the one generated from the
+  1.24.1 sources.
+- `CredentialsProviderIntegrationTest`: DDD host (own plain-PHP adapter) and standard host (InstanceSettings bridge)
+  kernels, `lint:container`, and REQ-RUNTIME-002: one kept-alive kernel, no resetter, 1,200 requests alternating two
+  projects with a DSN rotation mid-run (401 → previous DSN while Beacon lags), memory flat.
+
 ## [1.24.1] - 2026-11-12
 
 Next patch: 1.24.1.

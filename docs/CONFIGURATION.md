@@ -7,6 +7,7 @@
 - [YAML reference](#yaml-reference)
   - [`send.*` context switches](#send-context-switches)
 - [Ingest paths (versioned, legacy fallback)](#ingest-paths-versioned-legacy-fallback)
+- [Credentials provider and rotation (1.25+)](#credentials-provider-and-rotation-125)
 - [Timeout hierarchy (REQ-RUNTIME-001)](#timeout-hierarchy-req-runtime-001)
 - [Important behavior](#important-behavior)
 - [Development with self-signed certificates](#development-with-self-signed-certificates)
@@ -15,7 +16,7 @@
 
 | Variable | Description |
 |----------|-------------|
-| `BEACON_DSN` | Full Beacon DSN. Empty string disables outbound reporting. |
+| `BEACON_DSN` | Full Beacon DSN. Empty string disables outbound reporting (1.25+: unless a [credentials provider](#credentials-provider-and-rotation-125) supplies a DSN; it stays the fallback). |
 | `BEACON_RELEASE` | Optional app/code version string (wire via `release`). |
 | `BEACON_WORKER_KEY` | Optional worker key (`bwk_…`) for [remote Messenger commands](USAGE.md#remote-retry-from-beacon) (1.16+); only on hosts that run workers. Secret: never commit it. |
 
@@ -57,6 +58,9 @@ nowo_beacon:
     verify_peer: true
     timeout: 5.0
     ingest_paths: auto   # auto | versioned | legacy
+    credentials_provider: null         # 1.25+: service id of a BeaconCredentialsProviderInterface (null = config only)
+    credentials_cache_ttl: 60          # 1.25+: seconds a provider answer is reused (0 … 3600)
+    instance_settings_bridge: false    # 1.25+: DSN / worker key in the "beacon" InstanceSettings section
     transport:
         mode: sync   # sync | async | messenger
         retry:       # Beacon answered 5xx → wait and retry (0 retries = off)
@@ -89,7 +93,7 @@ nowo_beacon:
             buses: ['messenger.bus.default']
         remote_retry:                      # Retry / discard from the Beacon UI (1.16+), off by default
             enabled: false
-            worker_key: '%env(default::BEACON_WORKER_KEY)%'   # bwk_…, required when enabled
+            worker_key: '%env(default::BEACON_WORKER_KEY)%'   # bwk_…, required when enabled (unless a credentials provider supplies it)
             allowed_actions: [retry, discard]
             failure_transports: []         # empty = messenger.failure_transports
             poll_interval: 30              # seconds, 10 … 600
@@ -200,6 +204,47 @@ nowo_beacon:
 | `monolog_handler.ignore_http_client_errors` | `true` | 1.20+: skip records whose `context.exception` is an `HttpExceptionInterface` with status < 500 (Symfony's `ErrorListener` logs every uncaught 4xx at ERROR). |
 
 The self-test routes come from the `nowo_beacon` route loader instead of `#[Route]` attributes on the controller: they exist only when `self_test.http.enabled` is true and their path is configurable (`self_test.http.path`), which static attributes cannot express. The import file only points at the loader; route names (`nowo_beacon_self_test`, `nowo_beacon_self_test_trigger`) are stable.
+
+## Credentials provider and rotation (1.25+)
+
+Besides `BEACON_DSN` / `BEACON_WORKER_KEY`, the DSN and the worker key can come from a database record (owner decision
+2026-11-10, Beacon request D-20261112-14), to rotate them without a deploy.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `credentials_provider` | `null` | Service id of a `Nowo\BeaconBundle\Credentials\BeaconCredentialsProviderInterface`. `null`: configuration only, exactly as 1.24 (same services, same arguments; proven by `DefaultWiringEquivalenceTest`). Checked at compile time (service exists and implements the port). |
+| `credentials_cache_ttl` | `60` | Seconds a provider answer is reused (0 … 3600; 0 = read on every use). |
+| `instance_settings_bridge` | `false` | Registers the `beacon` InstanceSettings section, `nowo_beacon.credentials_provider.instance_settings` (provider + store) and a `SettingsChangedEvent` listener; becomes the provider when `credentials_provider` is null. Requires `nowo-tech/instance-settings-bundle`. |
+
+**Resolution (runtime, never at compile time).** For each value, the provider's wins; a missing, invalid or
+unreadable provider value falls back to the configured one; neither: reporting is off (events dropped, as with an
+empty DSN). With a provider, an empty `BEACON_DSN` no longer disables the bundle at compile time: the listeners are
+registered and the client decides per event.
+
+- **Boot time uses the configuration.** The provider is read only after the first `kernel.request`,
+  `console.command` or Messenger `WorkerStartedEvent`, so an error raised while the kernel boots is reported with
+  `BEACON_DSN` and never waits for a database.
+- **Failures never throw.** A provider exception is logged once (exception class only, never its message) until a read
+  succeeds again; invalid values are logged once (reason only). A call made while the provider is being read (e.g. its
+  own logging reaching the Monolog handler) gets the last snapshot or the configuration, never a nested read.
+- **Cache.** `credentials_cache_ttl` seconds, then re-read. `kernel.reset` and `SettingsChangedEvent` (section `beacon`)
+  only make it expire now; correctness never depends on the resetter (FrankenPHP worker with `kernel reset false`).
+  Messenger resets services after each message, so a consumer re-reads the provider once per message.
+- **Change.** When any effective value changes, the client, its transport, its async queue (pending requests are
+  completed first) and the Messenger handler transport are rebuilt; remote-command calls and signature checks read the
+  credentials on every call.
+
+**Rotation (current + previous with expiry).** A record can carry the value a rotation replaced, with an expiry
+(ISO 8601). A previous value without an expiry is ignored; a previous DSN must target the same origin and project as
+the current one.
+
+- DSN: events are sent with the current DSN. On HTTP 401 the same Envelope is re-sent **once** with the previous DSN
+  while it has not expired; without one, the provider is re-read once (at most every 5 s) and, when the DSN changed, the
+  Envelope is re-sent once with the new DSN. Otherwise the 401 stands. A warning names the step (never a key).
+- Worker key: command signatures made with the previous key are accepted until its expiry; a claim / result answered
+  with 401 is retried once with the previous key (or the re-read key). Works with one active key too (Beacon accepts
+  the new key once it knows it).
+- `nowo:beacon:credentials:rotate --dsn|--worker-key [--grace=86400]`: see [USAGE](USAGE.md#credentials-from-a-database-and-rotation-125).
 
 ## Ingest paths (versioned, legacy fallback)
 

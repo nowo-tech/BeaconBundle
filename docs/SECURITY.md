@@ -6,6 +6,7 @@
 - [Attack surface and threat model](#attack-surface-and-threat-model)
 - [Bundle security measures](#bundle-security-measures)
 - [Remote Messenger commands (1.16+)](#remote-messenger-commands-116)
+- [Stored credentials and rotation (1.25+)](#stored-credentials-and-rotation-125)
 - [Supported Versions](#supported-versions)
 - [Reporting a Vulnerability](#reporting-a-vulnerability)
 - [Release security checklist (12.4.1)](#release-security-checklist-1241)
@@ -77,6 +78,20 @@ Residual risk to remember:
 | Leaked worker key | Scope = the two command endpoints of one project (no issue data, no ingest). Results are tied to a per-claim token. Rotate / revoke in Beacon. A leaked ingest DSN does **not** grant this. HMAC means a leaked key **plus** a man-in-the-middle position could forge commands; Ed25519 signatures with a pinned Beacon public key are a recorded future improvement. **Residual (L4, needs a Beacon-side change):** the raw `bwk_…` key is the Bearer credential, so whoever sees that header (Beacon access logs, a TLS-terminating proxy, APM recording `Authorization`) can derive the signing subkey; sending the HKDF auth subkey instead requires a coordinated protocol change in Symfony Beacon. |
 | Message content disclosure | Message bodies are never sent in either direction; results carry reason codes and the exception **class** only; logs carry ids and codes — never the key, claim tokens or envelopes. The key is held in a `SensitiveParameterValue` (hidden from `var_dump()`, `var_export()`, VarDumper and exception traces; `serialize()` is refused). |
 | Abuse / DoS against the worker | One command per claim, 3-second HTTP timeout, no redirects, polling between messages only, exponential backoff, `Retry-After` (clamped 1 … 3600 s), one-hour pause on `401` / `403` / `404`. Every claim, result and pending-result failure, whatever its type (since 1.19.2 also non-HttpClient exceptions from decorated clients), becomes a poll status: nothing throws into the worker. |
+
+## Stored credentials and rotation (1.25+)
+
+Opt-in (`credentials_provider`, `instance_settings_bridge`). Client-side controls:
+
+| Threat | Controls |
+|---|---|
+| Secret disclosure in logs, traces, dumps, profiler | DSN secrets and worker keys live in `SensitiveParameterValue`s (`BeaconDsn`, `WorkerKey`, `BeaconCredentials`, the resolver's configuration copy); `__debugInfo()` masks them; `serialize()` is refused; constructor and method parameters carrying them are `#[SensitiveParameter]`. Provider exceptions are logged by **class only** (their message may contain a connection string); invalid values by reason only; rotation warnings name the step and the project id, never a key. All these records carry the transport flag, so the Monolog handler never forwards them to Beacon. The rotate command reads new values as hidden input or from stdin (never arguments) and prints origin, project and an 8-character public-key prefix only. |
+| Secrets at rest | Not stored by the bundle. With the InstanceSettings bridge, secret fields are encrypted by InstanceSettings / DoctrineEncrypt (key in the environment), never rendered back, exported only sealed; changes dispatch `SettingsChangedEvent` (field names + origin, logged as a notice). |
+| Database tampering redirecting reports | Whoever can write the record can already replace `BEACON_DSN`-equivalent data; the previous DSN, the only value used automatically after a 401, must target the **same origin and project** as the current one and is ignored without an expiry or once expired. Redirects are never followed. |
+| A revoked key accepted forever | Previous values need an expiry (ignored otherwise); the rotate command caps `--grace` at 30 days. |
+| Provider outage / slow database | Read only after the kernel booted; failures fall back to `BEACON_DSN` (then disabled) and never throw into the request; TTL cache (default 60 s) bounds the reads; a forced re-read after a 401 happens at most every 5 s. |
+| Recursion (provider logs → Monolog → Beacon → provider) | Re-entrancy guard: a nested call gets the last snapshot or the configuration. |
+| Worker-mode leaks | The cache holds configuration / provider values only (no request or user data) and expires by time. |
 
 ## Supported Versions
 
