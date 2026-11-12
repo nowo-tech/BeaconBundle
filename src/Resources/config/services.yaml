@@ -25,8 +25,10 @@ services:
     Nowo\BeaconBundle\Envelope\PendingTransportRegistry: ~
 
     # REQ-RUNTIME-002: lazy iterators of IGNORE_ON_UNINITIALIZED references ('@!'): a boundary never builds a service.
+    # autoconfigure off: it implements ResetInterface, but its console bookkeeping must survive kernel.reset (1.24.1).
     Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener:
         autowire: false
+        autoconfigure: false
         arguments:
             $scopeState: !iterator
                 - '@!Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer'

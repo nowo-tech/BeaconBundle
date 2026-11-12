@@ -14,11 +14,18 @@ use Nowo\BeaconBundle\Tests\Fixtures\WorkerScope\WorkerScopeKernel;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use stdClass;
+use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\CommandLoader\FactoryCommandLoader;
 use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -26,11 +33,15 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernel;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent;
 use Symfony\Component\Messenger\Event\WorkerRunningEvent;
+use Symfony\Component\Messenger\Event\WorkerStoppedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Messenger\Worker;
 use Symfony\Contracts\Service\ResetInterface;
+use Throwable;
 
 use function array_column;
 use function array_key_exists;
@@ -39,6 +50,8 @@ use function gc_collect_cycles;
 use function is_array;
 use function is_string;
 use function memory_get_usage;
+
+use const PHP_INT_MIN;
 
 /**
  * REQ-RUNTIME-002: ONE kept-alive kernel, the services resetter never called (`http_kernel` driven directly, a
@@ -126,10 +139,155 @@ final class WorkerScopeIsolationTest extends TestCase
         self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
         [$breadcrumbs, $spans, $scope, $trace] = $this->state($container);
 
+        $command = new Command('app:long-running');
+        $input   = new ArrayInput([]);
+        $dispatcher->dispatch(new ConsoleCommandEvent($command, $input, new NullOutput()), ConsoleEvents::COMMAND);
         $this->fill($breadcrumbs, $spans, $scope, $trace);
-        $dispatcher->dispatch(new ConsoleTerminateEvent(new Command('app:long-running'), new ArrayInput([]), new NullOutput(), 0), ConsoleEvents::TERMINATE);
+        $dispatcher->dispatch(new ConsoleTerminateEvent($command, $input, new NullOutput(), 0), ConsoleEvents::TERMINATE);
 
         $this->assertEmptyState($breadcrumbs, $spans, $scope, $trace);
+    }
+
+    /**
+     * Audit NM, through a real console Application in the kept-alive kernel: (a) a nested command whose terminate
+     * listener throws, (c) an unknown nested command and (d) a nested command whose console.command is stopped above
+     * 4096 never clear the outer command's scope mid-run, and the outermost command still clears it when it ends.
+     */
+    public function testNestedCommandsWithSkippedConsoleEventsKeepTheOuterBoundary(): void
+    {
+        $container  = $this->boot();
+        $dispatcher = $container->get('event_dispatcher');
+        self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
+        [$breadcrumbs, $spans, $scope, $trace] = $this->state($container);
+
+        $throwing = static function (ConsoleTerminateEvent $event): void {
+            if ($event->getCommand()?->getName() === 'app:inner') {
+                throw new RuntimeException('terminate listener failed');
+            }
+        };
+        $stopping = static function (ConsoleCommandEvent $event): void {
+            if ($event->getCommand()?->getName() === 'app:inner') {
+                $event->stopPropagation();
+            }
+        };
+
+        $cases = [
+            'throwing terminate listener' => [ConsoleEvents::TERMINATE, $throwing, 0, 'app:inner'],
+            'unknown nested command'      => [null, null, 0, 'app:does-not-exist'],
+            'stopped console.command'     => [ConsoleEvents::COMMAND, $stopping, 10000, 'app:inner'],
+        ];
+        foreach ($cases as $case => [$event, $listener, $priority, $nested]) {
+            if ($event !== null && $listener !== null) {
+                $dispatcher->addListener($event, $listener, $priority);
+            }
+
+            try {
+                // Twice: the second run proves the bookkeeping stayed balanced.
+                for ($run = 0; $run < 2; ++$run) {
+                    $tags = $this->runOuterWithNestedRun($dispatcher, $scope, $nested);
+                    self::assertSame('outer', $tags['tenant'] ?? null, $case . ': the nested command kept the outer scope');
+                    $this->assertEmptyState($breadcrumbs, $spans, $scope, $trace);
+                }
+            } finally {
+                if ($listener !== null) {
+                    $dispatcher->removeListener($event, $listener);
+                }
+            }
+        }
+    }
+
+    /**
+     * Audits NL2-v / NL2-v2 probes through a real console Application: a self-recursive command whose error listener
+     * throws, an error listener at PHP_INT_MIN that throws, a throwing WorkerMessageReceivedEvent listener inside a
+     * command, and a failing command with a throwing error listener inside a message followed by the message failure
+     * and the worker stop. After each, the next outermost command still clears the scope when it ends.
+     */
+    public function testFailedRunsAreHealedAndNeverKeepTheProcessInsideAUnit(): void
+    {
+        $container  = $this->boot();
+        $dispatcher = $container->get('event_dispatcher');
+        self::assertInstanceOf(EventDispatcherInterface::class, $dispatcher);
+        [$breadcrumbs, $spans, $scope, $trace] = $this->state($container);
+        $throwing                              = static function (): never {
+            throw new RuntimeException('listener failed');
+        };
+        $application = new Application('worker-test');
+        $application->setAutoExit(false);
+        $application->setCatchExceptions(false);
+        $application->setDispatcher($dispatcher);
+        $depth     = 0;
+        $recursive = (new Command('app:rec'))->setCode(static function (InputInterface $input, OutputInterface $output) use ($application, $dispatcher, $throwing, &$depth): int {
+            if (++$depth > 1) {
+                throw new RuntimeException('inner run failed');
+            }
+            $dispatcher->addListener(ConsoleEvents::ERROR, $throwing);
+            try {
+                $application->run(new ArrayInput(['command' => 'app:rec']), $output);
+            } catch (Throwable) {
+            } finally {
+                $dispatcher->removeListener(ConsoleEvents::ERROR, $throwing);
+            }
+
+            return Command::SUCCESS;
+        });
+        $failing = (new Command('app:fail'))->setCode(static function (): never {
+            throw new RuntimeException('command failed');
+        });
+        $consume = (new Command('app:consume'))->setCode(static function () use ($dispatcher, $throwing): int {
+            $dispatcher->addListener(WorkerMessageReceivedEvent::class, $throwing);
+            try {
+                $dispatcher->dispatch(new WorkerMessageReceivedEvent(new Envelope(new stdClass()), 'async'));
+            } catch (RuntimeException) {
+            } finally {
+                $dispatcher->removeListener(WorkerMessageReceivedEvent::class, $throwing);
+            }
+
+            return Command::SUCCESS;
+        });
+        $application->setCommandLoader(new FactoryCommandLoader([
+            'app:rec'     => static fn (): Command => $recursive,
+            'app:fail'    => static fn (): Command => $failing,
+            'app:consume' => static fn (): Command => $consume,
+        ]));
+
+        $probes = [
+            'self-recursive command, throwing error listener' => static function () use ($application): void {
+                $application->run(new ArrayInput(['command' => 'app:rec']), new NullOutput());
+            },
+            'error listener at PHP_INT_MIN throwing' => static function () use ($application, $dispatcher, $throwing): void {
+                $dispatcher->addListener(ConsoleEvents::ERROR, $throwing, PHP_INT_MIN);
+                try {
+                    $application->run(new ArrayInput(['command' => 'app:fail']), new NullOutput());
+                } catch (RuntimeException) {
+                } finally {
+                    $dispatcher->removeListener(ConsoleEvents::ERROR, $throwing);
+                }
+            },
+            'throwing received listener inside a command' => static function () use ($application): void {
+                $application->run(new ArrayInput(['command' => 'app:consume']), new NullOutput());
+            },
+            'failing command inside a message, worker stopped' => function () use ($application, $dispatcher, $throwing): void {
+                $envelope = new Envelope(new stdClass());
+                $dispatcher->dispatch(new WorkerMessageReceivedEvent($envelope, 'async'));
+                $dispatcher->addListener(ConsoleEvents::ERROR, $throwing);
+                try {
+                    $application->run(new ArrayInput(['command' => 'app:fail']), new NullOutput());
+                } catch (RuntimeException) {
+                } finally {
+                    $dispatcher->removeListener(ConsoleEvents::ERROR, $throwing);
+                }
+                $dispatcher->dispatch(new WorkerMessageFailedEvent($envelope, 'async', new RuntimeException('handler failed')));
+                $dispatcher->dispatch(new WorkerStoppedEvent($this->createStub(Worker::class)));
+            },
+        ];
+
+        foreach ($probes as $probe => $run) {
+            $depth = 0;
+            $run();
+            $tags = $this->runOuterWithNestedRun($dispatcher, $scope, 'app:inner');
+            self::assertSame('outer', $tags['tenant'] ?? null, $probe);
+            $this->assertEmptyState($breadcrumbs, $spans, $scope, $trace);
+        }
     }
 
     public function testServicesResetterStillResetsEveryScopeService(): void
@@ -225,6 +383,42 @@ final class WorkerScopeIsolationTest extends TestCase
         gc_collect_cycles();
 
         return memory_get_usage();
+    }
+
+    /**
+     * Runs app:outer: it tags the scope, runs $nested in-process (a failure of the nested run is swallowed) and
+     * returns the scope tags seen right after the nested run.
+     *
+     * @return array<string, string>
+     */
+    private function runOuterWithNestedRun(EventDispatcherInterface $dispatcher, Scope $scope, string $nested): array
+    {
+        $application = new Application('worker-test');
+        $application->setAutoExit(false);
+        $application->setCatchExceptions(false);
+        $application->setDispatcher($dispatcher);
+
+        $tags  = [];
+        $inner = (new Command('app:inner'))->setCode(static fn (): int => Command::SUCCESS);
+        $outer = (new Command('app:outer'))->setCode(static function (InputInterface $input, OutputInterface $output) use ($application, $scope, $nested, &$tags): int {
+            $scope->setTag('tenant', 'outer');
+            try {
+                $application->doRun(new ArrayInput(['command' => $nested]), $output);
+            } catch (Throwable) {
+                // The nested run failed (throwing listener, unknown command); the outer command goes on.
+            }
+            $tags = $scope->getTags();
+
+            return Command::SUCCESS;
+        });
+        $application->setCommandLoader(new FactoryCommandLoader([
+            'app:outer' => static fn (): Command => $outer,
+            'app:inner' => static fn (): Command => $inner,
+        ]));
+
+        self::assertSame(Command::SUCCESS, $application->run(new ArrayInput(['command' => 'app:outer']), new NullOutput()));
+
+        return $tags;
     }
 
     private function boot(): ContainerInterface

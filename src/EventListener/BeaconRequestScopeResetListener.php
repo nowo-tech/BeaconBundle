@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
+use Nowo\BeaconBundle\Worker\UnitOfWorkFrames;
 use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\Event\ConsoleCommandEvent;
+use Symfony\Component\Console\Event\ConsoleErrorEvent;
+use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -16,7 +20,8 @@ use Symfony\Component\Messenger\Event\WorkerStoppedEvent;
 use Symfony\Contracts\Service\ResetInterface;
 
 use function class_exists;
-use function max;
+
+use const PHP_INT_MAX;
 
 /**
  * Starts every unit of work with empty breadcrumbs, spans, scope tags and no trace id (REQ-RUNTIME-002).
@@ -30,8 +35,13 @@ use function max;
  *   for a failed message still carries that message's breadcrumbs, tags and trace id);
  * - `console.terminate` (priority -4096, after the console error capture and the pending flush), only when it ends the
  *   OUTERMOST command and no Messenger message is in flight: a command run in-process from another command or from a
- *   message handler (`Application::doRun()`) must not clear the outer unit's scope. The depth is counted on
- *   `console.command` / `console.terminate`; the in-flight flag is set on message received and unset on handled / failed.
+ *   message handler (`Application::doRun()`) must not clear the outer unit's scope.
+ *
+ * Which unit is outermost is tracked by {@see UnitOfWorkFrames} (1.24.1, audits NM / NL2-v / NL2-v2), fed at priority
+ * `PHP_INT_MAX` so another listener that throws or stops propagation cannot unbalance it: one frame per console run
+ * (Command + input) that saves and restores the outer Messenger state, a frame left failing by a throwing
+ * `console.error` listener healed at the next request, message, command or worker stop (before the handler writes its
+ * own flag). The clears keep their priorities.
  *
  * The same services are also tagged `kernel.reset` (they implement {@see ResetInterface}); this listener keeps them
  * correct where the services resetter does not run: a host that removes or bypasses `services_resetter` (or drives
@@ -43,17 +53,16 @@ use function max;
  *
  * @internal registered by the bundle; the constructor is not a public API
  */
-final class BeaconRequestScopeResetListener implements EventSubscriberInterface
+final class BeaconRequestScopeResetListener implements EventSubscriberInterface, ResetInterface
 {
-    /**
-     * Console commands currently running in this process (nested in-process runs count). Process-lifetime counter,
-     * bounded by the nesting depth; intentionally not reset by `kernel.reset` (a reset between messages of a
-     * `messenger:consume` command would lose the outer command).
-     */
-    private int $consoleDepth = 0;
+    /** Messenger skip event (class name; only dispatched by `messenger:failed:retry`, symfony/messenger 7.2+). */
+    public const MESSENGER_WORKER_MESSAGE_SKIPPED = 'Symfony\Component\Messenger\Event\WorkerMessageSkipEvent';
 
-    /** A Messenger message is being handled (between received and handled / failed). */
-    private bool $messageInFlight = false;
+    /**
+     * Units of work running in this process. Deliberately not tagged `kernel.reset` (a reset between messages of a
+     * `messenger:consume` command would lose the outer command; the service is not autoconfigured).
+     */
+    private readonly UnitOfWorkFrames $frames;
 
     /**
      * @param iterable<ResetInterface> $scopeState BreadcrumbBuffer, SpanBuffer, Scope and TraceIdProvider
@@ -63,29 +72,46 @@ final class BeaconRequestScopeResetListener implements EventSubscriberInterface
         private readonly iterable $scopeState,
         private readonly iterable $pendingRegistries = [],
     ) {
+        $this->frames = new UnitOfWorkFrames();
     }
 
     /**
-     * @return array<string, array{0: string, 1: int}>
+     * @return array<string, array{0: string, 1: int}|list<array{0: string, 1: int}>>
      */
     public static function getSubscribedEvents(): array
     {
-        $events = [KernelEvents::REQUEST => ['onKernelRequest', 4096]];
+        $events = [KernelEvents::REQUEST => [['onKernelRequestStarted', PHP_INT_MAX], ['onKernelRequest', 4096]]];
 
         if (class_exists(WorkerMessageReceivedEvent::class)) {
-            $events[WorkerMessageReceivedEvent::class] = ['onMessageReceived', 4096];
-            $events[WorkerMessageHandledEvent::class]  = ['onMessageFinished', -4096];
-            $events[WorkerMessageFailedEvent::class]   = ['onMessageFinished', -4096];
+            $events[WorkerMessageReceivedEvent::class]      = [['onMessageReceivedStarted', PHP_INT_MAX], ['onMessageReceived', 4096]];
+            $events[WorkerMessageHandledEvent::class]       = [['onMessageFinishedStarted', PHP_INT_MAX], ['onMessageFinished', -4096]];
+            $events[WorkerMessageFailedEvent::class]        = [['onMessageFinishedStarted', PHP_INT_MAX], ['onMessageFinished', -4096]];
+            $events[self::MESSENGER_WORKER_MESSAGE_SKIPPED] = ['onMessageFinishedStarted', PHP_INT_MAX];
             // A listener may skip a received message (no handled / failed event follows).
-            $events[WorkerStoppedEvent::class] = ['onWorkerStopped', -4096];
+            $events[WorkerStoppedEvent::class] = ['onWorkerStopped', PHP_INT_MAX];
         }
 
         if (class_exists(ConsoleEvents::class)) {
-            $events[ConsoleEvents::COMMAND]   = ['onConsoleCommand', 4096];
-            $events[ConsoleEvents::TERMINATE] = ['onConsoleTerminate', -4096];
+            // Bookkeeping first (PHP_INT_MAX), the clear late: a listener in between cannot skip the bookkeeping.
+            $events[ConsoleEvents::COMMAND]   = ['onConsoleCommand', PHP_INT_MAX];
+            $events[ConsoleEvents::ERROR]     = ['onConsoleError', PHP_INT_MAX];
+            $events[ConsoleEvents::TERMINATE] = [['onConsoleTerminateStarted', PHP_INT_MAX], ['onConsoleTerminate', -4096]];
         }
 
         return $events;
+    }
+
+    /**
+     * Main request starts (bookkeeping): heals a run left failing. The main-request depth is deliberately not kept
+     * (requestFinished() at once): the HTTP clears are unconditional and a command run from a controller keeps the
+     * pre-1.24.1 behaviour (it is its own outermost unit).
+     */
+    public function onKernelRequestStarted(RequestEvent $event): void
+    {
+        if ($event->isMainRequest()) {
+            $this->frames->requestStarted();
+            $this->frames->requestFinished();
+        }
     }
 
     public function onKernelRequest(RequestEvent $event): void
@@ -99,12 +125,18 @@ final class BeaconRequestScopeResetListener implements EventSubscriberInterface
     }
 
     /**
+     * A Messenger message is received (bookkeeping).
+     */
+    public function onMessageReceivedStarted(): void
+    {
+        $this->frames->messageReceived();
+    }
+
+    /**
      * Start of a Messenger message: nothing from the previous message or the worker's idle time is kept.
      */
     public function onMessageReceived(): void
     {
-        // @igor-ignore - Unit-of-work flag, set and unset at the Messenger boundaries.
-        $this->messageInFlight = true;
         $this->flushPending();
         $this->clear();
     }
@@ -114,35 +146,64 @@ final class BeaconRequestScopeResetListener implements EventSubscriberInterface
      */
     public function onMessageFinished(): void
     {
-        // @igor-ignore - Unit-of-work flag, set and unset at the Messenger boundaries.
-        $this->messageInFlight = false;
         $this->clear();
+    }
+
+    /**
+     * A Messenger message is handled, failed or skipped (bookkeeping).
+     */
+    public function onMessageFinishedStarted(): void
+    {
+        $this->frames->messageFinished();
     }
 
     public function onWorkerStopped(): void
     {
-        // @igor-ignore - Unit-of-work flag, set and unset at the Messenger boundaries.
-        $this->messageInFlight = false;
-    }
-
-    public function onConsoleCommand(): void
-    {
-        // @igor-ignore - Nesting counter of the running commands (no request data).
-        ++$this->consoleDepth;
+        $this->frames->workerStopped();
     }
 
     /**
-     * Clears only when the outermost command ends outside a Messenger message.
+     * A console run starts (bookkeeping).
      */
-    public function onConsoleTerminate(): void
+    public function onConsoleCommand(ConsoleCommandEvent $event): void
     {
-        // @igor-ignore - Nesting counter of the running commands (no request data).
-        $this->consoleDepth = max(0, $this->consoleDepth - 1);
-        if ($this->consoleDepth > 0 || $this->messageInFlight) {
-            return;
-        }
+        $this->frames->commandStarted($event);
+    }
 
-        $this->clear();
+    /**
+     * A console run failed (bookkeeping: its frame is marked failing until its own terminate).
+     */
+    public function onConsoleError(ConsoleErrorEvent $event): void
+    {
+        $this->frames->commandFailed($event);
+    }
+
+    /**
+     * A console run ends (bookkeeping: its frame is removed, the outermost verdict kept for the late clear).
+     */
+    public function onConsoleTerminateStarted(ConsoleTerminateEvent $event): void
+    {
+        $this->frames->commandTerminated($event);
+    }
+
+    /**
+     * Clears only when the outermost command ends outside a Messenger message (after the console error capture and
+     * the pending flush).
+     */
+    public function onConsoleTerminate(ConsoleTerminateEvent $event): void
+    {
+        if ($this->frames->isOutermost($event)) {
+            $this->clear();
+        }
+    }
+
+    /**
+     * Forgets the unit-of-work bookkeeping (not the scope: see clear()). Not tagged `kernel.reset` and not relied on in
+     * worker mode.
+     */
+    public function reset(): void
+    {
+        $this->frames->reset();
     }
 
     /**
