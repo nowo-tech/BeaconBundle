@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.24.1](#to-1241)
 - [To 1.24.0](#to-1240)
   - [To 1.24.0](#to-1240-1)
 - [To 1.23.0](#to-1230)
@@ -97,6 +98,20 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.24.1
+
+From **1.24.0**: patch, no configuration change.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- The outermost console command now always clears the Beacon scope when it ends, even when another console listener
+  throws or stops propagation, and a nested command never clears the outer command's scope mid-run.
+  `BeaconRequestScopeResetListener` (`@internal`) is not autoconfigured any more, now also listens to `console.error`
+  and `WorkerMessageSkipEvent`, and its console methods take the console event. New internal
+  `Worker\UnitOfWorkFrames` (not a service).
 
 ## To 1.24.0
 
