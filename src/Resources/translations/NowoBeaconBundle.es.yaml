@@ -11,4 +11,4 @@ settings:
     previous_help: Valor sustituido por la última rotación, aceptado hasta su caducidad. Lo escribe nowo:beacon:credentials:rotate.
     previous_dsn_expires_at: Caducidad del DSN anterior
     previous_worker_key_expires_at: Caducidad de la clave de worker anterior
-    expires_at_help: "Fecha y hora ISO 8601, p. ej. 2026-11-13T10:00:00+00:00. Sin una caducidad válida, el valor anterior se ignora."
+    expires_at_help: "La escribe nowo:beacon:credentials:rotate (solo lectura). ISO 8601, como mucho 30 días después; sin una caducidad válida, el valor anterior se ignora."

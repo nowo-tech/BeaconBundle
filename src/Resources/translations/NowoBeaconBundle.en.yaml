@@ -11,4 +11,4 @@ settings:
     previous_help: Value replaced by the last rotation, accepted until its expiry. Written by nowo:beacon:credentials:rotate.
     previous_dsn_expires_at: Previous DSN expires at
     previous_worker_key_expires_at: Previous worker key expires at
-    expires_at_help: "ISO 8601 date and time, e.g. 2026-11-13T10:00:00+00:00. Without a valid expiry the previous value is ignored."
+    expires_at_help: "Written by nowo:beacon:credentials:rotate (read-only). ISO 8601, at most 30 days ahead; without a valid expiry the previous value is ignored."

@@ -15,6 +15,8 @@ final readonly class SettingField
 
     /**
      * @param iterable<mixed> $constraints
+     * @param array<string, int|string> $choices
+     * @param array<string, mixed> $formOptions
      */
     public function __construct(
         public string $name,
@@ -26,6 +28,8 @@ final readonly class SettingField
         public bool $secret = false,
         public bool $portable = true,
         iterable $constraints = [],
+        public array $choices = [],
+        public array $formOptions = [],
     ) {
         $list = [];
         foreach ($constraints as $constraint) {
@@ -49,5 +53,23 @@ final readonly class SettingField
     public static function secret(string $name, ?string $label = null, ?string $help = null, bool $required = false, iterable $constraints = [], SettingType $type = SettingType::String): self
     {
         return new self($name, $type, null, $label, $help, $required, secret: true, constraints: $constraints);
+    }
+
+    /**
+     * Copy that is left out of exports and refused on imports.
+     */
+    public function notPortable(): self
+    {
+        return new self($this->name, $this->type, $this->default, $this->label, $this->help, $this->required, $this->secret, false, $this->constraints, $this->choices, $this->formOptions);
+    }
+
+    /**
+     * Copy with extra admin form options.
+     *
+     * @param array<string, mixed> $formOptions
+     */
+    public function withFormOptions(array $formOptions): self
+    {
+        return new self($this->name, $this->type, $this->default, $this->label, $this->help, $this->required, $this->secret, $this->portable, $this->constraints, $this->choices, $formOptions + $this->formOptions);
     }
 }

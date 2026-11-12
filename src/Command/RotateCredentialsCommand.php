@@ -55,7 +55,7 @@ final class RotateCredentialsCommand extends Command
     public const DEFAULT_GRACE = 86400;
 
     /** Longest accepted grace period (30 days): a replaced key must stop working. */
-    public const MAX_GRACE = 2592000;
+    public const MAX_GRACE = BeaconCredentialsResolver::MAX_PREVIOUS_LIFETIME;
 
     public function __construct(
         private readonly BeaconCredentialsResolver $resolver,

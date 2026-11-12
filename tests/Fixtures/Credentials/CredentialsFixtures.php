@@ -21,6 +21,12 @@ final class CredentialsFixtures
     /** DSN of another project. */
     public const OTHER_PROJECT_DSN = 'https://pub-two:fixture-secret-two@beacon.example.invalid/2';
 
+    /** DSN a database writer could plant: another origin (audit NS-M1 probe). */
+    public const ATTACKER_DSN = 'https://pub-evil:fixture-secret-evil@attacker.example.invalid/1';
+
+    /** Same host as the configured DSN, another port: another origin. */
+    public const OTHER_PORT_DSN = 'https://pub-port:fixture-secret-port@beacon.example.invalid:8443/1';
+
     public const CONFIG_KEY = 'bwk_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
 
     public const DB_KEY = 'bwk_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
@@ -35,7 +41,7 @@ final class CredentialsFixtures
     public static function secrets(): array
     {
         return [
-            'fixture-secret-env', 'fixture-secret-db', 'fixture-secret-next', 'fixture-secret-two', 'fixture-db-password',
+            'fixture-secret-env', 'fixture-secret-db', 'fixture-secret-next', 'fixture-secret-two', 'fixture-secret-evil', 'fixture-secret-port', 'fixture-db-password',
             self::CONFIG_KEY, self::DB_KEY, self::NEXT_KEY,
         ];
     }

@@ -45,6 +45,12 @@ final class BeaconCredentialsResolver
 {
     public const DEFAULT_CACHE_TTL = 60;
 
+    /**
+     * Longest accepted lifetime of a previous value (30 days from now): a later expiry is ignored, so a replaced key
+     * always stops working (audit NS-L1).
+     */
+    public const MAX_PREVIOUS_LIFETIME = 2592000;
+
     /** Minimum seconds between two forced refreshes ({@see refresh()}, used after an HTTP 401). */
     public const REFRESH_BACKOFF = 5.0;
 
@@ -244,8 +250,14 @@ final class BeaconCredentialsResolver
         [$dsn, $dsnRaw, $dsnProblem, $dsnSource] = $this->resolveDsn($record?->dsn());
         [$key, $keyRaw, $keyProblem, $keySource] = $this->resolveWorkerKey($record?->workerKey());
 
+        // Audit NS-M1: the configured worker key never follows a provider DSN to another origin.
+        if ($keySource === ResolvedBeaconCredentials::SOURCE_CONFIG && !$this->configuredSecretsMayGoTo($dsn, $dsnSource)) {
+            $this->warnOnce('config_worker_key_other_origin', 'The configured Beacon worker key is not used with the DSN of the credentials provider, which targets another origin than nowo_beacon.dsn: remote Messenger commands are off until the provider also stores the worker key.');
+            [$key, $keyRaw, $keyProblem, $keySource] = [null, null, 'The configured worker key is not sent to the DSN of the credentials provider (another origin than nowo_beacon.dsn): store the worker key with the DSN.', ResolvedBeaconCredentials::SOURCE_NONE];
+        }
+
         $previousDsn       = $this->previousDsnOf($record, $dsn);
-        $previousWorkerKey = $this->previousWorkerKeyOf($record);
+        $previousWorkerKey = $this->previousWorkerKeyOf($record, $dsn, $dsnSource);
 
         $effective = new BeaconCredentials(
             $dsnRaw,
@@ -327,6 +339,12 @@ final class BeaconCredentialsResolver
             return null;
         }
 
+        if ($this->expiresTooLate($record->previousDsnExpiresAt())) {
+            $this->warnOnce('previous_dsn_expiry_too_late', 'The previous Beacon DSN expires more than 30 days from now: it is ignored.');
+
+            return null;
+        }
+
         try {
             $previous = $this->parser->parse($raw);
         } catch (InvalidBeaconDsnException $e) {
@@ -344,15 +362,28 @@ final class BeaconCredentialsResolver
         return $previous;
     }
 
-    private function previousWorkerKeyOf(?BeaconCredentials $record): ?WorkerKey
+    private function previousWorkerKeyOf(?BeaconCredentials $record, ?BeaconDsn $dsn, string $dsnSource): ?WorkerKey
     {
         $raw = $record?->previousWorkerKey();
         if ($raw === null) {
             return null;
         }
 
+        // A previous key may be a former configured key copied by the rotate command: same origin rule (audit NS-M1).
+        if ($dsnSource === ResolvedBeaconCredentials::SOURCE_PROVIDER && $this->configOrigin() !== null && !$this->configuredSecretsMayGoTo($dsn, $dsnSource)) {
+            $this->warnOnce('previous_worker_key_other_origin', 'The previous Beacon worker key is not used with a provider DSN that targets another origin than nowo_beacon.dsn: it is ignored.');
+
+            return null;
+        }
+
         if (!$record?->previousWorkerKeyExpiresAt() instanceof DateTimeImmutable) {
             $this->warnOnce('previous_worker_key_no_expiry', 'The previous Beacon worker key has no expiry: it is ignored.');
+
+            return null;
+        }
+
+        if ($this->expiresTooLate($record->previousWorkerKeyExpiresAt())) {
+            $this->warnOnce('previous_worker_key_expiry_too_late', 'The previous Beacon worker key expires more than 30 days from now: it is ignored.');
 
             return null;
         }
@@ -364,6 +395,44 @@ final class BeaconCredentialsResolver
         }
 
         return new WorkerKey($raw);
+    }
+
+    private function expiresTooLate(?DateTimeImmutable $expiresAt): bool
+    {
+        return $expiresAt instanceof DateTimeImmutable && $expiresAt->getTimestamp() > $this->now()->getTimestamp() + self::MAX_PREVIOUS_LIFETIME;
+    }
+
+    /**
+     * Origin (scheme, host, port) of the configured DSN, or null when it is empty or invalid.
+     */
+    private function configOrigin(): ?string
+    {
+        $configured = (string) $this->configDsn->getValue();
+        if ($configured === '') {
+            return null;
+        }
+
+        try {
+            return $this->parser->parse($configured)->getOrigin();
+        } catch (InvalidBeaconDsnException) {
+            return null;
+        }
+    }
+
+    /**
+     * Whether secrets that come from the configuration (or were copied from it) may be sent to `$dsn`: always for a
+     * configured DSN; for a provider DSN only when it has the configured DSN's origin (audit NS-M1: a database writer
+     * can redirect events, never obtain the configured worker key).
+     */
+    private function configuredSecretsMayGoTo(?BeaconDsn $dsn, string $dsnSource): bool
+    {
+        if ($dsnSource !== ResolvedBeaconCredentials::SOURCE_PROVIDER) {
+            return true;
+        }
+
+        $origin = $this->configOrigin();
+
+        return $origin !== null && $dsn instanceof BeaconDsn && $dsn->getOrigin() === $origin;
     }
 
     /**

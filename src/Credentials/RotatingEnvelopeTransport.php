@@ -17,7 +17,8 @@ use Throwable;
  * Synchronous Envelope transport of one credentials generation, with the rotation fallbacks.
  *
  * Sends with the current DSN. When Beacon answers HTTP 401:
- * 1. a previous DSN that has not expired (same origin and project): the same body is re-sent once with it;
+ * 1. a previous DSN that has not expired (same origin and project): the same body is re-sent once with it (once it
+ *    was rejected too, this step is skipped until the credentials change);
  * 2. otherwise the credentials are re-read once ({@see BeaconCredentialsResolver::refresh()}, with backoff) and, when
  *    the DSN changed, the body is re-sent once with the new one;
  * 3. otherwise the 401 stands (logged by the transport as before).
@@ -32,6 +33,9 @@ final class RotatingEnvelopeTransport implements EnvelopeTransportInterface
     public const UNAUTHORIZED = 401;
 
     private readonly EnvelopeTransport $current;
+
+    /** The previous DSN was rejected too: skip it for the rest of this credentials version (audit NS-I3). */
+    private bool $previousRejected = false;
 
     /**
      * @param Closure(BeaconDsn): EnvelopeTransport $transportFor builds a synchronous transport for one DSN
@@ -81,11 +85,16 @@ final class RotatingEnvelopeTransport implements EnvelopeTransportInterface
         }
 
         try {
-            $previous = $this->credentials->previousDsn($this->resolver->now());
+            $previous = $this->previousRejected ? null : $this->credentials->previousDsn($this->resolver->now());
             if ($previous instanceof BeaconDsn) {
                 $this->log('Beacon ingest answered HTTP 401 to the current DSN; the Envelope is re-sent once with the previous DSN.');
+                $retried = ($this->transportFor)($previous)->sendDetailed($envelopeBody);
+                if ($retried->getStatusCode() === self::UNAUTHORIZED) {
+                    // @igor-ignore - Per credentials version (this object is rebuilt when they change), no request data.
+                    $this->previousRejected = true;
+                }
 
-                return ($this->transportFor)($previous)->sendDetailed($envelopeBody);
+                return $retried;
             }
 
             if (!$this->resolver->refresh()) {
