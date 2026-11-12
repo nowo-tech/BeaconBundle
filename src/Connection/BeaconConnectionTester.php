@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Connection;
 
+use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
@@ -29,6 +30,8 @@ use function trim;
  *
  * Always uses synchronous HTTP so the result reflects the real ingest ACK,
  * regardless of `nowo_beacon.transport.mode`.
+ *
+ * With a credentials provider (1.25) it tests the effective DSN (provider record over configuration).
  */
 final class BeaconConnectionTester
 {
@@ -49,6 +52,7 @@ final class BeaconConnectionTester
         private readonly string $serverName = 'unknown',
         private readonly ?LoggerInterface $logger = null,
         ?IngestPathResolver $ingestPaths = null,
+        private readonly ?BeaconCredentialsResolver $credentials = null,
     ) {
         $this->dsn         = new SensitiveParameterValue($dsn);
         $this->ingestPaths = $ingestPaths ?? new IngestPathResolver();
@@ -62,7 +66,23 @@ final class BeaconConnectionTester
      */
     public function test(bool $checkOnly = false, string $message = 'BeaconBundle connection test'): ConnectionTestResult
     {
-        $dsnString = trim($this->dsn->getValue());
+        $dsn = (string) $this->dsn->getValue();
+        if ($this->credentials?->hasProvider() === true) {
+            $dsn = $this->credentials->resolve()->effective()->dsn() ?? '';
+        }
+
+        return $this->testDsn($dsn, $checkOnly, $message);
+    }
+
+    /**
+     * Validate (and optionally probe) one DSN, e.g. a new one during a rotation.
+     *
+     * @param bool $checkOnly When true, only parse/display the DSN (no HTTP POST)
+     * @param string $message Event message used for the test Envelope
+     */
+    public function testDsn(#[SensitiveParameter] string $dsn, bool $checkOnly = false, string $message = 'BeaconBundle connection test'): ConnectionTestResult
+    {
+        $dsnString = trim($dsn);
         if ($dsnString === '' || str_starts_with($dsnString, '%')) {
             return new ConnectionTestResult(
                 false,

@@ -163,11 +163,9 @@ final class RemoteCommandClient
             'verify_host' => $this->verifyPeer,
         ];
 
-        $versioned                 = $this->ingestPaths->useVersioned($dsn);
-        [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, $versioned), $options);
-        if ($versioned && $this->ingestPaths->versionedAnswered($dsn, $status)) {
-            [$status, $headers, $body] = $this->send(IngestPaths::projectPathUrl($dsn, $path, false), $options);
-            $this->ingestPaths->legacyAnswered($dsn, $status);
+        [$status, $headers, $body] = $this->exchange($dsn, $path, $options);
+        if ($status === 401) {
+            [$status, $headers, $body] = $this->afterUnauthorized($dsn, $path, $options, [$status, $headers, $body]);
         }
 
         if ($status === 200) {
@@ -177,6 +175,72 @@ final class RemoteCommandClient
         $kind = $this->classify($status, $isClaim);
 
         throw new RemoteCommandException($kind, 'Beacon answered HTTP ' . $status . '.', $status, $kind === RemoteCommandException::KIND_RATE_LIMITED ? $this->retryAfter($headers['retry-after'][0] ?? null) : null);
+    }
+
+    /**
+     * One call on the versioned path, re-sent once on the legacy path after a 404 / 405 in auto mode.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @throws RemoteCommandException when Beacon cannot be reached
+     *
+     * @return array{0: int, 1: array<string, list<string>>, 2: string}
+     */
+    private function exchange(BeaconDsn $dsn, string $path, array $options): array
+    {
+        $versioned = $this->ingestPaths->useVersioned($dsn);
+        $answer    = $this->send(IngestPaths::projectPathUrl($dsn, $path, $versioned), $options);
+        if ($versioned && $this->ingestPaths->versionedAnswered($dsn, $answer[0])) {
+            $answer = $this->send(IngestPaths::projectPathUrl($dsn, $path, false), $options);
+            $this->ingestPaths->legacyAnswered($dsn, $answer[0]);
+        }
+
+        return $answer;
+    }
+
+    /**
+     * Rotation (1.25, credentials provider): after an HTTP 401, the call is made once more with the previous worker key
+     * while it has not expired, else with the re-read credentials when they changed. Otherwise the 401 stands.
+     *
+     * @param array<string, mixed> $options
+     * @param array{0: int, 1: array<string, list<string>>, 2: string} $answer
+     *
+     * @throws RemoteCommandException when Beacon cannot be reached
+     *
+     * @return array{0: int, 1: array<string, list<string>>, 2: string}
+     */
+    private function afterUnauthorized(BeaconDsn $dsn, string $path, array $options, array $answer): array
+    {
+        $previous = $this->credentials->previousWorkerKey();
+        if ($previous instanceof WorkerKey) {
+            return $this->exchange($dsn, $path, $this->withKey($options, $previous));
+        }
+
+        if (!$this->credentials->refresh()) {
+            return $answer;
+        }
+
+        $freshDsn = $this->credentials->dsn();
+        $freshKey = $this->credentials->workerKey();
+        if (!$freshDsn instanceof BeaconDsn || !$freshKey instanceof WorkerKey) {
+            return $answer;
+        }
+
+        return $this->exchange($freshDsn, $path, $this->withKey($options, $freshKey));
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<string, mixed>
+     */
+    private function withKey(array $options, WorkerKey $key): array
+    {
+        $headers                  = is_array($options['headers'] ?? null) ? $options['headers'] : [];
+        $headers['Authorization'] = $key->authorizationHeader();
+        $options['headers']       = $headers;
+
+        return $options;
     }
 
     /**

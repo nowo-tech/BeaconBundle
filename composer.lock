@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "628b9891dbc1988388af94d7dcebee8d",
+    "content-hash": "d2a31785b296075fd168b969ba00b8e7",
     "packages": [
         {
             "name": "nowo-tech/beacon-php",
@@ -3902,7 +3902,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T12:14:22+00:00"
+            "time": "2026-11-03T12:14:22+00:00",
+            "published-time": "2026-11-03T12:14:36+00:00"
         },
         {
             "name": "phpstan/phpstan-phpunit",

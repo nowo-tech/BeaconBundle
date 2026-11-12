@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.25.0](#to-1250)
 - [To 1.24.1](#to-1241)
 - [To 1.24.0](#to-1240)
   - [To 1.24.0](#to-1240-1)
@@ -98,6 +99,39 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.25.0
+
+From **1.24.1**: minor, opt-in feature. Without `credentials_provider` / `instance_settings_bridge` the bundle wires and
+behaves exactly as 1.24.1.
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
+
+- **New (opt-in): DSN and worker key from a database, with rotation.** Set `nowo_beacon.credentials_provider` to a
+  service implementing `Nowo\BeaconBundle\Credentials\BeaconCredentialsProviderInterface`, or
+  `instance_settings_bridge: true` with `nowo-tech/instance-settings-bundle`. `.env` stays the fallback. See
+  [CONFIGURATION](CONFIGURATION.md#credentials-provider-and-rotation-125) and
+  [USAGE](USAGE.md#credentials-from-a-database-and-rotation-125).
+- **With a provider**, an empty `BEACON_DSN` no longer swaps in `NullBeaconClient` at compile time: the listeners are
+  registered and the client (`ResolvingBeaconClient`, `@internal`) drops events while no DSN is known. Code that checks
+  `nowo.beacon.enabled` sees `true` in that case. `messenger.remote_retry.worker_key` may stay empty when the provider
+  supplies the key.
+- **Pairing and limits (audit NS):** `BEACON_WORKER_KEY` is never sent to a stored DSN on another origin (store the key
+  with the DSN); previous values expiring more than 30 days ahead are ignored; the bridge fields are not portable
+  (composer `conflict` with `nowo-tech/instance-settings-bundle` < 1.0). Keep `BEACON_DSN` on the same project as the
+  stored DSN: changing the stored project re-targets queued Messenger Envelopes and 401 re-sends. For a compromised key,
+  rotate with `--grace=0` and revoke it in Beacon.
+- New command `nowo:beacon:credentials:rotate` (registered in every configuration; without a writable store it explains
+  how to rotate `.env` values and exits 1).
+- New service `Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver` (tagged `kernel.reset`, inert without a
+  provider) and compiler pass `CredentialsProviderPass`.
+- Internal signature changes (classes are `final`): `SendBeaconEnvelopeMessageHandler` now takes any
+  `EnvelopeTransportInterface`; `AsyncEnvelopeTransport`, `RemoteRetryCredentials`, `BeaconConnectionTester` and
+  `BeaconSelfTest` take one more optional constructor argument; `BeaconConnectionTester::testDsn()` is new.
+- `NowoBeaconBundle::boot()` / `shutdown()` no longer fail on bundle instances that never received a container
+  (`lint:container` on a non-debug kernel re-instantiates the bundles).
 
 ## To 1.24.1
 

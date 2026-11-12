@@ -3,8 +3,8 @@
 | Field | Value |
 |-------|-------|
 | Package | `nowo-tech/beacon-bundle` (`symfony-bundle`) |
-| Audited revision | `v1.8.2` (worker scenario B complete); 1.24.0: Messenger / console boundaries (W-08, REQ-RUNTIME-002); 1.24.1: unit-of-work frames (audits NM, NL2-v) |
-| Audit date | 2026-09-24; 2026-11-11 (W-08); 2026-11-12 (audit NM) |
+| Audited revision | `v1.8.2` (worker scenario B complete); 1.24.0: Messenger / console boundaries (W-08, REQ-RUNTIME-002); 1.24.1: unit-of-work frames (audits NM, NL2-v); 1.25.0: credentials provider cache (W-09) |
+| Audit date | 2026-09-24; 2026-11-11 (W-08); 2026-11-12 (audit NM, W-09) |
 | Method | Manual review of every file under `src/` (client, transports, listeners, instrumentation, Monolog handler, DI extension, `Resources/config/services.yaml`) |
 | **Verdict** | ✅ **Compatible with FrankenPHP worker + kernel not reset (scenario B)** — request-scoped buffers, trace id, auto HTTP transaction Request, and leftover async POSTs are cleared/drained without relying on `services_resetter` |
 | Remediation | W-01/W-02: `BeaconRequestScopeResetListener` (+ pending flush). W-08: the same listener also clears at Messenger received / handled / failed and `console.terminate`. W-03: LRU 64 in `EnvelopeBuilder`. W-04: fatal handler via `NowoBeaconBundle::boot()`. W-05 accepted. W-06: transaction listener resets on every main request. W-07: flush terminate priority `-2048` (after transaction `-1024`). |
@@ -23,6 +23,7 @@
   - [W-06 — Auto HTTP transaction Request leaked across requests without reset (Medium)](#w-06--auto-http-transaction-request-leaked-across-requests-without-reset-medium)
   - [W-07 — Async flush ran at the same terminate priority as auto HTTP transactions (Medium)](#w-07--async-flush-ran-at-the-same-terminate-priority-as-auto-http-transactions-medium)
   - [W-08 — Scope carried over between Messenger messages and console commands without the resetter (Medium)](#w-08--scope-carried-over-between-messenger-messages-and-console-commands-without-the-resetter-medium)
+  - [W-09 — Credentials provider cache in a kept-alive kernel (Info, 1.25.0)](#w-09--credentials-provider-cache-in-a-kept-alive-kernel-info-1250)
 - [Usage recommendations in worker mode](#usage-recommendations-in-worker-mode)
 - [Re-audit triggers](#re-audit-triggers)
 
@@ -146,6 +147,23 @@ Value objects (`BeaconDsn`, `SendOptions`, `TransportResult`, `ConnectionTestRes
 - **Ordering:** the clear at `WorkerMessageFailedEvent` runs at priority -4096, after the failure capture (-150), Scheduler check-in (-512), message transaction (-1024) and pending flush (-2048), so the event of a failed message still carries **that** message's scope. Breadcrumbs of message A never reach an event of message B: they are cleared when A ends and again when B is received (4096, before B is handled and before the message transaction restores the trace id at -1024).
 - **Status:** Resolved in 1.24.0. Tests: `tests/Integration/WorkerScopeIsolationTest.php`: one kernel, the services resetter never called, 1,000 iterations of an HTTP request (`http_kernel` directly), a succeeding and a failing message (Messenger `Worker` without `ResetServicesListener`), users A / B alternating; every captured event has only its own breadcrumb, its own tenant tag, no tag of another unit of work and a trace id never seen before; memory margin 4 MiB after a 50-iteration warm-up (cycle-collected); `console.terminate` and a direct `services_resetter->reset()` (`ResetInterface` kept). `tests/Unit/EventListener/BeaconRequestScopeResetListenerTest.php`: priorities against the failure capture, each Messenger event, `console.terminate`, nested commands and a command run inside a message, a direct `clear()` and the uninitialized references (nothing built).
 - **Audit NM (1.24.1, Low):** the console depth counter (`++` at 4096, `--` at -4096) leaked when a console listener in between threw or stopped propagation, so the outermost command of a long-lived process stopped clearing the scope; reverse case: a nested command whose `console.command` was stopped above 4096 cleared the outer command's scope mid-run. Now `Worker\UnitOfWorkFrames` fed at `PHP_INT_MAX` (audit NL2-v / NL2-v2 design): a frame per console run (Command + input) saving and restoring the outer Messenger state, a terminate without a frame never removes another run's frame, a frame left failing by a throwing error listener is dropped at the next request / message / command / worker stop before the handler writes its own flag. Tests: `WorkerScopeIsolationTest::testNestedCommandsWithSkippedConsoleEventsKeepTheOuterBoundary`, `testFailedRunsAreHealedAndNeverKeepTheProcessInsideAUnit`, `UnitOfWorkFramesTest`, `BeaconRequestScopeResetListenerTest::testSkippedConsoleEventsNeverUnbalanceTheBookkeeping`.
+
+### W-09 — Credentials provider cache in a kept-alive kernel (Info, 1.25.0)
+
+- **Where:** `BeaconCredentialsResolver` (process-wide snapshot of the effective DSN / worker key, its expiry, a
+  version number, the "armed" flag, a re-entrancy guard and a fixed set of warning codes), `ResolvingBeaconClient` and
+  `ResolvingEnvelopeTransport` (client / transport of the current version).
+- **Analysis:** none of it is request or user data: the values come from the configuration or the provider. The
+  snapshot expires by time (`credentials_cache_ttl`), so a worker whose kernel is never reset picks a rotation up
+  within the TTL; `kernel.reset` (method `reset`, not `ResetInterface` on purpose) and `SettingsChangedEvent` only make
+  it expire now. The version number and the armed flag must survive resets (clients compare the version), which is why
+  the resolver keeps them. Rebuilding a client flushes the async queue of the replaced one first; the replaced objects
+  are released (bounded memory).
+- **Status:** Compatible with scenario B. Tests: `CredentialsProviderIntegrationTest::testWorkerRotatesTheDsnAndAlternatesProjectsWithoutResetter`
+  (one kernel, `http_kernel` driven directly, 1,200 requests, two projects alternating every 50 requests, DSN rotated
+  at request 600 with 25 requests of 401 → previous DSN, every Envelope checked against the expected key and project
+  path, memory margin 4 MiB after a 50-request warm-up); `BeaconCredentialsResolverTest` (TTL without reset,
+  re-entrancy). `igor-php`: no new finding.
 
 Good patterns observed: every request-scoped service implements `ResetInterface` and is tagged `kernel.reset`, and the buffers have hard size caps. Scenario B is covered by bundle-owned request/terminate listeners without depending on `services_resetter`. The user context is read from the token at send time and is off by default (`send.user: false`).
 

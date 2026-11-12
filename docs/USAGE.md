@@ -24,6 +24,10 @@ For a full end-to-end setup (create a Symfony Beacon project, copy the DSN, veri
   - [Wire format](#wire-format)
   - [Polling, backoff and errors](#polling-backoff-and-errors)
   - [Polling without workers (cron)](#polling-without-workers-cron)
+- [Credentials from a database and rotation (1.25+)](#credentials-from-a-database-and-rotation-125)
+  - [InstanceSettings bridge (standard Symfony app)](#instancesettings-bridge-standard-symfony-app)
+  - [Your own adapter (DDD / hexagonal host)](#your-own-adapter-ddd--hexagonal-host)
+  - [Rotating](#rotating)
 - [Scheduler check-ins](#scheduler-check-ins)
   - [What is sent](#what-is-sent)
   - [Max runtime and opt-out](#max-runtime-and-opt-out)
@@ -412,6 +416,121 @@ Use it when no `messenger:consume` process runs permanently, or set `poll_in_wor
 ```cron
 * * * * * php /app/bin/console nowo:beacon:messenger-commands --once --no-interaction --quiet
 ```
+
+## Credentials from a database and rotation (1.25+)
+
+`.env` stays the fallback; when a database record exists, it wins (see
+[CONFIGURATION](CONFIGURATION.md#credentials-provider-and-rotation-125) for the resolution rules, the cache and the
+401 fallbacks). Nothing changes until you configure a provider.
+
+### InstanceSettings bridge (standard Symfony app)
+
+```bash
+composer require nowo-tech/instance-settings-bundle
+```
+
+```yaml
+# config/packages/nowo_beacon.yaml
+nowo_beacon:
+    dsn: '%env(default::BEACON_DSN)%'             # fallback (and boot-time errors)
+    instance_settings_bridge: true                 # "beacon" section = credentials provider
+    credentials_cache_ttl: 60
+    messenger:
+        remote_retry:
+            enabled: true
+            worker_key: '%env(default::BEACON_WORKER_KEY)%'   # optional fallback
+```
+
+The bundle adds a **Beacon** section to the InstanceSettings admin (`dsn`, `worker_key`, and the `previous_*` values
+written by the rotate command; expiry fields read-only, all fields left out of exports and imports). Secret fields are encrypted at rest by InstanceSettings (DoctrineEncrypt; the
+encryption key stays in the environment), never rendered back by the form (write-only: an empty field keeps the
+stored secret) and exported only sealed. Every save dispatches `SettingsChangedEvent`: the bundle expires its cache in
+that process at once and logs a notice with the changed **field names** and the origin (`form`, `import`, `api`),
+never a value; hook your audit log on the same event. Other processes pick the change up within
+`credentials_cache_ttl`. Access to the section follows the InstanceSettings access checker (admins only).
+
+Reading or writing from code:
+
+```php
+$settings->save('beacon', ['dsn' => $newDsn]);           // InstanceSettingsInterface
+$settings->getSecret('beacon.dsn');                        // decrypted, never log it
+```
+
+### Your own adapter (DDD / hexagonal host)
+
+The port and its value object are plain PHP (no Symfony, Doctrine or HTTP type). Implement it in your
+infrastructure layer, over your own table, vault or secret manager, and point the option at it:
+
+```php
+namespace App\Infrastructure\Beacon;
+
+use Nowo\BeaconBundle\Credentials\BeaconCredentials;
+use Nowo\BeaconBundle\Credentials\BeaconCredentialsStoreInterface;
+
+final class VaultBeaconCredentials implements BeaconCredentialsStoreInterface   // or BeaconCredentialsProviderInterface (read-only)
+{
+    public function __construct(private readonly SecretVault $vault) {}
+
+    public function current(): ?BeaconCredentials
+    {
+        $row = $this->vault->read('beacon');            // may throw: the bundle falls back to the configuration
+
+        return $row === null ? null : new BeaconCredentials(
+            dsn: $row['dsn'] ?? null,
+            workerKey: $row['worker_key'] ?? null,
+            previousDsn: $row['previous_dsn'] ?? null,
+            previousDsnExpiresAt: isset($row['previous_dsn_expires_at']) ? new \DateTimeImmutable($row['previous_dsn_expires_at']) : null,
+        );
+    }
+
+    public function save(BeaconCredentials $credentials): void   // only for nowo:beacon:credentials:rotate
+    {
+        $this->vault->write('beacon', [/* … */]);
+    }
+}
+```
+
+```yaml
+nowo_beacon:
+    credentials_provider: App\Infrastructure\Beacon\VaultBeaconCredentials
+```
+
+Rules for implementations: no request or user state in properties (worker mode), may throw, return `null` (or null
+fields) for "use the configuration". `BeaconCredentials` holds its values in `SensitiveParameterValue`s, masks them in
+dumps and refuses serialization.
+
+### Rotating
+
+```bash
+php bin/console nowo:beacon:credentials:rotate --dsn                 # asks for the new DSN (hidden input)
+php bin/console nowo:beacon:credentials:rotate --worker-key --grace=3600
+printf '%s\n' "$NEW_DSN" | php bin/console nowo:beacon:credentials:rotate --dsn -n   # non-interactive: one value per line on stdin
+```
+
+New values are never command-line arguments (shell history, process list). The command needs a writable store
+(`BeaconCredentialsStoreInterface`; the InstanceSettings bridge is one), then:
+
+1. validates the new value (DSN: same origin and project as the current one; worker key: `bwk_…`);
+2. writes it and keeps the value it replaces (from the database or from `.env`) as `previous_*` for `--grace` seconds
+   (default 86400, max 2592000, 0 = drop it);
+3. self-test: reads the record back through the provider and, for a DSN, sends one test Envelope with the new DSN;
+4. on any failure restores the previous record and exits 1. It never prints a secret.
+
+Typical sequence: create the new key in Beacon, run the command, wait for `--grace`, revoke the old key in Beacon.
+**For a compromised key use `--grace=0`, then revoke it in Beacon** (no previous value is kept).
+
+Things to know:
+
+- The configured `BEACON_WORKER_KEY` is used with a stored DSN only when both target the same origin (scheme, host,
+  port); otherwise store the worker key next to the DSN (remote commands stay off until then, with one warning).
+- Keep `BEACON_DSN` (the fallback) on the **same Beacon and project** as the stored DSN, so that a database outage or
+  the kernel boot never reports to another project.
+- Changing the **project** of the stored DSN re-targets everything sent afterwards: Envelopes already queued in
+  Messenger (`transport.mode: messenger`) are sent with the DSN valid when the worker handles them, and a 401 refresh
+  re-sends to the current DSN. Rotate keys within one project; move projects deliberately.
+- The bridge fields are never exported nor imported, and the expiry fields are read-only in the form (the rotate
+  command writes them).
+Credentials kept only in `.env` are rotated by hand (new value in the environment, restart / redeploy).
 
 ## Scheduler check-ins
 
