@@ -4,6 +4,7 @@
 
 - [Unreleased](#unreleased)
 - [To 1.25.1](#to-1251)
+- [To 1.25.1](#to-1251-1)
 - [To 1.25.0](#to-1250)
 - [To 1.24.1](#to-1241)
 - [To 1.24.0](#to-1240)
@@ -100,6 +101,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.25.1
+
+From **1.25.0**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 ## To 1.25.1
 
