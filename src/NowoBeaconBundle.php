@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle;
 
+use Nowo\BeaconBundle\DependencyInjection\Compiler\CredentialsProviderPass;
 use Nowo\BeaconBundle\DependencyInjection\Compiler\RecordingFailureSenderPass;
 use Nowo\BeaconBundle\DependencyInjection\Compiler\ScheduleProviderLocatorPass;
 use Nowo\BeaconBundle\DependencyInjection\Compiler\TaskDescriptionCommandLoaderPass;
@@ -21,8 +22,8 @@ final class NowoBeaconBundle extends Bundle
 {
     /**
      * Registers the Scheduler check-in provider locator pass (after Symfony's scheduler pass) and the
-     * failure-sender recording pass (failure-transport ids in `extra.messenger`) and the command
-     * loader pass of the Scheduler task descriptions.
+     * failure-sender recording pass (failure-transport ids in `extra.messenger`), the credentials provider check and the
+     * command loader pass of the Scheduler task descriptions.
      */
     public function build(ContainerBuilder $container): void
     {
@@ -30,6 +31,7 @@ final class NowoBeaconBundle extends Bundle
 
         $container->addCompilerPass(new ScheduleProviderLocatorPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
         $container->addCompilerPass(new RecordingFailureSenderPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
+        $container->addCompilerPass(new CredentialsProviderPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -16);
         // After FrameworkBundle's AddConsoleCommandPass (before removing, priority 0) registers console.command_loader.
         $container->addCompilerPass(new TaskDescriptionCommandLoaderPass(), PassConfig::TYPE_BEFORE_REMOVING, -16);
     }
@@ -39,7 +41,8 @@ final class NowoBeaconBundle extends Bundle
      */
     public function boot(): void
     {
-        $container = $this->container;
+        // `??`: bundles re-instantiated by lint:container (non-debug kernel) never get a container.
+        $container = $this->container ?? null;
         if (!$container instanceof ContainerInterface) {
             return;
         }
@@ -67,7 +70,8 @@ final class NowoBeaconBundle extends Bundle
      */
     public function shutdown(): void
     {
-        $container = $this->container;
+        // `??`: bundles re-instantiated by lint:container (non-debug kernel) never get a container.
+        $container = $this->container ?? null;
         if (!$container instanceof ContainerInterface) {
             return;
         }

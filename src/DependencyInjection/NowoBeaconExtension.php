@@ -8,12 +8,16 @@ use Doctrine\DBAL\Driver\Middleware;
 use LogicException;
 use Monolog\Handler\AbstractProcessingHandler;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\BeaconBundle\Bridge\InstanceSettings\BeaconSettingsSection;
+use Nowo\BeaconBundle\Bridge\InstanceSettings\InstanceSettingsCredentialsListener;
+use Nowo\BeaconBundle\Bridge\InstanceSettings\InstanceSettingsCredentialsStore;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Command\DeployCommand;
 use Nowo\BeaconBundle\Command\MessengerCommandsCommand;
 use Nowo\BeaconBundle\Command\MessengerReportCommand;
+use Nowo\BeaconBundle\Command\RotateCredentialsCommand;
 use Nowo\BeaconBundle\Command\SchedulerCatalogCommand;
 use Nowo\BeaconBundle\Command\SelfTestCommand;
 use Nowo\BeaconBundle\Command\TestConnectionCommand;
@@ -21,12 +25,14 @@ use Nowo\BeaconBundle\Connection\BeaconConnectionTester;
 use Nowo\BeaconBundle\Context\SecurityUserContextProvider;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Controller\SelfTestController;
+use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\IngestHttpClientFactory;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessageHandler;
 use Nowo\BeaconBundle\EventListener\BeaconConsoleErrorListener;
+use Nowo\BeaconBundle\EventListener\BeaconCredentialsArmListener;
 use Nowo\BeaconBundle\EventListener\BeaconExceptionListener;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
@@ -60,6 +66,8 @@ use Nowo\BeaconBundle\SelfTest\BeaconSelfTest;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailHandler;
 use Nowo\BeaconBundle\SelfTest\Message\BeaconSelfTestFailMessage;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
+use Nowo\InstanceSettingsBundle\Event\SettingsChangedEvent;
+use Nowo\InstanceSettingsBundle\Settings\InstanceSettingsInterface;
 use Psr\Clock\ClockInterface;
 use SensitiveParameter;
 use Symfony\Component\Config\FileLocator;
@@ -91,6 +99,9 @@ use function is_string;
  */
 final class NowoBeaconExtension extends Extension implements PrependExtensionInterface
 {
+    /** Service id of the InstanceSettings credentials store (`instance_settings_bridge: true`). */
+    public const INSTANCE_SETTINGS_STORE = 'nowo_beacon.credentials_provider.instance_settings';
+
     /**
      * Prepends MonologBundle handler config when `monolog_handler.enabled` is true, and the Messenger trace middleware
      * on `messenger.trace_middleware.buses` unless `messenger.trace_middleware.enabled` is false.
@@ -146,7 +157,13 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         // Literal DSNs contain "://"; env placeholders / %env(...)% do not.
         $isLiteralDsn = str_contains($dsn, '://');
 
-        $container->setParameter('nowo.beacon.enabled', $enabledFlag && ($dsn !== ''));
+        // 1.25: with a credentials provider the DSN may come from it at runtime, so an empty nowo_beacon.dsn no longer
+        // disables reporting at compile time (the client then drops events while neither has a DSN).
+        $providerId  = $this->registerCredentials($container, $config);
+        $hasProvider = $providerId !== null;
+        $reporting   = $enabledFlag && ($dsn !== '' || $hasProvider);
+
+        $container->setParameter('nowo.beacon.enabled', $reporting);
         $container->setParameter('nowo.beacon.dsn', $config['dsn'] ?? '');
         $container->setParameter('nowo.beacon.environment', $config['environment']);
         $container->setParameter('nowo.beacon.release', $config['release']);
@@ -181,15 +198,16 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             (string) $config['environment'],
             is_string($config['release'] ?? null) ? $config['release'] : null,
             $serverName,
+            $hasProvider,
         );
 
         $this->registerMessengerReportCommand($container, $config['messenger']['failure_transports'] ?? ['failed']);
 
-        $this->registerMessengerRemoteRetry($container, $config, $enabledFlag && $dsn !== '', $serverName);
+        $this->registerMessengerRemoteRetry($container, $config, $reporting, $serverName, $hasProvider);
 
-        $this->registerSelfTest($container, $config, $enabledFlag && $dsn !== '');
+        $this->registerSelfTest($container, $config, $reporting, $hasProvider);
 
-        $checkInsEnabled = $this->registerSchedulerCheckIns($container, $config, $enabledFlag && $dsn !== '');
+        $checkInsEnabled = $this->registerSchedulerCheckIns($container, $config, $reporting);
 
         $deploy = new Definition(DeployCommand::class, [
             '$client'             => new Reference(BeaconClientInterface::class),
@@ -216,9 +234,9 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         $container->setAlias(UserContextProviderInterface::class, SecurityUserContextProvider::class);
 
         // Before the early return: prepend() adds the middleware to the default bus in every configuration.
-        $this->registerTraceMiddleware($container, $enabledFlag && $dsn !== '');
+        $this->registerTraceMiddleware($container, $reporting);
 
-        if (!$enabledFlag || $dsn === '') {
+        if (!$reporting) {
             $this->registerNullClient($container);
 
             return;
@@ -276,10 +294,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         }
 
         $client = new Definition(BeaconClientInterface::class);
-        $client->setFactory([new Reference(BeaconClientFactory::class), 'create']);
+        $client->setFactory([new Reference(BeaconClientFactory::class), $hasProvider ? 'createResolving' : 'create']);
         $client->setArguments([
-            '$enabled'       => $enabledFlag,
-            '$dsn'           => $config['dsn'] ?? '',
+            ...($hasProvider
+                ? ['$resolver' => new Reference(BeaconCredentialsResolver::class)]
+                : ['$enabled' => $enabledFlag, '$dsn' => $config['dsn'] ?? '']),
             '$environment'   => $config['environment'],
             '$release'       => $config['release'],
             '$serverName'    => $serverName,
@@ -306,10 +325,11 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
 
         if ($transportMode === 'messenger' && interface_exists(MessageBusInterface::class)) {
             $syncTransport = new Definition(EnvelopeTransport::class);
-            $syncTransport->setFactory([new Reference(BeaconClientFactory::class), 'createSyncTransport']);
+            $syncTransport->setFactory([new Reference(BeaconClientFactory::class), $hasProvider ? 'createResolvingSyncTransport' : 'createSyncTransport']);
             $syncTransport->setArguments([
-                '$enabled'    => $enabledFlag,
-                '$dsn'        => $config['dsn'] ?? '',
+                ...($hasProvider
+                    ? ['$resolver' => new Reference(BeaconCredentialsResolver::class)]
+                    : ['$enabled' => $enabledFlag, '$dsn' => $config['dsn'] ?? '']),
                 '$verifyPeer' => (bool) $config['verify_peer'],
                 '$timeout'    => (float) $config['timeout'],
             ]);
@@ -656,7 +676,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
      *
      * @param array<string, mixed> $config
      */
-    private function registerMessengerRemoteRetry(ContainerBuilder $container, array $config, bool $reportingEnabled, string $serverName): void
+    private function registerMessengerRemoteRetry(ContainerBuilder $container, array $config, bool $reportingEnabled, string $serverName, bool $hasProvider = false): void
     {
         $remote  = $config['messenger']['remote_retry'] ?? [];
         $enabled = (bool) ($remote['enabled'] ?? false);
@@ -697,6 +717,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$parser'       => new Reference(BeaconDsnParser::class),
             '$rawDsn'       => $config['dsn'] ?? '',
             '$rawWorkerKey' => $workerKey,
+            '$resolver'     => $hasProvider ? new Reference(BeaconCredentialsResolver::class) : null,
         ]);
         $credentials->setPublic(false);
         $container->setDefinition(RemoteRetryCredentials::class, $credentials);
@@ -764,7 +785,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
      *
      * @param array<string, mixed> $config
      */
-    private function registerSelfTest(ContainerBuilder $container, array $config, bool $reportingEnabled): void
+    private function registerSelfTest(ContainerBuilder $container, array $config, bool $reportingEnabled, bool $hasProvider = false): void
     {
         $hasMessenger = interface_exists(MessageBusInterface::class);
 
@@ -779,6 +800,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$consoleListener'   => (bool) $config['register_console_listener'],
             '$phpWarningHandler' => (bool) $config['register_php_warning_handler'],
             '$messengerListener' => (bool) $config['register_messenger_listener'],
+            '$credentials'       => $hasProvider ? new Reference(BeaconCredentialsResolver::class) : null,
         ]);
         $service->setAutowired(false);
         $service->setPublic(false);
@@ -848,6 +870,91 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
     }
 
     /**
+     * Registers the credentials resolver (always: without a provider it only parses the configuration, as before), the
+     * rotate command, the optional InstanceSettings bridge and, with a provider, the listener that arms the resolver.
+     *
+     * The provider service must implement BeaconCredentialsProviderInterface (checked by CredentialsProviderPass, which
+     * also hands it to the rotate command when it is a BeaconCredentialsStoreInterface).
+     *
+     * @param array<string, mixed> $config
+     *
+     * @return string|null id of the credentials provider service
+     */
+    private function registerCredentials(ContainerBuilder $container, array $config): ?string
+    {
+        $providerId = is_string($config['credentials_provider'] ?? null) ? trim($config['credentials_provider']) : null;
+
+        if ((bool) ($config['instance_settings_bridge'] ?? false)) {
+            if (!interface_exists(InstanceSettingsInterface::class)) {
+                // @codeCoverageIgnoreStart (the dev install always has the InstanceSettings types)
+                throw new LogicException('nowo_beacon.instance_settings_bridge requires nowo-tech/instance-settings-bundle. Run "composer require nowo-tech/instance-settings-bundle" or set it to false.');
+                // @codeCoverageIgnoreEnd
+            }
+
+            $section = new Definition(BeaconSettingsSection::class);
+            $section->setAutowired(false);
+            $section->setAutoconfigured(false);
+            $section->setPublic(false);
+            $section->addTag('nowo_instance_settings.section');
+            $container->setDefinition(BeaconSettingsSection::class, $section);
+
+            $store = new Definition(InstanceSettingsCredentialsStore::class, [
+                '$settings' => new Reference(InstanceSettingsInterface::class),
+            ]);
+            $store->setPublic(false);
+            $container->setDefinition(self::INSTANCE_SETTINGS_STORE, $store);
+
+            $listener = new Definition(InstanceSettingsCredentialsListener::class, [
+                '$resolver' => new Reference(BeaconCredentialsResolver::class),
+                '$logger'   => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            ]);
+            $listener->addTag('kernel.event_listener', ['event' => SettingsChangedEvent::class]);
+            $listener->setPublic(false);
+            $container->setDefinition(InstanceSettingsCredentialsListener::class, $listener);
+
+            $providerId ??= self::INSTANCE_SETTINGS_STORE;
+        }
+
+        $container->setParameter('nowo.beacon.credentials_provider', $providerId);
+
+        $resolver = new Definition(BeaconCredentialsResolver::class, [
+            '$parser'          => new Reference(BeaconDsnParser::class),
+            '$configDsn'       => $config['dsn'] ?? '',
+            '$configWorkerKey' => $config['messenger']['remote_retry']['worker_key'] ?? '',
+            '$provider'        => $providerId !== null ? new Reference($providerId) : null,
+            '$cacheTtl'        => (int) ($config['credentials_cache_ttl'] ?? BeaconCredentialsResolver::DEFAULT_CACHE_TTL),
+            '$clock'           => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'          => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+        ]);
+        // Expires the cache only; the TTL keeps it correct in workers whose kernel is never reset.
+        $resolver->addTag('kernel.reset', ['method' => 'reset']);
+        $resolver->setPublic(false);
+        $container->setDefinition(BeaconCredentialsResolver::class, $resolver);
+
+        $rotate = new Definition(RotateCredentialsCommand::class, [
+            '$resolver' => new Reference(BeaconCredentialsResolver::class),
+            '$tester'   => new Reference(BeaconConnectionTester::class),
+            '$parser'   => new Reference(BeaconDsnParser::class),
+            '$store'    => null, // set by CredentialsProviderPass when the provider is writable
+        ]);
+        $rotate->setAutowired(false);
+        $rotate->setPublic(false);
+        $rotate->addTag('console.command');
+        $container->setDefinition(RotateCredentialsCommand::class, $rotate);
+
+        if ($providerId !== null) {
+            $arm = new Definition(BeaconCredentialsArmListener::class, [
+                '$resolver' => new Reference(BeaconCredentialsResolver::class),
+            ]);
+            $arm->addTag('kernel.event_subscriber');
+            $arm->setPublic(false);
+            $container->setDefinition(BeaconCredentialsArmListener::class, $arm);
+        }
+
+        return $providerId;
+    }
+
+    /**
      * Extension alias (`nowo_beacon`).
      */
     public function getAlias(): string
@@ -870,11 +977,12 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
         string $environment,
         ?string $release,
         string $serverName,
+        bool $hasProvider = false,
     ): void {
         $tester = new Definition(BeaconConnectionTester::class, [
             '$parser'           => new Reference(BeaconDsnParser::class),
             '$httpClient'       => new Reference('http_client'),
-            '$reportingEnabled' => $reportingEnabled && trim((string) $dsn) !== '',
+            '$reportingEnabled' => $reportingEnabled && (trim((string) $dsn) !== '' || $hasProvider),
             '$dsn'              => $dsn,
             '$verifyPeer'       => $verifyPeer,
             '$timeout'          => $timeout,
@@ -883,6 +991,7 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$serverName'       => $serverName,
             '$logger'           => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$ingestPaths'      => new Reference(IngestPathResolver::class),
+            '$credentials'      => $hasProvider ? new Reference(BeaconCredentialsResolver::class) : null,
         ]);
         $tester->setAutowired(false);
         $tester->setPublic(false);

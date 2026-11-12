@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\SelfTest;
 
 use InvalidArgumentException;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
+use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
@@ -92,6 +93,7 @@ final readonly class BeaconSelfTest
         private bool $consoleListener = true,
         private bool $phpWarningHandler = true,
         private bool $messengerListener = true,
+        private ?BeaconCredentialsResolver $credentials = null,
     ) {
         // Like BeaconConnectionTester: dumps, exports and traces never show the DSN secret.
         $this->dsn = new SensitiveParameterValue(is_string($dsn) ? $dsn : '');
@@ -326,8 +328,15 @@ final readonly class BeaconSelfTest
         return new SelfTestResult(self::KIND_MESSENGER_FAILURE, $runToken, null, $delivery);
     }
 
+    /**
+     * Configured DSN, or the effective one (provider record over configuration) when a credentials provider is set.
+     */
     private function dsnString(): string
     {
+        if ($this->credentials?->hasProvider() === true) {
+            return $this->credentials->resolve()->effective()->dsn() ?? '';
+        }
+
         return trim((string) $this->dsn->getValue());
     }
 }

@@ -7,13 +7,14 @@ namespace Nowo\BeaconBundle\Envelope;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
- * Worker-side handler: POSTs queued Envelope bodies with the synchronous HTTP transport.
+ * Worker-side handler: POSTs queued Envelope bodies with the synchronous HTTP transport (with a credentials provider,
+ * the one that follows the effective credentials).
  */
 #[AsMessageHandler]
 final class SendBeaconEnvelopeMessageHandler
 {
     public function __construct(
-        private readonly EnvelopeTransport $transport,
+        private readonly EnvelopeTransportInterface $transport,
     ) {
     }
 

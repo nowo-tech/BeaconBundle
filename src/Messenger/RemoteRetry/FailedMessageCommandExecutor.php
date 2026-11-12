@@ -159,6 +159,21 @@ final class FailedMessageCommandExecutor
         return $result;
     }
 
+    /**
+     * Whether the command is signed with the current worker key or, during a rotation, the previous one until its expiry.
+     */
+    private function signedWithKnownKey(RemoteCommand $command, WorkerKey $current): bool
+    {
+        $signature = strtolower($command->signature);
+        if (hash_equals($command->expectedSignature($current->signingKey()), $signature)) {
+            return true;
+        }
+
+        $previous = $this->credentials->previousWorkerKey();
+
+        return $previous instanceof WorkerKey && hash_equals($command->expectedSignature($previous->signingKey()), $signature);
+    }
+
     private function verify(RemoteCommand $command): ?CommandResult
     {
         $key = $this->credentials->workerKey();
@@ -166,9 +181,7 @@ final class FailedMessageCommandExecutor
             return CommandResult::failed(CommandResult::REASON_INTERNAL_ERROR, $this->now());
         }
 
-        if (!hash_equals($command->expectedSignature($key->signingKey()), strtolower($command->signature))
-            || !$this->credentials->matchesProject($command->project)
-        ) {
+        if (!$this->signedWithKnownKey($command, $key) || !$this->credentials->matchesProject($command->project)) {
             return CommandResult::failed(CommandResult::REASON_SIGNATURE_INVALID, $this->now());
         }
 

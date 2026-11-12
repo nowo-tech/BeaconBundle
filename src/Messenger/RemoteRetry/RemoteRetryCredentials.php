@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Messenger\RemoteRetry;
 
 use InvalidArgumentException;
 use LogicException;
+use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException;
@@ -24,6 +25,10 @@ use function trim;
  *
  * The resolved value depends only on the process environment, so it is computed once per process. The raw values
  * are held in {@see SensitiveParameterValue}s (hidden from dumps and traces) and the object cannot be serialized.
+ *
+ * With a {@see BeaconCredentialsResolver} (1.25, `nowo_beacon.credentials_provider` set), every call reads the effective
+ * credentials from it instead (provider record over configuration, cached for the TTL), the previous worker key stays
+ * accepted until its expiry and {@see refresh()} re-reads them after an HTTP 401.
  */
 final class RemoteRetryCredentials
 {
@@ -47,6 +52,7 @@ final class RemoteRetryCredentials
         mixed $rawDsn,
         #[SensitiveParameter]
         mixed $rawWorkerKey,
+        private readonly ?BeaconCredentialsResolver $resolver = null,
     ) {
         $this->rawDsn       = new SensitiveParameterValue($rawDsn);
         $this->rawWorkerKey = new SensitiveParameterValue($rawWorkerKey);
@@ -73,23 +79,65 @@ final class RemoteRetryCredentials
      */
     public function problem(): ?string
     {
+        if ($this->resolver instanceof BeaconCredentialsResolver) {
+            $resolved = $this->resolver->resolve();
+
+            return $resolved->dsnProblem() ?? $resolved->workerKeyProblem();
+        }
+
         $this->resolve();
 
         return $this->problem;
     }
 
+    /**
+     * Follows the credentials provider when one is configured.
+     *
+     * @phpstan-impure
+     */
     public function dsn(): ?BeaconDsn
     {
+        if ($this->resolver instanceof BeaconCredentialsResolver) {
+            return $this->resolver->resolve()->dsn();
+        }
+
         $this->resolve();
 
         return $this->dsn;
     }
 
+    /**
+     * Follows the credentials provider when one is configured.
+     *
+     * @phpstan-impure
+     */
     public function workerKey(): ?WorkerKey
     {
+        if ($this->resolver instanceof BeaconCredentialsResolver) {
+            $resolved = $this->resolver->resolve();
+
+            return $resolved->dsn() instanceof BeaconDsn ? $resolved->workerKey() : null;
+        }
+
         $this->resolve();
 
         return $this->workerKey;
+    }
+
+    /**
+     * Worker key replaced by the last rotation, while it has not expired (only with a credentials provider).
+     */
+    public function previousWorkerKey(): ?WorkerKey
+    {
+        return $this->resolver?->previousWorkerKey();
+    }
+
+    /**
+     * Re-read the credentials now (with backoff); whether they changed. Always false without a credentials provider.
+     */
+    public function refresh(): bool
+    {
+        return $this->resolver?->refresh() ?? false;
     }
 
     /**

@@ -71,7 +71,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Nowo\\BeaconBundle\\Tests\\": "tests/"
+            "Nowo\\BeaconBundle\\Tests\\": "tests/",
+            "Nowo\\InstanceSettingsBundle\\": "tests/Stubs/InstanceSettingsBundle/"
         }
     },
     "archive": {
@@ -142,6 +143,7 @@
         "symfony/security-csrf": "Required by the optional self-test JSON endpoint (nowo_beacon.self_test.http) for CSRF protection",
         "symfony/messenger": "Required for register_messenger_listener and transport.mode=messenger.",
         "symfony/scheduler": "Optional: attach extra.scheduler on Messenger failures when envelopes carry ScheduledStamp (include_scheduler_context), and required by scheduler.check_ins (Scheduler check-ins).",
-        "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware)."
+        "doctrine/dbal": "Required for instrumentation.doctrine SQL spans (DBAL middleware).",
+        "nowo-tech/instance-settings-bundle": "Keep the Beacon DSN and worker key in the database, encrypted, with rotation (nowo_beacon.instance_settings_bridge: true)"
     }
 }

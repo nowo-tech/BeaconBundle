@@ -1,0 +1,14 @@
+settings:
+    section:
+        label: Beacon
+        intro: Beacon DSN and worker key kept in the database, encrypted. They take precedence over BEACON_DSN / BEACON_WORKER_KEY, which stay the fallback. Stored values are never shown again; rotate them with nowo:beacon:credentials:rotate.
+    dsn: Beacon DSN
+    dsn_help: "https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID. Empty: BEACON_DSN is used."
+    worker_key: Worker key
+    worker_key_help: "bwk_… key of remote Messenger commands. Empty: BEACON_WORKER_KEY is used."
+    previous_dsn: Previous DSN
+    previous_worker_key: Previous worker key
+    previous_help: Value replaced by the last rotation, accepted until its expiry. Written by nowo:beacon:credentials:rotate.
+    previous_dsn_expires_at: Previous DSN expires at
+    previous_worker_key_expires_at: Previous worker key expires at
+    expires_at_help: "ISO 8601 date and time, e.g. 2026-11-13T10:00:00+00:00. Without a valid expiry the previous value is ignored."

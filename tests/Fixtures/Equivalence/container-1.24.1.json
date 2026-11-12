@@ -1,0 +1,2606 @@
+{
+    "literal_dsn": {
+        "services": {
+            "Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Client\\BeaconClientFactory": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientFactory",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@nowo.beacon.ingest_http_client#1",
+                    "$logger": "@logger#2",
+                    "$userContextProvider": "@Nowo\\BeaconBundle\\Context\\UserContextProviderInterface#1",
+                    "$breadcrumbBuffer": "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#1",
+                    "$requestStack": "@request_stack#2",
+                    "$scope": "@Nowo\\BeaconBundle\\Scope\\Scope#1",
+                    "$spanBuffer": "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#1",
+                    "$pendingRegistry": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$messageBus": "@messenger.default_bus#2",
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$syncHttpClient": "@nowo.beacon.ingest_http_client.sync#1",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\DeployCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\DeployCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$defaultRelease": null,
+                    "$defaultEnvironment": "prod"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand",
+                "factory": null,
+                "arguments": {
+                    "$poller": null
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerReportCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerReportCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$receiverLocator": "@messenger.receiver_locator#2",
+                    "$failureTransports": [
+                        "failed"
+                    ]
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$catalogBuilder": "@Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder#1",
+                    "$checkInsEnabled": false
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SelfTestCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SelfTestCommand",
+                "factory": null,
+                "arguments": {
+                    "$selfTest": "@Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\TestConnectionCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\TestConnectionCommand",
+                "factory": null,
+                "arguments": {
+                    "$tester": "@Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester": {
+                "class": "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@http_client#1",
+                    "$reportingEnabled": true,
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid:9444/5",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$environment": "prod",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$logger": "@logger#2",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider": {
+                "class": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "factory": null,
+                "arguments": {
+                    "$tokenStorage": "@security.token_storage#2"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconConsoleErrorListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": []
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconExceptionListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$sendRequest": true,
+                    "$ignorePaths": [
+                        "/_profiler",
+                        "/_wdt",
+                        "/build",
+                        "/assets",
+                        "/health",
+                        "/.well-known/appspecific/com.chrome.devtools.json"
+                    ],
+                    "$sendClient": false,
+                    "$ignoreHttpClientErrors": false
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$includeSchedulerContext": true,
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$ignoreMessageClasses": [],
+                    "$checkInRuns": null,
+                    "$failureRecorder": "@Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder#1"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_listener": [
+                        {
+                            "event": "Symfony\\Component\\Messenger\\Event\\WorkerMessageFailedEvent",
+                            "priority": -150
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$levels": 1706,
+                    "$continue": true,
+                    "$captureSilenced": false
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconRequestScopeResetListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$scopeState": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#4",
+                            "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#4",
+                            "@Nowo\\BeaconBundle\\Scope\\Scope#4",
+                            "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#4"
+                        ]
+                    },
+                    "$pendingRegistries": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#4"
+                        ]
+                    }
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver": {
+                "class": "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver",
+                "factory": null,
+                "arguments": {
+                    "$mode": "auto"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ],
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader": {
+                "class": "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader",
+                "factory": null,
+                "arguments": {
+                    "$selfTestEnabled": false,
+                    "$selfTestPath": "/_beacon/self-test"
+                },
+                "calls": [],
+                "tags": {
+                    "routing.loader": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy",
+                "factory": null,
+                "arguments": {
+                    "$maxRuntime": [],
+                    "$ignore": [],
+                    "$descriptions": []
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$providers": null,
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$logger": "@logger#2",
+                    "$descriptions": "@Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$commandLoader": null
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scope\\Scope": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid:9444/5",
+                    "$reportingEnabled": true,
+                    "$bus": "@messenger.default_bus#2",
+                    "$pendingTransports": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$exceptionListener": true,
+                    "$consoleListener": true,
+                    "$phpWarningHandler": true,
+                    "$messengerListener": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "messenger.message_handler": [
+                        {
+                            "handles": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailMessage"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Trace\\TraceIdProvider": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "nowo.beacon.client": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientInterface",
+                "factory": [
+                    "@Nowo\\BeaconBundle\\Client\\BeaconClientFactory#1",
+                    "create"
+                ],
+                "arguments": {
+                    "$enabled": true,
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid:9444/5",
+                    "$environment": "prod",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$send": {
+                        "environment": true,
+                        "release": true,
+                        "server_name": true,
+                        "stacktrace": true,
+                        "request": true,
+                        "user": false,
+                        "runtime": true,
+                        "framework": true,
+                        "os": true,
+                        "client": false,
+                        "stack_vars": false
+                    },
+                    "$beforeSend": null,
+                    "$transportMode": "sync"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ]
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client.sync": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ],
+                    true
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            }
+        },
+        "aliases": {
+            "Nowo\\BeaconBundle\\Client\\BeaconClientInterface": {
+                "id": "nowo.beacon.client",
+                "public": false
+            },
+            "Nowo\\BeaconBundle\\Context\\UserContextProviderInterface": {
+                "id": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "public": false
+            }
+        },
+        "parameters": {
+            "kernel.environment": "test",
+            "nowo.beacon.dsn": "https://pubkey:fixture-secret@beacon.example.invalid:9444/5",
+            "nowo.beacon.enabled": true,
+            "nowo.beacon.environment": "prod",
+            "nowo.beacon.ignore_exceptions": [],
+            "nowo.beacon.ignore_paths": [
+                "/_profiler",
+                "/_wdt",
+                "/build",
+                "/assets",
+                "/health",
+                "/.well-known/appspecific/com.chrome.devtools.json"
+            ],
+            "nowo.beacon.ingest_paths": "auto",
+            "nowo.beacon.release": null,
+            "nowo.beacon.send": {
+                "environment": true,
+                "release": true,
+                "server_name": true,
+                "stacktrace": true,
+                "request": true,
+                "user": false,
+                "runtime": true,
+                "framework": true,
+                "os": true,
+                "client": false,
+                "stack_vars": false
+            },
+            "nowo.beacon.timeout": 5,
+            "nowo.beacon.transport.mode": "sync",
+            "nowo.beacon.verify_peer": true
+        }
+    },
+    "env_dsn_messenger_remote_retry": {
+        "services": {
+            "Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Client\\BeaconClientFactory": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientFactory",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@nowo.beacon.ingest_http_client#1",
+                    "$logger": "@logger#2",
+                    "$userContextProvider": "@Nowo\\BeaconBundle\\Context\\UserContextProviderInterface#1",
+                    "$breadcrumbBuffer": "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#1",
+                    "$requestStack": "@request_stack#2",
+                    "$scope": "@Nowo\\BeaconBundle\\Scope\\Scope#1",
+                    "$spanBuffer": "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#1",
+                    "$pendingRegistry": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$messageBus": "@messenger.default_bus#2",
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$syncHttpClient": "@nowo.beacon.ingest_http_client.sync#1",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\DeployCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\DeployCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$defaultRelease": null,
+                    "$defaultEnvironment": "%kernel.environment%"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand",
+                "factory": null,
+                "arguments": {
+                    "$poller": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandPoller#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerReportCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerReportCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$receiverLocator": "@messenger.receiver_locator#2",
+                    "$failureTransports": [
+                        "failed"
+                    ]
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$catalogBuilder": "@Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder#1",
+                    "$checkInsEnabled": false
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SelfTestCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SelfTestCommand",
+                "factory": null,
+                "arguments": {
+                    "$selfTest": "@Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\TestConnectionCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\TestConnectionCommand",
+                "factory": null,
+                "arguments": {
+                    "$tester": "@Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester": {
+                "class": "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@http_client#1",
+                    "$reportingEnabled": true,
+                    "$dsn": "%env(default::BEACON_DSN)%",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$environment": "%kernel.environment%",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$logger": "@logger#2",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider": {
+                "class": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "factory": null,
+                "arguments": {
+                    "$tokenStorage": "@security.token_storage#2"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Envelope\\SendBeaconEnvelopeMessageHandler": {
+                "class": "Nowo\\BeaconBundle\\Envelope\\SendBeaconEnvelopeMessageHandler",
+                "factory": null,
+                "arguments": {
+                    "$transport": "@nowo.beacon.sync_transport#1"
+                },
+                "calls": [],
+                "tags": {
+                    "messenger.message_handler": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconConsoleErrorListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": []
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconExceptionListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$sendRequest": true,
+                    "$ignorePaths": [
+                        "/_profiler",
+                        "/_wdt",
+                        "/build",
+                        "/assets",
+                        "/health",
+                        "/.well-known/appspecific/com.chrome.devtools.json"
+                    ],
+                    "$sendClient": false,
+                    "$ignoreHttpClientErrors": false
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$includeSchedulerContext": true,
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$ignoreMessageClasses": [],
+                    "$checkInRuns": null,
+                    "$failureRecorder": "@Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder#1"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_listener": [
+                        {
+                            "event": "Symfony\\Component\\Messenger\\Event\\WorkerMessageFailedEvent",
+                            "priority": -150
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$levels": 1706,
+                    "$continue": true,
+                    "$captureSilenced": false
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconRequestScopeResetListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$scopeState": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#4",
+                            "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#4",
+                            "@Nowo\\BeaconBundle\\Scope\\Scope#4",
+                            "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#4"
+                        ]
+                    },
+                    "$pendingRegistries": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#4"
+                        ]
+                    }
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\FlushPendingTransportsListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\FlushPendingTransportsListener",
+                "factory": null,
+                "arguments": {
+                    "$registry": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver": {
+                "class": "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver",
+                "factory": null,
+                "arguments": {
+                    "$mode": "auto"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ],
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\FailedMessageCommandExecutor": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\FailedMessageCommandExecutor",
+                "factory": null,
+                "arguments": {
+                    "$credentials": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteRetryCredentials#1",
+                    "$receiverLocator": "@messenger.receiver_locator#2",
+                    "$allowedActions": [
+                        "retry",
+                        "discard"
+                    ],
+                    "$failureTransports": [
+                        "failed"
+                    ],
+                    "$cache": "@cache.app#2",
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$logger": "@logger#2"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandClient": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandClient",
+                "factory": null,
+                "arguments": {
+                    "$httpClient": "@http_client#1",
+                    "$credentials": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteRetryCredentials#1",
+                    "$serverName": "host-1",
+                    "$environment": "%kernel.environment%",
+                    "$verifyPeer": true,
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandPoller": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandPoller",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteCommandClient#1",
+                    "$executor": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\FailedMessageCommandExecutor#1",
+                    "$credentials": "@Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteRetryCredentials#1",
+                    "$pollInterval": 30,
+                    "$logger": "@logger#2"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteRetryCredentials": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\RemoteRetry\\RemoteRetryCredentials",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$rawDsn": "%env(default::BEACON_DSN)%",
+                    "$rawWorkerKey": "%env(default::BEACON_WORKER_KEY)%"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader": {
+                "class": "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader",
+                "factory": null,
+                "arguments": {
+                    "$selfTestEnabled": false,
+                    "$selfTestPath": "/_beacon/self-test"
+                },
+                "calls": [],
+                "tags": {
+                    "routing.loader": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy",
+                "factory": null,
+                "arguments": {
+                    "$maxRuntime": [],
+                    "$ignore": [],
+                    "$descriptions": []
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$providers": null,
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$logger": "@logger#2",
+                    "$descriptions": "@Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$commandLoader": null
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scope\\Scope": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$dsn": "%env(default::BEACON_DSN)%",
+                    "$reportingEnabled": true,
+                    "$bus": "@messenger.default_bus#2",
+                    "$pendingTransports": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$exceptionListener": true,
+                    "$consoleListener": true,
+                    "$phpWarningHandler": true,
+                    "$messengerListener": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "messenger.message_handler": [
+                        {
+                            "handles": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailMessage"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Trace\\TraceIdProvider": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "nowo.beacon.client": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientInterface",
+                "factory": [
+                    "@Nowo\\BeaconBundle\\Client\\BeaconClientFactory#1",
+                    "create"
+                ],
+                "arguments": {
+                    "$enabled": true,
+                    "$dsn": "%env(default::BEACON_DSN)%",
+                    "$environment": "%kernel.environment%",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$send": {
+                        "environment": true,
+                        "release": true,
+                        "server_name": true,
+                        "stacktrace": true,
+                        "request": true,
+                        "user": false,
+                        "runtime": true,
+                        "framework": true,
+                        "os": true,
+                        "client": false,
+                        "stack_vars": false
+                    },
+                    "$beforeSend": null,
+                    "$transportMode": "messenger"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ]
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client.sync": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ],
+                    true
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.sync_transport": {
+                "class": "Nowo\\BeaconBundle\\Envelope\\EnvelopeTransport",
+                "factory": [
+                    "@Nowo\\BeaconBundle\\Client\\BeaconClientFactory#1",
+                    "createSyncTransport"
+                ],
+                "arguments": {
+                    "$enabled": true,
+                    "$dsn": "%env(default::BEACON_DSN)%",
+                    "$verifyPeer": true,
+                    "$timeout": 5
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            }
+        },
+        "aliases": {
+            "Nowo\\BeaconBundle\\Client\\BeaconClientInterface": {
+                "id": "nowo.beacon.client",
+                "public": false
+            },
+            "Nowo\\BeaconBundle\\Context\\UserContextProviderInterface": {
+                "id": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "public": false
+            }
+        },
+        "parameters": {
+            "kernel.environment": "test",
+            "nowo.beacon.dsn": "%env(default::BEACON_DSN)%",
+            "nowo.beacon.enabled": true,
+            "nowo.beacon.environment": "%kernel.environment%",
+            "nowo.beacon.ignore_exceptions": [],
+            "nowo.beacon.ignore_paths": [
+                "/_profiler",
+                "/_wdt",
+                "/build",
+                "/assets",
+                "/health",
+                "/.well-known/appspecific/com.chrome.devtools.json"
+            ],
+            "nowo.beacon.ingest_paths": "auto",
+            "nowo.beacon.release": null,
+            "nowo.beacon.send": {
+                "environment": true,
+                "release": true,
+                "server_name": true,
+                "stacktrace": true,
+                "request": true,
+                "user": false,
+                "runtime": true,
+                "framework": true,
+                "os": true,
+                "client": false,
+                "stack_vars": false
+            },
+            "nowo.beacon.timeout": 5,
+            "nowo.beacon.transport.mode": "messenger",
+            "nowo.beacon.verify_peer": true
+        }
+    },
+    "async_self_test_http": {
+        "services": {
+            "Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Client\\BeaconClientFactory": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientFactory",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@nowo.beacon.ingest_http_client#1",
+                    "$logger": "@logger#2",
+                    "$userContextProvider": "@Nowo\\BeaconBundle\\Context\\UserContextProviderInterface#1",
+                    "$breadcrumbBuffer": "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#1",
+                    "$requestStack": "@request_stack#2",
+                    "$scope": "@Nowo\\BeaconBundle\\Scope\\Scope#1",
+                    "$spanBuffer": "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#1",
+                    "$pendingRegistry": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$messageBus": "@messenger.default_bus#2",
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$syncHttpClient": "@nowo.beacon.ingest_http_client.sync#1",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\DeployCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\DeployCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$defaultRelease": null,
+                    "$defaultEnvironment": "%kernel.environment%"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand",
+                "factory": null,
+                "arguments": {
+                    "$poller": null
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerReportCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerReportCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$receiverLocator": "@messenger.receiver_locator#2",
+                    "$failureTransports": [
+                        "failed"
+                    ]
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$catalogBuilder": "@Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder#1",
+                    "$checkInsEnabled": false
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SelfTestCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SelfTestCommand",
+                "factory": null,
+                "arguments": {
+                    "$selfTest": "@Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\TestConnectionCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\TestConnectionCommand",
+                "factory": null,
+                "arguments": {
+                    "$tester": "@Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester": {
+                "class": "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@http_client#1",
+                    "$reportingEnabled": true,
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid/5",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$environment": "%kernel.environment%",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$logger": "@logger#2",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider": {
+                "class": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "factory": null,
+                "arguments": {
+                    "$tokenStorage": "@security.token_storage#2"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Controller\\SelfTestController": {
+                "class": "Nowo\\BeaconBundle\\Controller\\SelfTestController",
+                "factory": null,
+                "arguments": {
+                    "$selfTest": "@Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest#1",
+                    "$roles": [
+                        "ROLE_ADMIN"
+                    ],
+                    "$csrfTokenManager": "@security.csrf.token_manager#2",
+                    "$authorizationChecker": "@security.authorization_checker#2"
+                },
+                "calls": [],
+                "tags": {
+                    "controller.service_arguments": [
+                        []
+                    ]
+                },
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconConsoleErrorListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": []
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconExceptionListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$sendRequest": true,
+                    "$ignorePaths": [
+                        "/_profiler",
+                        "/_wdt",
+                        "/build",
+                        "/assets",
+                        "/health",
+                        "/.well-known/appspecific/com.chrome.devtools.json"
+                    ],
+                    "$sendClient": false,
+                    "$ignoreHttpClientErrors": false
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconFatalErrorHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconMessengerFailedListener",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$ignoreExceptions": [],
+                    "$includeSchedulerContext": true,
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$ignoreMessageClasses": [],
+                    "$checkInRuns": null,
+                    "$failureRecorder": "@Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder#1"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_listener": [
+                        {
+                            "event": "Symfony\\Component\\Messenger\\Event\\WorkerMessageFailedEvent",
+                            "priority": -150
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconPhpWarningHandler",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$enabled": true,
+                    "$levels": 1706,
+                    "$continue": true,
+                    "$captureSilenced": false
+                },
+                "calls": [],
+                "tags": [],
+                "public": true,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconRequestScopeResetListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$scopeState": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#4",
+                            "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#4",
+                            "@Nowo\\BeaconBundle\\Scope\\Scope#4",
+                            "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#4"
+                        ]
+                    },
+                    "$pendingRegistries": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#4"
+                        ]
+                    }
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\BeaconTraceRequestListener",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\EventListener\\FlushPendingTransportsListener": {
+                "class": "Nowo\\BeaconBundle\\EventListener\\FlushPendingTransportsListener",
+                "factory": null,
+                "arguments": {
+                    "$registry": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1"
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver": {
+                "class": "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver",
+                "factory": null,
+                "arguments": {
+                    "$mode": "auto"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\FailureTransport\\FailureTransportRecorder",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ],
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader": {
+                "class": "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader",
+                "factory": null,
+                "arguments": {
+                    "$selfTestEnabled": true,
+                    "$selfTestPath": "/_beacon/self-test"
+                },
+                "calls": [],
+                "tags": {
+                    "routing.loader": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy",
+                "factory": null,
+                "arguments": {
+                    "$maxRuntime": [],
+                    "$ignore": [],
+                    "$descriptions": []
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$providers": null,
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$logger": "@logger#2",
+                    "$descriptions": "@Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$commandLoader": null
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scope\\Scope": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid/5",
+                    "$reportingEnabled": true,
+                    "$bus": "@messenger.default_bus#2",
+                    "$pendingTransports": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$exceptionListener": true,
+                    "$consoleListener": true,
+                    "$phpWarningHandler": true,
+                    "$messengerListener": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "messenger.message_handler": [
+                        {
+                            "handles": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailMessage"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Trace\\TraceIdProvider": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "nowo.beacon.client": {
+                "class": "Nowo\\BeaconBundle\\Client\\BeaconClientInterface",
+                "factory": [
+                    "@Nowo\\BeaconBundle\\Client\\BeaconClientFactory#1",
+                    "create"
+                ],
+                "arguments": {
+                    "$enabled": true,
+                    "$dsn": "https://pubkey:fixture-secret@beacon.example.invalid/5",
+                    "$environment": "%kernel.environment%",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$send": {
+                        "environment": true,
+                        "release": true,
+                        "server_name": true,
+                        "stacktrace": true,
+                        "request": true,
+                        "user": false,
+                        "runtime": true,
+                        "framework": true,
+                        "os": true,
+                        "client": false,
+                        "stack_vars": false
+                    },
+                    "$beforeSend": null,
+                    "$transportMode": "async"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ]
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "nowo.beacon.ingest_http_client.sync": {
+                "class": "Symfony\\Contracts\\HttpClient\\HttpClientInterface",
+                "factory": [
+                    "Nowo\\BeaconBundle\\Envelope\\IngestHttpClientFactory",
+                    "create"
+                ],
+                "arguments": [
+                    "@http_client#1",
+                    2,
+                    500,
+                    2,
+                    5000,
+                    0.1,
+                    [
+                        500,
+                        502,
+                        503,
+                        504
+                    ],
+                    true
+                ],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            }
+        },
+        "aliases": {
+            "Nowo\\BeaconBundle\\Client\\BeaconClientInterface": {
+                "id": "nowo.beacon.client",
+                "public": false
+            },
+            "Nowo\\BeaconBundle\\Context\\UserContextProviderInterface": {
+                "id": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "public": false
+            }
+        },
+        "parameters": {
+            "kernel.environment": "test",
+            "nowo.beacon.dsn": "https://pubkey:fixture-secret@beacon.example.invalid/5",
+            "nowo.beacon.enabled": true,
+            "nowo.beacon.environment": "%kernel.environment%",
+            "nowo.beacon.ignore_exceptions": [],
+            "nowo.beacon.ignore_paths": [
+                "/_profiler",
+                "/_wdt",
+                "/build",
+                "/assets",
+                "/health",
+                "/.well-known/appspecific/com.chrome.devtools.json"
+            ],
+            "nowo.beacon.ingest_paths": "auto",
+            "nowo.beacon.release": null,
+            "nowo.beacon.send": {
+                "environment": true,
+                "release": true,
+                "server_name": true,
+                "stacktrace": true,
+                "request": true,
+                "user": false,
+                "runtime": true,
+                "framework": true,
+                "os": true,
+                "client": false,
+                "stack_vars": false
+            },
+            "nowo.beacon.timeout": 5,
+            "nowo.beacon.transport.mode": "async",
+            "nowo.beacon.verify_peer": true
+        }
+    },
+    "empty_dsn": {
+        "services": {
+            "Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Client\\NullBeaconClient": {
+                "class": "Nowo\\BeaconBundle\\Client\\NullBeaconClient",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\DeployCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\DeployCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$defaultRelease": null,
+                    "$defaultEnvironment": "%kernel.environment%"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerCommandsCommand",
+                "factory": null,
+                "arguments": {
+                    "$poller": null
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\MessengerReportCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\MessengerReportCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$receiverLocator": "@messenger.receiver_locator#2",
+                    "$failureTransports": [
+                        "failed"
+                    ]
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SchedulerCatalogCommand",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$catalogBuilder": "@Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder#1",
+                    "$checkInsEnabled": false
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\SelfTestCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\SelfTestCommand",
+                "factory": null,
+                "arguments": {
+                    "$selfTest": "@Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Command\\TestConnectionCommand": {
+                "class": "Nowo\\BeaconBundle\\Command\\TestConnectionCommand",
+                "factory": null,
+                "arguments": {
+                    "$tester": "@Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester#1"
+                },
+                "calls": [],
+                "tags": {
+                    "console.command": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester": {
+                "class": "Nowo\\BeaconBundle\\Connection\\BeaconConnectionTester",
+                "factory": null,
+                "arguments": {
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$httpClient": "@http_client#1",
+                    "$reportingEnabled": false,
+                    "$dsn": "",
+                    "$verifyPeer": true,
+                    "$timeout": 5,
+                    "$environment": "%kernel.environment%",
+                    "$release": null,
+                    "$serverName": "host-1",
+                    "$logger": "@logger#2",
+                    "$ingestPaths": "@Nowo\\BeaconBundle\\Ingest\\IngestPathResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider": {
+                "class": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "factory": null,
+                "arguments": {
+                    "$tokenStorage": "@security.token_storage#2"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\EventListener\\BeaconRequestScopeResetListener": {
+                "class": null,
+                "factory": null,
+                "arguments": {
+                    "$scopeState": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer#4",
+                            "@Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer#4",
+                            "@Nowo\\BeaconBundle\\Scope\\Scope#4",
+                            "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#4"
+                        ]
+                    },
+                    "$pendingRegistries": {
+                        "iterator": [
+                            "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#4"
+                        ]
+                    }
+                },
+                "calls": [],
+                "tags": {
+                    "kernel.event_subscriber": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver": {
+                "class": "Nowo\\BeaconBundle\\Ingest\\IngestPathResolver",
+                "factory": null,
+                "arguments": {
+                    "$mode": "auto"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware": {
+                "class": "Nowo\\BeaconBundle\\Messenger\\BeaconTraceMiddleware",
+                "factory": null,
+                "arguments": {
+                    "$traceIdProvider": "@Nowo\\BeaconBundle\\Trace\\TraceIdProvider#1",
+                    "$enabled": false
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader": {
+                "class": "Nowo\\BeaconBundle\\Routing\\BeaconRouteLoader",
+                "factory": null,
+                "arguments": {
+                    "$selfTestEnabled": false,
+                    "$selfTestPath": "/_beacon/self-test"
+                },
+                "calls": [],
+                "tags": {
+                    "routing.loader": [
+                        []
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy",
+                "factory": null,
+                "arguments": {
+                    "$maxRuntime": [],
+                    "$ignore": [],
+                    "$descriptions": []
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\ScheduleCatalogBuilder",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$providers": null,
+                    "$clock": "@Psr\\Clock\\ClockInterface#2",
+                    "$logger": "@logger#2",
+                    "$descriptions": "@Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver#1"
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver": {
+                "class": "Nowo\\BeaconBundle\\Scheduler\\TaskDescriptionResolver",
+                "factory": null,
+                "arguments": {
+                    "$policy": "@Nowo\\BeaconBundle\\Scheduler\\CheckInPolicy#1",
+                    "$commandLoader": null
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Scope\\Scope": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\BeaconSelfTest",
+                "factory": null,
+                "arguments": {
+                    "$client": "@Nowo\\BeaconBundle\\Client\\BeaconClientInterface#1",
+                    "$parser": "@Nowo\\BeaconBundle\\Dsn\\BeaconDsnParser#1",
+                    "$dsn": "",
+                    "$reportingEnabled": false,
+                    "$bus": "@messenger.default_bus#2",
+                    "$pendingTransports": "@Nowo\\BeaconBundle\\Envelope\\PendingTransportRegistry#1",
+                    "$exceptionListener": true,
+                    "$consoleListener": true,
+                    "$phpWarningHandler": true,
+                    "$messengerListener": true
+                },
+                "calls": [],
+                "tags": [],
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler": {
+                "class": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailHandler",
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "messenger.message_handler": [
+                        {
+                            "handles": "Nowo\\BeaconBundle\\SelfTest\\Message\\BeaconSelfTestFailMessage"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": false
+            },
+            "Nowo\\BeaconBundle\\Trace\\TraceIdProvider": {
+                "class": null,
+                "factory": null,
+                "arguments": [],
+                "calls": [],
+                "tags": {
+                    "kernel.reset": [
+                        {
+                            "method": "reset"
+                        }
+                    ]
+                },
+                "public": false,
+                "decorates": null,
+                "autowired": true
+            }
+        },
+        "aliases": {
+            "Nowo\\BeaconBundle\\Client\\BeaconClientInterface": {
+                "id": "Nowo\\BeaconBundle\\Client\\NullBeaconClient",
+                "public": false
+            },
+            "Nowo\\BeaconBundle\\Context\\UserContextProviderInterface": {
+                "id": "Nowo\\BeaconBundle\\Context\\SecurityUserContextProvider",
+                "public": false
+            }
+        },
+        "parameters": {
+            "kernel.environment": "test",
+            "nowo.beacon.dsn": "",
+            "nowo.beacon.enabled": false,
+            "nowo.beacon.environment": "%kernel.environment%",
+            "nowo.beacon.ignore_exceptions": [],
+            "nowo.beacon.ignore_paths": [
+                "/_profiler",
+                "/_wdt",
+                "/build",
+                "/assets",
+                "/health",
+                "/.well-known/appspecific/com.chrome.devtools.json"
+            ],
+            "nowo.beacon.ingest_paths": "auto",
+            "nowo.beacon.release": null,
+            "nowo.beacon.send": {
+                "environment": true,
+                "release": true,
+                "server_name": true,
+                "stacktrace": true,
+                "request": true,
+                "user": false,
+                "runtime": true,
+                "framework": true,
+                "os": true,
+                "client": false,
+                "stack_vars": false
+            },
+            "nowo.beacon.timeout": 5,
+            "nowo.beacon.transport.mode": "sync",
+            "nowo.beacon.verify_peer": true
+        }
+    }
+}

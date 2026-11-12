@@ -1,0 +1,14 @@
+settings:
+    section:
+        label: Beacon
+        intro: DSN y clave de worker de Beacon guardados en la base de datos, cifrados. Tienen prioridad sobre BEACON_DSN / BEACON_WORKER_KEY, que quedan como respaldo. Los valores guardados no se vuelven a mostrar; rótalos con nowo:beacon:credentials:rotate.
+    dsn: DSN de Beacon
+    dsn_help: "https://CLAVE_PUBLICA:CLAVE_SECRETA@host/ID_PROYECTO. Vacío: se usa BEACON_DSN."
+    worker_key: Clave de worker
+    worker_key_help: "Clave bwk_… de los comandos remotos de Messenger. Vacía: se usa BEACON_WORKER_KEY."
+    previous_dsn: DSN anterior
+    previous_worker_key: Clave de worker anterior
+    previous_help: Valor sustituido por la última rotación, aceptado hasta su caducidad. Lo escribe nowo:beacon:credentials:rotate.
+    previous_dsn_expires_at: Caducidad del DSN anterior
+    previous_worker_key_expires_at: Caducidad de la clave de worker anterior
+    expires_at_help: "Fecha y hora ISO 8601, p. ej. 2026-11-13T10:00:00+00:00. Sin una caducidad válida, el valor anterior se ignora."
