@@ -90,6 +90,8 @@ use function class_exists;
 use function interface_exists;
 use function is_array;
 use function is_string;
+use function rtrim;
+use function strtolower;
 
 /**
  * Loads `nowo_beacon` configuration and wires the HTTP Envelope client.
@@ -925,6 +927,10 @@ final class NowoBeaconExtension extends Extension implements PrependExtensionInt
             '$cacheTtl'        => (int) ($config['credentials_cache_ttl'] ?? BeaconCredentialsResolver::DEFAULT_CACHE_TTL),
             '$clock'           => new Reference(ClockInterface::class, ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             '$logger'          => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$allowedOrigins'  => array_values(array_map(
+                static fn (mixed $origin): string => strtolower(rtrim(trim((string) $origin), '/')),
+                (array) ($config['credentials_allowed_origins'] ?? []),
+            )),
         ]);
         // Expires the cache only; the TTL keeps it correct in workers whose kernel is never reset.
         $resolver->addTag('kernel.reset', ['method' => 'reset']);
