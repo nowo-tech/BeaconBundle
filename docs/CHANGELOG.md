@@ -82,6 +82,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Tests
+
+- CI: the coverage run is now `composer test-coverage-100` (new script, `.scripts/check-coverage.php`), so a pull request that drops statement or element coverage below **100%** fails the build; before, nothing in CI checked a threshold. The suite is already at 100%.
+
 ### Documentation
 
 - `docs/SECURITY.md`: record the real AI security audits (Appendices CH, JQ, KM, NS) with dates and grade instead of the "expected" 1.19.2 wording (REQ-SEC-004).
