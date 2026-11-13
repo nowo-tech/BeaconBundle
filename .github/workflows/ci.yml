@@ -191,7 +191,7 @@ jobs:
           composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
       - name: Run tests with coverage
-        run: composer test-coverage
+        run: composer test-coverage-100
 
       - name: Validate coverage file
         run: |
