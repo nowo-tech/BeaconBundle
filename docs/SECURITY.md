@@ -125,7 +125,7 @@ Before tagging a release, confirm:
 | **Logging** | No code path logs full DSNs, secrets, or unrelated request secrets. |
 | **Dependencies** | `composer audit` has been run and findings triaged. |
 | **Timeouts / DoS** | `timeout` stays documented and intentionally low; retries stay limited to 5xx, `max_retries` and the sync `Retry-After` bound. |
-| **AI security audit (REQ-SEC-004)** | Independent full audit 2026-11-01 (Appendix CH, `BUNDLES_SECURITY_ANALYSIS.md` in the Nowo monorepo): **Pass (conditional) / Low** on `db1ba30`; **Pass (good) / Low** expected once the 1.19.2 fixes (L1, L2, L3, L5, L6, I5) ship — to be confirmed by the auditor. |
+| **AI security audit (REQ-SEC-004)** | Latest independent audit 2026-11-12 (Appendix NS, 1.25.0 credentials from a database): **Ship**, one Medium (NS-M1) fixed before release, overall risk **Low**. The 2026-11-01 full audit (Appendix CH) is **Pass (good) / Low** since 1.19.2. Recorded in `BUNDLES_SECURITY_ANALYSIS.md` in the Nowo monorepo (see [AI security audit](#ai-security-audit)). |
 | **Release notes** | Security-relevant changes are reflected in `CHANGELOG.md` and `UPGRADING.md` when needed. |
 
 Recommended commands:
@@ -139,9 +139,11 @@ make release-check
 
 | Field | Value |
 | ----- | ----- |
-| Date | 2026-11-01 (supersedes the 2026-07-28 static pass, which predates 1.16–1.19) |
-| Grade | Pass (conditional) on `db1ba30`; Pass (good) expected with the remaining 1.19.2 fixes |
+| Latest audit date | 2026-11-12 (Appendix NS, 1.25.0 credentials from a database with rotation, audited at `14c07b9`, re-verified at `305bf72`) |
+| Grade | **Pass (good)** / Low: Appendix CH (2026-11-01 / 02, full audit, 1.19.2) is the last full audit; deltas JQ (1.21.0, 2026-11-09), KM (1.22.0, 2026-11-10) and NS (1.25.0, 2026-11-12) found no open High or Medium |
 | Risk | Low (v1.19.1 and earlier: Medium, F1 credential forwarding on cross-host redirect, fixed in 1.19.2) |
-| Method | Independent full review of `src/`, docs and specs with PoCs (redactor, real HTTP redirects, rogue Beacon simulation, self-test kernel) — Appendix CH |
-| Fixed in 1.19.2 | L1 redactor coverage; L2 result path never throws into the worker; L3 client-side command lifetime; L5 secrets out of dumps / traces / serialization; L6 explicit TLS verification; I5 / I6 docs |
+| Method | Independent read-only reviews of `src/`, docs and specs with PoCs (redactor, real HTTP redirects, rogue Beacon simulation, self-test kernel, 12 origin-bypass probes for the credentials provider) |
+| Appendix CH (1.19.2) | L1 redactor coverage; L2 result path never throws into the worker; L3 client-side command lifetime; L5 secrets out of dumps / traces / serialization; L6 explicit TLS verification; I5 / I6 docs |
+| Appendix NS (1.25.0) | NS-M1 (Medium) fixed: a configured worker key pairs with a database DSN only on the exact configured origin, otherwise remote commands are off. NS-L1 previous-key expiry capped at 30 days; NS-L2 `--grace=0` advice for compromised keys; NS-L3 bridge fields non-portable |
+| 1.25.1 / 1.25.2 | 1.25.1 restricts a database DSN to `credentials_allowed_origins` (owner decision 2026-11-12, recorded as an addendum to Appendix NS); 1.25.2 fixes a service instantiation cycle (lazy provider). Neither adds attack surface; no separate audit appendix |
 | Open residuals | None Critical/High. L4 (Bearer = root worker key, needs a Beacon-side change); I2 DSN in the Envelope header (protocol, persisted in Messenger transports); I3 unredacted source context; I4 opt-in paths with less redaction; I1 background `Retry-After` bounded by `timeout` only. App-owned: DSN secret hygiene; `send.request` URL/query sensitivity; `send.user` PII when enabled. |

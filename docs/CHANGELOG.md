@@ -82,6 +82,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- `docs/SECURITY.md`: record the real AI security audits (Appendices CH, JQ, KM, NS) with dates and grade instead of the "expected" 1.19.2 wording (REQ-SEC-004).
+
 ## [1.25.2] - 2026-11-12
 
 Next patch: 1.25.2.
