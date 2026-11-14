@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.25.3](#to-1253)
 - [To 1.25.2](#to-1252)
 - [To 1.25.1](#to-1251)
 - [To 1.25.0](#to-1250)
@@ -101,6 +102,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.25.3
+
+From **1.25.2**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 ## To 1.25.2
 
