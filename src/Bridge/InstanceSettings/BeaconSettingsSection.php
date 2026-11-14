@@ -42,7 +42,7 @@ final class BeaconSettingsSection implements SettingsSectionInterface
 
     public function getIcon(): ?string
     {
-        return null;
+        return 'tabler:radar';
     }
 
     /**
