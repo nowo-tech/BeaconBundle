@@ -37,7 +37,7 @@ final class InstanceSettingsBridgeTest extends TestCase
         self::assertSame('settings.section.label', $section->getLabel());
         self::assertSame('NowoBeaconBundle', $section->getTranslationDomain());
         self::assertSame('settings.section.intro', $section->getIntro());
-        self::assertNull($section->getIcon());
+        self::assertSame('tabler:radar', $section->getIcon());
 
         $secret = [];
         foreach ($section->getFields() as $field) {
