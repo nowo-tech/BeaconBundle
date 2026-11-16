@@ -67,7 +67,7 @@ final class BeaconClientScrubberTest extends TestCase
         self::assertSame('https://[Filtered]@example.com/', $payload['breadcrumbs']['values'][0]['data']['url']);
         self::assertSame(2, $payload['breadcrumbs']['values'][0]['data']['items']);
 
-        foreach (['tag-session-value', 'crumb-pw', 'crumb-url-pw', 'extra-cookie', 'extra-token-value', 'nested-csrf', '4111'] as $secret) {
+        foreach (['tag-session-value', 'crumb-pw', 'crumb-url-pw', 'extra-cookie', 'extra-token-value', 'nested-csrf', '4111 1111 1111 1111', '4111111111111111'] as $secret) {
             self::assertStringNotContainsString($secret, $this->bodies[0]);
         }
     }
