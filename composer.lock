@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d2a31785b296075fd168b969ba00b8e7",
+    "content-hash": "7f449e5a4ea4cd7d8d43e5bf5777e415",
     "packages": [
         {
             "name": "nowo-tech/beacon-php",
-            "version": "v0.1.0",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nowo-tech/beacon-php.git",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520"
+                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/ff16717138d9e039043daa29e7988a8c12874520",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520",
+                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/8657e43ee8b34087b437a17ad85ec780002fa98d",
+                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d",
                 "shasum": ""
             },
             "require": {
@@ -100,7 +100,7 @@
                 "security": "https://github.com/nowo-tech/beacon-php/security/policy",
                 "source": "https://github.com/nowo-tech/beacon-php"
             },
-            "time": "2026-11-09T14:03:00+00:00"
+            "time": "2026-11-11T10:34:50+00:00"
         },
         {
             "name": "psr/cache",
