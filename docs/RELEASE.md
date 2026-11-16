@@ -2,6 +2,13 @@
 
 Use this checklist when cutting a new BeaconBundle version. The workflow [`release.yml`](../.github/workflows/release.yml) runs on push of a tag matching `v*` and creates the GitHub Release from the tag message plus the matching `docs/CHANGELOG.md` entry.
 
+## Table of contents
+
+- [Before tagging](#before-tagging)
+- [Tag and push](#tag-and-push)
+- [After push](#after-push)
+- [Quick reference](#quick-reference)
+
 ## Before tagging
 
 1. **Update `docs/CHANGELOG.md`**

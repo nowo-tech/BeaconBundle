@@ -7,7 +7,7 @@ COMPOSE_BIN := $(shell docker compose version >/dev/null 2>&1 && echo "docker co
 COMPOSE     := $(COMPOSE_BIN) -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: help up down down-dev build shell install ensure-up test test-coverage test-coverage-100 coverage-check coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs strip-cursor-coauthor-from-history check-envelope-goldens demo-smoke check-no-raw-html-form
+.PHONY: help up down down-dev build shell install ensure-up test test-coverage test-coverage-100 coverage-check coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs strip-cursor-coauthor-from-history check-envelope-goldens demo-smoke check-no-raw-html-form validate-translations
 
 help:
 	@echo "Beacon Bundle - Development Commands"
@@ -32,6 +32,7 @@ help:
 	@echo "  rector-dry    Run Rector in dry-run mode"
 	@echo "  phpstan       Run PHPStan static analysis"
 	@echo "  igor          Run Igor worker-state audit (REQ-CS-008)"
+	@echo "  validate-translations  Lint the translation catalogues and check key parity with en (REQ-MAKE-004)"
 	@echo "  qa            Run all QA checks (cs-check + phpstan + test)"
 	@echo "  release-check Pre-release (REQ-MAKE-002): git-hygiene, open-PRs, raw-form gate, cs, rector, phpstan, igor, coverage, demos"
 	@echo "  demo-smoke    Boot demo/symfony8 and assert HTTP 200 (REQ-TEST-011)"
@@ -140,8 +141,13 @@ setup-hooks:
 # Run Igor worker-state audit (REQ-CS-008)
 igor: ensure-up
 	$(COMPOSE) exec -T php composer igor
+# REQ-MAKE-004 / REQ-I18N-002: YAML syntax, NowoBeaconBundle domain only, key parity with en, no empty message.
+# Required locales not shipped yet are a warning (TRANSLATIONS_STRICT=1 makes them an error).
+validate-translations: ensure-up
+	$(COMPOSE) exec -T php php .scripts/validate-translations.php
+
 # REQ-MAKE-002 order.
-release-check: ensure-up check-no-cursor-coauthor check-open-prs check-no-raw-html-form composer-sync cs-fix cs-check rector-dry phpstan igor test-coverage release-check-demos
+release-check: ensure-up check-no-cursor-coauthor check-open-prs check-no-raw-html-form composer-sync cs-fix cs-check rector-dry phpstan igor validate-translations test-coverage release-check-demos
 
 # REQ-TEST-011 — boot demo stack and assert one HTTP 200
 demo-smoke:

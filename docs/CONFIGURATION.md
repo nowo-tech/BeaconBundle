@@ -9,6 +9,7 @@
 - [Ingest paths (versioned, legacy fallback)](#ingest-paths-versioned-legacy-fallback)
 - [Credentials provider and rotation (1.25+)](#credentials-provider-and-rotation-125)
 - [Timeout hierarchy (REQ-RUNTIME-001)](#timeout-hierarchy-req-runtime-001)
+- [Translations](#translations)
 - [Important behavior](#important-behavior)
 - [Development with self-signed certificates](#development-with-self-signed-certificates)
 
@@ -362,6 +363,32 @@ nowo_beacon:
         user: false
         client: false
 ```
+
+## Translations
+
+The bundle ships one translation domain, `NowoBeaconBundle` (REQ-I18N-003), used only by the labels and help texts of
+the `beacon` InstanceSettings section (`instance_settings_bridge: true`). Catalogues live in
+`src/Resources/translations/NowoBeaconBundle.<locale>.yaml`; the bundle currently ships `en` (reference) and `es`.
+`make validate-translations` lints them and checks that every locale has exactly the keys of `en`.
+
+Your application translations always take precedence; the bundle catalogue is only the fallback for missing keys.
+To change a label, or to add a locale the bundle does not ship yet:
+
+1. Use the same domain as the bundle: `NowoBeaconBundle`.
+2. Create `translations/NowoBeaconBundle.<locale>.yaml` (or `.xlf`) in your application.
+3. Override only the keys you need; any key you leave out falls back to the bundle value.
+
+Example `translations/NowoBeaconBundle.fr.yaml`:
+
+```yaml
+settings:
+    section:
+        label: Beacon
+    dsn: DSN Beacon
+    worker_key: Clé worker
+```
+
+Run `bin/console cache:clear` after adding a new file.
 
 ## Important behavior
 
