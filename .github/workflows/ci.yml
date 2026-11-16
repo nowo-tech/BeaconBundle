@@ -96,6 +96,40 @@ jobs:
           SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
         run: composer test-coverage
 
+  # Lowest supported nowo-tech/beacon-php (composer.json: ^0.1 || ^0.2; the lock and the matrix get 0.2).
+  test-beacon-php-lowest:
+    name: PHP 8.4 - Symfony 8.1 - beacon-php 0.1
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json
+          coverage: none
+          tools: composer:v2
+
+      - name: Override Composer platform PHP (composer.json pins the minimum PHP for the lock)
+        run: composer config platform.php "8.4.99"
+
+      - name: Install dependencies with beacon-php 0.1
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+          composer update nowo-tech/beacon-php --with "nowo-tech/beacon-php:~0.1.0" --with-all-dependencies --no-interaction --prefer-dist --no-progress
+          composer show nowo-tech/beacon-php | grep -E '^versions'
+
+      - name: Run tests
+        env:
+          SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
+        run: composer test
+
+      - name: Run PHPStan
+        run: composer phpstan
+
   code-style:
     name: Code Style
     runs-on: ubuntu-latest
