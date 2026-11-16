@@ -83,6 +83,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- `docs/CONFIGURATION.md`: new "Translations" section (domain `NowoBeaconBundle`, override procedure, shipped
+  locales) (REQ-I18N-001); `docs/RELEASE.md` table of contents (REQ-DOCS-005); README `## License` section
+  (REQ-DOCS-019).
+- Spec Kit: `specs/001-baseline/code-inventory.md` maps all 121 production files again (credentials provider and
+  rotation, InstanceSettings bridge, ingest paths, worker boundaries, translations of 1.23–1.25) and
+  `specs/001-baseline/spec.md` gains FR-WK-007, FR-CRD-001..006 and FR-ING-001..002 (REQ-SPECKIT-001 / 003).
+
+### Tests
+
+- `make validate-translations` (`.scripts/validate-translations.php`): YAML syntax, `NowoBeaconBundle` domain only,
+  key parity with `en`, no empty message; part of `make release-check` and of the CI "Code style, PHPStan, Igor" job
+  (REQ-MAKE-004). Required locales not shipped yet are reported as a warning.
+
 ## [1.25.3] - 2026-11-14
 
 ### Added

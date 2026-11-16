@@ -193,3 +193,7 @@ supported install cannot reach in the test environment — optional-dependency g
 internals, and defensive returns that the surrounding code already rules out (empty DSN secret after `parse_url`,
 `file()` failure on an existing file, empty filtered stack trace, non-`RedeliveryStamp` first stamp, DBAL exception
 bindings). New markers need the same justification in review.
+
+## License
+
+This bundle is released under the [MIT License](LICENSE).

@@ -1,7 +1,7 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-11-01  
-**Aligned with:** **v1.19.x** (Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`, Messenger remote retry `specs/008`, ingest retries `FR-TR-003`)
+**Last audited:** 2026-11-16  
+**Aligned with:** **v1.25.x** (credentials provider and rotation 1.25, versioned ingest paths 1.23, Messenger / console worker boundaries 1.24, Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`, Messenger remote retry `specs/008`, ingest retries `FR-TR-003`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
 
@@ -167,13 +167,59 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Controller/SelfTestController.php` | Optional JSON endpoint (roles + CSRF); `#[Route]` attributes, never autoconfigured | FR-ST-006, FR-ST-007 |
 | `src/Routing/BeaconRouteLoader.php` | `type: nowo_beacon` loader: imports the controller attributes when enabled, applies `self_test.http.path` | FR-ST-006 |
 
+### Credentials provider and rotation (1.25) (11)
+
+| Path | Role | FR / notes |
+|------|------|------------|
+| `src/Credentials/BeaconCredentials.php` | Provider record VO: DSN + worker key, each with an optional previous value and expiry | FR-CRD-001 |
+| `src/Credentials/BeaconCredentialsProviderInterface.php` | Port: host-side credentials source (`current()`) | FR-CRD-001 |
+| `src/Credentials/BeaconCredentialsStoreInterface.php` | Writable provider used by the rotate command (`save()`) | FR-CRD-004 |
+| `src/Credentials/BeaconCredentialsResolver.php` | Effective credentials: provider merged over the configuration, cached for `credentials_cache_ttl`, origin allow-list | FR-CRD-002, FR-CRD-003 |
+| `src/Credentials/ResolvedBeaconCredentials.php` | Parsed snapshot with a `generation` counter | FR-CRD-002 |
+| `src/Credentials/ResolvingEnvelopeTransport.php` | Messenger-mode transport that follows the effective credentials | FR-CRD-002 |
+| `src/Credentials/RotatingEnvelopeTransport.php` | Transport of one generation with the bounded 401 resend on the previous DSN | FR-CRD-005 |
+| `src/Client/ResolvingBeaconClient.php` | Client that rebuilds its inner client when the credentials change | FR-CRD-002 |
+| `src/Command/RotateCredentialsCommand.php` | `nowo:beacon:credentials:rotate` (hidden input, self-test, restore on failure) | FR-CRD-004 |
+| `src/DependencyInjection/Compiler/CredentialsProviderPass.php` | Compile-time check of `credentials_provider`; writable provider for the command | FR-CRD-001 |
+| `src/EventListener/BeaconCredentialsArmListener.php` | Arms provider reads on the first request / command / worker start (boot uses the configuration only) | FR-CRD-003 |
+
+### InstanceSettings bridge (1.25) (3)
+
+| Path | Role | FR / notes |
+|------|------|------------|
+| `src/Bridge/InstanceSettings/BeaconSettingsSection.php` | `beacon` settings section (encrypted, write-only, not portable) | FR-CRD-006 |
+| `src/Bridge/InstanceSettings/InstanceSettingsCredentialsStore.php` | Credentials store backed by the section | FR-CRD-006 |
+| `src/Bridge/InstanceSettings/InstanceSettingsCredentialsListener.php` | Expires the credentials cache after the section is saved; notice without values | FR-CRD-006 |
+
+### Ingest paths (1.23) (4)
+
+| Path | Role | FR / notes |
+|------|------|------------|
+| `src/Ingest/IngestPaths.php` | Versioned and legacy ingest URLs | FR-ING-001 |
+| `src/Ingest/IngestPathMode.php` | `ingest_paths` mode enum (`auto`, `versioned`, `legacy`) | FR-ING-001 |
+| `src/Ingest/IngestPathResolver.php` | Per-target memory of the served paths (bounded) | FR-ING-002 |
+| `src/Envelope/UsedUrlLogger.php` | Log decorator writing the ingest URL actually used | FR-ING-002 |
+
+### Worker boundaries (1.24) (1)
+
+| Path | Role | FR / notes |
+|------|------|------------|
+| `src/Worker/UnitOfWorkFrames.php` | Outermost request / message / command tracking for the scope reset listener | FR-WK-007 |
+
+### Translations (1.25) (2)
+
+| Path | Role | FR / notes |
+|------|------|------------|
+| `src/Resources/translations/NowoBeaconBundle.en.yaml` | Labels of the `beacon` settings section (reference catalogue) | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.es.yaml` | Spanish labels | FR-CRD-006 |
+
 ## Coverage summary
 
 | Metric | Value |
 |--------|-------|
-| PHP production files (`find src -name '*.php' \| wc -l`) | 99 |
-| Other production files (`src/Resources/config/services.yaml`) | 1 |
-| **Total production sources** (`find src -type f \| wc -l`) | **100** |
-| Rows mapped in this inventory | **100** |
+| PHP production files (`find src -name '*.php' \| wc -l`) | 118 |
+| Other production files (`services.yaml` + 2 translation catalogues) | 3 |
+| **Total production sources** (`find src -type f \| wc -l`) | **121** |
+| Rows mapped in this inventory | **121** |
 | Unmapped files | 0 (no placeholder IDs) |
 | Success criteria in `spec.md` | SC-001 … SC-007 |

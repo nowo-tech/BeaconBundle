@@ -168,6 +168,9 @@ jobs:
       - name: Igor worker-state audit (REQ-CS-008)
         run: composer igor
 
+      - name: Validate translations (REQ-MAKE-004)
+        run: php .scripts/validate-translations.php
+
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest

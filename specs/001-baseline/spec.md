@@ -133,12 +133,26 @@ Integrator-facing docs (all **English**): [`README.md`](../../README.md), [`docs
 | FR-WK-003 | `FlushPendingTransportsListener` terminate priority MUST be lower than the auto HTTP transaction listener so async POSTs enqueued on terminate are drained in the same cycle; leftover pending MAY also flush at the next main request start |
 | FR-WK-004 | `EnvelopeBuilder` source-line cache MUST be bounded (LRU); workers SHOULD still be recycled on deploy |
 | FR-WK-005 | When `register_fatal_handler` is true, `BeaconFatalErrorHandler` MUST be registered once per process (`Bundle::boot()`); in worker mode the shutdown function runs when the worker exits |
+| FR-WK-007 | Scope, breadcrumbs, spans and trace id are also cleared at Messenger received / handled / failed and the outermost `console.terminate`; only the outermost unit of work clears (`UnitOfWorkFrames`), so nested commands and commands run inside a message keep the outer state (1.24, REQ-RUNTIME-002) |
+
+### Credentials provider and ingest paths
+
+| ID | Requirement |
+|----|-------------|
+| FR-CRD-001 | Optional `credentials_provider` (service implementing `BeaconCredentialsProviderInterface`, checked at compile time); `null` keeps the 1.24 wiring unchanged |
+| FR-CRD-002 | Provider values are merged over the configured DSN / worker key at runtime and cached for `credentials_cache_ttl`; clients and transports rebuild when the effective credentials change |
+| FR-CRD-003 | The provider is read only once the application runs (first request, command or worker start); a provider DSN is used only when its origin is in `credentials_allowed_origins` (or is the configured origin), otherwise the configuration is used with a warning |
+| FR-CRD-004 | `nowo:beacon:credentials:rotate` writes new values through `BeaconCredentialsStoreInterface`, keeps the replaced ones as previous until their expiry, runs the self-test and restores the old record on failure; secrets are never command-line arguments |
+| FR-CRD-005 | On HTTP 401 a non-expired previous DSN (same origin and project) is tried once for the same body |
+| FR-CRD-006 | `instance_settings_bridge: true` stores the DSN and worker key in the encrypted, write-only, non-portable `beacon` InstanceSettings section (labels in the `NowoBeaconBundle` translation domain) |
+| FR-ING-001 | `ingest_paths` (`auto` default, `versioned`, `legacy`) selects the versioned `/api/ingest/v1/…` or the legacy ingest paths |
+| FR-ING-002 | In `auto` mode a 404 / 405 on the versioned path retries once on the legacy path and the answer is remembered per Beacon target (bounded); logs name the URL actually used |
 
 ## Success criteria
 
 | ID | Criterion |
 |----|-----------|
-| SC-001 | Every production file under `src/` is mapped in [`code-inventory.md`](code-inventory.md): **100/100** (99 PHP + `services.yaml`), no placeholder IDs |
+| SC-001 | Every production file under `src/` is mapped in [`code-inventory.md`](code-inventory.md): **121/121** (118 PHP + `services.yaml` + 2 translation catalogues), no placeholder IDs |
 | SC-002 | PHPUnit line coverage of `src/` is **100%** (`make test-coverage-100`) on the CI matrix (PHP 8.2–8.5 × Symfony 7.4 / 8.x) |
 | SC-003 | PHPStan, PHP-CS-Fixer, Rector (dry run) and Igor report no errors |
 | SC-004 | Envelope shapes match the golden fixtures in `tests/Contract/fixtures/envelope/` (`make check-envelope-goldens` against Symfony Beacon) |
