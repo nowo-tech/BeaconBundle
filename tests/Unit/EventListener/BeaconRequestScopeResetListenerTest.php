@@ -150,9 +150,21 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         self::assertSame(['onConsoleError', PHP_INT_MAX], $events[ConsoleEvents::ERROR]);
         self::assertSame([['onConsoleTerminateStarted', PHP_INT_MAX], ['onConsoleTerminate', -4096]], $events[ConsoleEvents::TERMINATE]);
         // The failed-message capture, Scheduler check-in and message transaction run first and keep the scope.
-        self::assertLessThan(BeaconMessengerFailedListener::PRIORITY, $events[WorkerMessageFailedEvent::class][1][1]);
-        self::assertLessThan(-1024, $events[WorkerMessageFailedEvent::class][1][1]);
-        self::assertLessThan(-2048, $events[WorkerMessageHandledEvent::class][1][1], 'after the pending flush');
+        $failedPriority  = self::listenerPriority($events, WorkerMessageFailedEvent::class);
+        $handledPriority = self::listenerPriority($events, WorkerMessageHandledEvent::class);
+        self::assertLessThan(BeaconMessengerFailedListener::PRIORITY, $failedPriority);
+        self::assertLessThan(-1024, $failedPriority);
+        self::assertLessThan(-2048, $handledPriority, 'after the pending flush');
+    }
+
+    /**
+     * Priority of the second listener of an event, typed as int so PHPStan does not fold the exact values asserted above.
+     *
+     * @param array<string, mixed> $events
+     */
+    private static function listenerPriority(array $events, string $event): int
+    {
+        return (int) $events[$event][1][1];
     }
 
     public function testMessageBoundariesClearTheScope(): void
