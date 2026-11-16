@@ -83,6 +83,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `nowo-tech/beacon-php` constraint widened to `^0.1 || ^0.2` (supersedes Dependabot #54); the lock moves to 0.2.0.
+  No behaviour change: the bundle uses beacon-php's envelope builder, scrubber, scope and response handler, which
+  0.2.0 keeps compatible (only optional parameters were added), and keeps its own ingest transport and path
+  resolver. CI also runs the suite with beacon-php 0.1. See [UPGRADING](UPGRADING.md#unreleased).
+
 ### Demo
 
 - The demo is built on UiKit and FormKit (REQ-DEMO-014 / REQ-DEMO-015): the Bootstrap CDN shell is replaced by UiKit's

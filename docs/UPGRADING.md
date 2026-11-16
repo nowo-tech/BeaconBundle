@@ -103,6 +103,16 @@
 
 ## Unreleased
 
+The bundle now accepts `nowo-tech/beacon-php` **^0.1 || ^0.2**. No configuration or code change:
+`composer update nowo-tech/beacon-php` moves to 0.2; hosts that pin 0.1 elsewhere keep it.
+
+- The bundle sends envelopes with its own transport and `nowo_beacon.ingest_paths` resolver (1.23), so beacon-php
+  0.2's new `ingest_paths` option, its process-wide `IngestPathResolver::shared()` and the transport changes do not
+  apply to the bundle: ingest URLs, fallback and the URL in log records stay as in 1.25.
+- Code that builds its own beacon-php `Client` / `Options` next to the bundle follows
+  [beacon-php's UPGRADING to 0.2.0](https://github.com/nowo-tech/beacon-php/blob/v0.2.0/docs/UPGRADING.md#to-020)
+  (versioned ingest path first; `ingest_paths: legacy` against Beacon < 1.147 under PHP-FPM).
+
 ## To 1.25.3
 
 From **1.25.2**:
