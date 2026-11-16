@@ -3,23 +3,22 @@
 {% block title %}Login{% endblock %}
 
 {% block body %}
-    <div class="card demo-card demo-login-card">
-        <div class="card-header text-center">Demo login</div>
-        <div class="card-body">
+    <section class="nowo-ui-card">
+        <div class="nowo-ui-card__header"><h1 class="nowo-ui-card__title">Demo login</h1></div>
+        <div class="nowo-ui-card__body">
             {% if error %}
-                <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                <div class="nowo-ui-flash nowo-ui-flash--error" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
             {% endif %}
 
-            {{ form_start(loginForm, { attr: { class: 'vstack gap-3' } }) }}
+            {{ form_start(loginForm) }}
                 {% for child in loginForm %}
                     {% if not child.rendered %}
                         {{ form_row(child) }}
                     {% endif %}
                 {% endfor %}
-                <button type="submit" class="btn btn-primary w-100">Sign in</button>
             {{ form_end(loginForm) }}
 
-            <p class="text-muted small text-center mt-3 mb-0">Try <code>debugger / debug</code> or <code>viewer / viewer</code>.</p>
+            <p class="nowo-ui-muted">Try <code class="nowo-ui-code">debugger / debug</code> or <code class="nowo-ui-code">viewer / viewer</code>.</p>
         </div>
-    </div>
+    </section>
 {% endblock %}

@@ -1,19 +1,19 @@
 {% extends 'base.html.twig' %}
 {% block title %}{{ heading }}{% endblock %}
 {% block body %}
-<div class="container py-4">
+<div>
     <h1>{{ heading }}</h1>
     <p>{{ description }}</p>
     {% if note is defined and note %}
-        <p class="text-muted">{{ note }}</p>
+        <p class="nowo-ui-muted">{{ note }}</p>
     {% endif %}
     <p>Client enabled: <strong>{{ enabled ? 'yes' : 'no' }}</strong></p>
-    <p>Level: <code>{{ level }}</code></p>
-    <p>Event id: <code>{{ eventId ?? 'null (DSN empty, disabled, or assigned inside a listener)' }}</code></p>
+    <p>Level: <code class="nowo-ui-code">{{ level }}</code></p>
+    <p>Event id: <code class="nowo-ui-code">{{ eventId ?? 'null (DSN empty, disabled, or assigned inside a listener)' }}</code></p>
     {% if fingerprint is not empty %}
-        <p>Fingerprint: <code>{{ fingerprint|join(', ') }}</code></p>
+        <p>Fingerprint: <code class="nowo-ui-code">{{ fingerprint|join(', ') }}</code></p>
     {% endif %}
-    <p class="text-muted small mb-3">Event ids are generated locally before transport. For TLS failures, missing DSN secret, rejected keys (401) or suspended project ingestion (403), verify delivery in Beacon Issues / Performance or in application logs. Auth uses <code>X-Beacon-Auth</code> (<code>beacon_key</code> + <code>beacon_secret</code>).</p>
+    <p class="nowo-ui-muted">Event ids are generated locally before transport. For TLS failures, missing DSN secret, rejected keys (401) or suspended project ingestion (403), verify delivery in Beacon Issues / Performance or in application logs. Auth uses <code class="nowo-ui-code">X-Beacon-Auth</code> (<code class="nowo-ui-code">beacon_key</code> + <code class="nowo-ui-code">beacon_secret</code>).</p>
     <p><a href="{{ path('homepage') }}">Home</a> · <a href="{{ path('demo_status') }}">Status JSON</a></p>
 </div>
 {% endblock %}

@@ -83,6 +83,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Demo
+
+- The demo is built on UiKit and FormKit (REQ-DEMO-014 / REQ-DEMO-015): the Bootstrap CDN shell is replaced by UiKit's
+  admin layout with its default theme, and the login form is a FormKit form (profile `demo`) that keeps the
+  PasswordToggleBundle widget. No bundle runtime change.
+
 ### Documentation
 
 - `docs/CONFIGURATION.md`: new "Translations" section (domain `NowoBeaconBundle`, override procedure, shipped
