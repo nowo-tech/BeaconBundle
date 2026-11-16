@@ -1,44 +1,44 @@
 {% extends 'base.html.twig' %}
 {% block title %}Beacon Bundle demo{% endblock %}
 {% block body %}
-<div class="container py-5">
-    <h1 class="mb-3">Beacon Bundle demo</h1>
-    <p class="lead">Report events to any Symfony Beacon instance via <code>BEACON_DSN</code> (public <strong>and</strong> secret required). The matrix below maps each route to the scenario it exercises.</p>
+<div>
+    <h1>Beacon Bundle demo</h1>
+    <p>Report events to any Symfony Beacon instance via <code class="nowo-ui-code">BEACON_DSN</code> (public <strong>and</strong> secret required). The matrix below maps each route to the scenario it exercises.</p>
 
-    <h2 class="h5 mt-4">Messages &amp; exceptions</h2>
+    <h2>Messages &amp; exceptions</h2>
     <ul>
-        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code>captureMessage</code> (info) + send.* contexts</li>
-        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code>captureMessage</code> (error)</li>
-        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code>captureException</code> with previous + rich extra</li>
+        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code class="nowo-ui-code">captureMessage</code> (info) + send.* contexts</li>
+        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code class="nowo-ui-code">captureMessage</code> (error)</li>
+        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code class="nowo-ui-code">captureException</code> with previous + rich extra</li>
         <li><a href="{{ path('demo_full_context') }}">GET /full-context</a> — densest sample (breadcrumbs, nested exception, fingerprint, checkout extra)</li>
         <li><a href="{{ path('demo_boom') }}">GET /boom</a> — HTTP listener capture (Symfony 500; event sent with request)</li>
         <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> — ignored by listener (500, <strong>not</strong> sent)</li>
         <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint + breadcrumbs + stacktrace</li>
     </ul>
 
-    <h2 class="h5 mt-4">Context &amp; performance</h2>
+    <h2>Context &amp; performance</h2>
     <ul>
         <li><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a> — breadcrumbs attached to the next event</li>
-        <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code>send.user</code>; log in first)</li>
+        <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code class="nowo-ui-code">send.user</code>; log in first)</li>
         <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans (no N+1)</li>
         <li><a href="{{ path('demo_transaction_nplus1') }}">GET /transaction-nplus1</a> — 6 similar DB spans → Beacon N+1 group</li>
-        <li><a href="{{ path('demo_auto_http') }}">GET /auto-http</a> — message + <code>auto_http_transaction</code> on terminate</li>
+        <li><a href="{{ path('demo_auto_http') }}">GET /auto-http</a> — message + <code class="nowo-ui-code">auto_http_transaction</code> on terminate</li>
     </ul>
 
-    <h2 class="h5 mt-4">Integrations</h2>
+    <h2>Integrations</h2>
     <ul>
-        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error → <code>monolog_handler</code></li>
+        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error → <code class="nowo-ui-code">monolog_handler</code></li>
         <li><a href="{{ path('demo_messenger_fail') }}">GET /messenger-fail</a> — simulated final Messenger worker failure</li>
-        <li><a href="{{ path('demo_messenger_remote_retry') }}">GET /messenger-remote-retry</a> — real Doctrine failure for remote Retry / Discard from Beacon (<code>make worker</code>, then <a href="{{ path('demo_messenger_remote_retry', {fix: 1}) }}">fix the gateway</a>)</li>
-        <li><code>php bin/console app:demo-console-boom</code> — console listener (<code>register_console_listener</code>)</li>
+        <li><a href="{{ path('demo_messenger_remote_retry') }}">GET /messenger-remote-retry</a> — real Doctrine failure for remote Retry / Discard from Beacon (<code class="nowo-ui-code">make worker</code>, then <a href="{{ path('demo_messenger_remote_retry', {fix: 1}) }}">fix the gateway</a>)</li>
+        <li><code class="nowo-ui-code">php bin/console app:demo-console-boom</code> — console listener (<code class="nowo-ui-code">register_console_listener</code>)</li>
     </ul>
 
-    <h2 class="h5 mt-4">Status</h2>
+    <h2>Status</h2>
     <ul>
-        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code>enabled</code> / DSN secret / environment / release</li>
-        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code>send.user</code> (<code>debugger</code> / <code>debug</code>)</li>
+        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code class="nowo-ui-code">enabled</code> / DSN secret / environment / release</li>
+        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code class="nowo-ui-code">send.user</code> (<code class="nowo-ui-code">debugger</code> / <code class="nowo-ui-code">debug</code>)</li>
     </ul>
 
-    <p class="text-muted small mb-0">Set <code>BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code>https://PUBLIC:SECRET@localhost:9444/…</code> from the host). After Beacon <code>make bootstrap</code>, run <code>make sync-beacon</code> here. Empty DSN disables reporting. Auth: <code>X-Beacon-Auth</code> with <code>beacon_key</code> + <code>beacon_secret</code>.</p>
+    <p class="nowo-ui-muted">Set <code class="nowo-ui-code">BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code class="nowo-ui-code">https://PUBLIC:SECRET@localhost:9444/…</code> from the host). After Beacon <code class="nowo-ui-code">make bootstrap</code>, run <code class="nowo-ui-code">make sync-beacon</code> here. Empty DSN disables reporting. Auth: <code class="nowo-ui-code">X-Beacon-Auth</code> with <code class="nowo-ui-code">beacon_key</code> + <code class="nowo-ui-code">beacon_secret</code>.</p>
 </div>
 {% endblock %}
