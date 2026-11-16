@@ -21,7 +21,7 @@ Use this checklist when cutting a new BeaconBundle version. The workflow [`relea
    - Rename any placeholder section such as "to the next release" into the concrete target version.
    - Leave a short placeholder for the next release if useful.
 
-3. **beacon-php bump check.** The bundle requires `nowo-tech/beacon-php: ^0.1`, so any 0.1.x patch reaches users without a bundle release. Before tagging (and whenever `composer.lock` moves beacon-php), the suite must pass with that version, in particular the 18 `tests/Fixtures/Golden/bundle-1.20/` goldens (`tests/Contract/EnvelopeGoldenBytesTest.php`) and `EnvelopeLiveParityTest.php`: the builder's redaction fix-up relies on beacon-php's exception and frame ordering. Ask beacon-php to run the same 18 goldens in its CI before it tags a 0.1.x.
+3. **beacon-php bump check.** The bundle requires `nowo-tech/beacon-php: ^0.1 || ^0.2`, so any 0.1.x / 0.2.x release reaches users without a bundle release. Before tagging (and whenever `composer.lock` moves beacon-php), the suite must pass with that version, in particular the 18 `tests/Fixtures/Golden/bundle-1.20/` goldens (`tests/Contract/EnvelopeGoldenBytesTest.php`) and `EnvelopeLiveParityTest.php`: the builder's redaction fix-up relies on beacon-php's exception and frame ordering. Ask beacon-php to run the same 18 goldens in its CI before it tags a 0.1.x / 0.2.x.
 
 4. **Run the pre-release checks**
 

@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d2a31785b296075fd168b969ba00b8e7",
+    "content-hash": "7f449e5a4ea4cd7d8d43e5bf5777e415",
     "packages": [
         {
             "name": "nowo-tech/beacon-php",
-            "version": "v0.1.0",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nowo-tech/beacon-php.git",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520"
+                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/ff16717138d9e039043daa29e7988a8c12874520",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520",
+                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/8657e43ee8b34087b437a17ad85ec780002fa98d",
+                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d",
                 "shasum": ""
             },
             "require": {
@@ -100,7 +100,8 @@
                 "security": "https://github.com/nowo-tech/beacon-php/security/policy",
                 "source": "https://github.com/nowo-tech/beacon-php"
             },
-            "time": "2026-11-09T14:03:00+00:00"
+            "time": "2026-11-11T10:34:50+00:00",
+            "published-time": "2026-11-11T10:36:11+00:00"
         },
         {
             "name": "psr/cache",
@@ -197,7 +198,8 @@
                 "issues": "https://github.com/php-fig/clock/issues",
                 "source": "https://github.com/php-fig/clock/tree/1.0.0"
             },
-            "time": "2022-11-25T14:36:26+00:00"
+            "time": "2022-11-25T14:36:26+00:00",
+            "published-time": "2022-11-25T14:59:22+00:00"
         },
         {
             "name": "psr/container",
@@ -352,7 +354,8 @@
             "support": {
                 "source": "https://github.com/php-fig/http-client"
             },
-            "time": "2023-09-23T14:17:50+00:00"
+            "time": "2023-09-23T14:17:50+00:00",
+            "published-time": "2023-09-23T14:18:12+00:00"
         },
         {
             "name": "psr/http-factory",
@@ -407,7 +410,8 @@
             "support": {
                 "source": "https://github.com/php-fig/http-factory"
             },
-            "time": "2024-04-15T12:06:14+00:00"
+            "time": "2024-04-15T12:06:14+00:00",
+            "published-time": "2024-05-10T07:32:19+00:00"
         },
         {
             "name": "psr/http-message",
@@ -460,7 +464,8 @@
             "support": {
                 "source": "https://github.com/php-fig/http-message/tree/2.0"
             },
-            "time": "2023-04-04T09:54:51+00:00"
+            "time": "2023-04-04T09:54:51+00:00",
+            "published-time": "2023-04-04T09:55:35+00:00"
         },
         {
             "name": "psr/log",
@@ -510,7 +515,8 @@
             "support": {
                 "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
-            "time": "2024-09-11T13:17:53+00:00"
+            "time": "2024-09-11T13:17:53+00:00",
+            "published-time": "2024-09-11T13:21:14+00:00"
         },
         {
             "name": "symfony/cache",
@@ -2021,7 +2027,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-28T09:35:49+00:00"
+            "time": "2026-10-28T09:35:49+00:00",
+            "published-time": "2026-10-28T10:07:45+00:00"
         },
         {
             "name": "symfony/polyfill-php83",
@@ -7607,5 +7614,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
