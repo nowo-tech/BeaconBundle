@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.26.0](#to-1260)
 - [To 1.25.3](#to-1253)
 - [To 1.25.2](#to-1252)
 - [To 1.25.1](#to-1251)
@@ -102,6 +103,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.26.0
+
+From **1.25.3**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 The bundle now accepts `nowo-tech/beacon-php` **^0.1 || ^0.2**. No configuration or code change:
 `composer update nowo-tech/beacon-php` moves to 0.2; hosts that pin 0.1 elsewhere keep it.

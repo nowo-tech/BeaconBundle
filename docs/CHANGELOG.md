@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.26.0] - 2026-11-16](#1260---2026-11-16)
 - [[1.25.3] - 2026-11-14](#1253---2026-11-14)
 - [[1.25.2] - 2026-11-12](#1252---2026-11-12)
 - [[1.25.1] - 2026-11-12](#1251---2026-11-12)
@@ -83,12 +84,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-11-16
+
 ### Changed
 
 - `nowo-tech/beacon-php` constraint widened to `^0.1 || ^0.2` (supersedes Dependabot #54); the lock moves to 0.2.0.
   No behaviour change: the bundle uses beacon-php's envelope builder, scrubber, scope and response handler, which
   0.2.0 keeps compatible (only optional parameters were added), and keeps its own ingest transport and path
-  resolver. CI also runs the suite with beacon-php 0.1. See [UPGRADING](UPGRADING.md#unreleased).
+  resolver. CI also runs the suite with beacon-php 0.1. See [UPGRADING](UPGRADING.md#to-1260).
 
 ### Demo
 
@@ -1090,7 +1093,7 @@ Improve test coverage for trace, fatal, and console code paths (REQ-TEST-003).
 - Expanded documentation set for installation, configuration, usage, release, security, performance, Engram, and Spec Kit workflows.
 - Demo routes covering message capture, manual exception capture, listener-triggered exceptions, ignored exceptions, fingerprints, and runtime status.
 
-[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.25.3...HEAD
+[Unreleased]: https://github.com/nowo-tech/BeaconBundle/compare/v1.26.0...HEAD
 [1.13.1]: https://github.com/nowo-tech/BeaconBundle/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/nowo-tech/BeaconBundle/compare/v1.11.1...v1.12.0
