@@ -85,6 +85,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Translation catalogues `it`, `fr`, `pt`, `de` and `nl` for the `NowoBeaconBundle` domain, with the same keys as `en`
+  (REQ-I18N-002).
+
 ## [1.27.0] - 2026-11-17
 
 ### Changed

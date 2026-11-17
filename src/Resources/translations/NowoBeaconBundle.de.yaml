@@ -1,0 +1,14 @@
+settings:
+    section:
+        label: Beacon
+        intro: Beacon-DSN und Worker-Schlüssel werden verschlüsselt in der Datenbank gespeichert. Sie haben Vorrang vor BEACON_DSN / BEACON_WORKER_KEY, die als Rückfall bleiben. Gespeicherte Werte werden nie wieder angezeigt; rotieren Sie sie mit nowo:beacon:credentials:rotate.
+    dsn: Beacon-DSN
+    dsn_help: "https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID. Leer: BEACON_DSN wird verwendet."
+    worker_key: Worker-Schlüssel
+    worker_key_help: "bwk_…-Schlüssel der Remote-Messenger-Befehle. Leer: BEACON_WORKER_KEY wird verwendet."
+    previous_dsn: Vorheriger DSN
+    previous_worker_key: Vorheriger Worker-Schlüssel
+    previous_help: Durch die letzte Rotation ersetzter Wert, bis zu seinem Ablauf akzeptiert. Geschrieben von nowo:beacon:credentials:rotate.
+    previous_dsn_expires_at: Vorheriger DSN läuft ab am
+    previous_worker_key_expires_at: Vorheriger Worker-Schlüssel läuft ab am
+    expires_at_help: "Geschrieben von nowo:beacon:credentials:rotate (schreibgeschützt). ISO 8601, höchstens 30 Tage in der Zukunft; ohne gültiges Ablaufdatum wird der vorherige Wert ignoriert."

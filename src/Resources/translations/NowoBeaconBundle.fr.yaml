@@ -1,0 +1,14 @@
+settings:
+    section:
+        label: Beacon
+        intro: Le DSN Beacon et la clé worker sont conservés en base de données, chiffrés. Ils ont priorité sur BEACON_DSN / BEACON_WORKER_KEY, qui restent la valeur de repli. Les valeurs enregistrées ne sont plus jamais affichées ; faites-les tourner avec nowo:beacon:credentials:rotate.
+    dsn: DSN Beacon
+    dsn_help: "https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID. Vide : BEACON_DSN est utilisé."
+    worker_key: Clé worker
+    worker_key_help: "Clé bwk_… des commandes Messenger distantes. Vide : BEACON_WORKER_KEY est utilisée."
+    previous_dsn: DSN précédent
+    previous_worker_key: Clé worker précédente
+    previous_help: Valeur remplacée par la dernière rotation, acceptée jusqu'à son expiration. Écrite par nowo:beacon:credentials:rotate.
+    previous_dsn_expires_at: Expiration du DSN précédent
+    previous_worker_key_expires_at: Expiration de la clé worker précédente
+    expires_at_help: "Écrit par nowo:beacon:credentials:rotate (lecture seule). ISO 8601, au plus 30 jours à l'avance ; sans expiration valide, la valeur précédente est ignorée."

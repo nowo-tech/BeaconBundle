@@ -368,7 +368,7 @@ nowo_beacon:
 
 The bundle ships one translation domain, `NowoBeaconBundle` (REQ-I18N-003), used only by the labels and help texts of
 the `beacon` InstanceSettings section (`instance_settings_bridge: true`). Catalogues live in
-`src/Resources/translations/NowoBeaconBundle.<locale>.yaml`; the bundle currently ships `en` (reference) and `es`.
+`src/Resources/translations/NowoBeaconBundle.<locale>.yaml`; the bundle currently ships `en` (reference), `es`, `it`, `fr`, `pt`, `de` and `nl`.
 `make validate-translations` lints them and checks that every locale has exactly the keys of `en`.
 
 Your application translations always take precedence; the bundle catalogue is only the fallback for missing keys.
