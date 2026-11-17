@@ -114,7 +114,9 @@ composer update nowo-tech/beacon-bundle nowo-tech/beacon-php
 ```
 
 The bundle now requires `nowo-tech/beacon-php` **^0.3** (beacon-php 0.3.0 made its state, DSN and exception classes
-final). No configuration change.
+final). No bundle configuration change. If your `composer.json` pins the bundle exactly (for example `"1.26.0"`) or
+requires `nowo-tech/beacon-php` directly with a constraint that excludes 0.3 (for example `"^0.2"`), edit it first,
+for example `"nowo-tech/beacon-bundle": "^1.27"` and `"nowo-tech/beacon-php": "^0.3"`, then run the command above.
 
 **Breaking (catch type):** `Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException` no longer extends beacon-php's
 `Nowo\Beacon\Dsn\InvalidDsnException`. Code that catches `InvalidDsnException` around `BeaconDsnParser::parse()`
@@ -133,6 +135,17 @@ Deprecations (removed in 2.0):
   breadcrumbs, spans and trace id are shared) and triggers a deprecation when it is built.
 - Read the trace id request attribute with `BeaconTraceRequestListener::REQUEST_ATTRIBUTE` instead of
   `TraceIdProvider::REQUEST_ATTRIBUTE` (same value, `_beacon_trace_id`).
+
+Service overrides:
+
+- The bundle now injects the core service ids (`Nowo\Beacon\Scope\Scope`, `Nowo\Beacon\Breadcrumb\BreadcrumbBuffer`,
+  `Nowo\Beacon\Span\SpanBuffer`, `Nowo\Beacon\Trace\TraceIdProvider`). A host that decorated or overrode
+  `Nowo\BeaconBundle\Scope\Scope`, `Nowo\BeaconBundle\Trace\TraceIdProvider`,
+  `Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer` or `Nowo\BeaconBundle\Instrumentation\SpanBuffer` no longer
+  affects what the bundle uses: decorate or override the `Nowo\Beacon\…` ids instead.
+- Remove host aliases written for 1.26 that point a core id at a bundle id, such as
+  `Nowo\Beacon\Scope\Scope: '@Nowo\BeaconBundle\Scope\Scope'`: the bundle id now wraps the core id, so such an
+  alias makes the container compile fail with a `ServiceCircularReferenceException`.
 
 Notes:
 

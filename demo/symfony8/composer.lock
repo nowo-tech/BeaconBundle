@@ -781,7 +781,7 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "b462f6557998be4284b93ec481e3f2fddc276b27"
+                "reference": "74de04a8a3353778097ca95e094431b9a4b5f718"
             },
             "require": {
                 "nowo-tech/beacon-php": "^0.3",
@@ -790,7 +790,6 @@
                 "psr/log": "^1.0 || ^2.0 || ^3.0",
                 "symfony/config": "^7.0 || ^8.0",
                 "symfony/dependency-injection": "^7.0 || ^8.0",
-                "symfony/deprecation-contracts": "^3.0",
                 "symfony/framework-bundle": "^7.0 || ^8.0",
                 "symfony/http-client": "^7.0 || ^8.0",
                 "symfony/http-kernel": "^7.0 || ^8.0"
