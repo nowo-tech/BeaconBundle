@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope;
+use Nowo\Beacon\Span\SpanBuffer;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
-use Nowo\BeaconBundle\Scope\Scope;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
@@ -95,7 +95,7 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         $this->breadcrumbs->add('SELECT * FROM orders WHERE user_id = ?', 'db.sql');
         $this->spans->add('db.sql.query', 'SELECT 1', 1.0, 2.0);
         $this->scope->setTag('user_id', 'A');
-        $firstTraceId = $first->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE);
+        $firstTraceId = $first->attributes->get(BeaconTraceRequestListener::REQUEST_ATTRIBUTE);
 
         // Request 2 (user B) on the same worker, no services_resetter in between
         $second = $this->mainRequest(Request::create('/profile'));
@@ -103,7 +103,7 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         self::assertSame([], $this->breadcrumbs->all());
         self::assertSame([], $this->spans->all());
         self::assertSame([], $this->scope->getTags());
-        $secondTraceId = $second->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE);
+        $secondTraceId = $second->attributes->get(BeaconTraceRequestListener::REQUEST_ATTRIBUTE);
         self::assertIsString($firstTraceId);
         self::assertIsString($secondTraceId);
         self::assertNotSame($firstTraceId, $secondTraceId);
@@ -134,7 +134,7 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
 
         self::assertCount(1, $this->breadcrumbs->all());
         self::assertSame(['tenant' => 't1'], $this->scope->getTags());
-        self::assertSame($main->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE), $this->traceIdProvider->get());
+        self::assertSame($main->attributes->get(BeaconTraceRequestListener::REQUEST_ATTRIBUTE), $this->traceIdProvider->get());
     }
 
     public function testSubscribesToMessengerAndConsoleBoundariesAfterTheFailureCapture(): void

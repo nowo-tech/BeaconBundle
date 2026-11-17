@@ -65,7 +65,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
     ) {
         $this->clientName    = $clientName ?? ClientUserAgent::resolve();
         $this->tlsHttpClient = new ExplicitTlsHttpClient($this->httpClient, $this->verifyPeer);
-        $this->responses     = new IngestResponseHandler($this->dsn, $this->logger);
+        $this->responses     = new IngestResponseHandler($this->dsn->toCoreDsn(), $this->logger);
         $this->ingestPaths   = $ingestPaths ?? new IngestPathResolver();
     }
 
@@ -255,7 +255,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
             return $this->responses;
         }
 
-        return new IngestResponseHandler($this->dsn, new UsedUrlLogger($this->logger, $url));
+        return new IngestResponseHandler($this->dsn->toCoreDsn(), new UsedUrlLogger($this->logger, $url));
     }
 
     private function fromCore(CoreTransportResult $result): TransportResult

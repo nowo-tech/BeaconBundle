@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use DateTimeInterface;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Messenger\FailureTransport\FailureTransportRecorder;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
@@ -46,7 +47,7 @@ final class BeaconMessengerFailedListener
         /** @var list<class-string> */
         private readonly array $ignoreExceptions = [],
         private readonly bool $includeSchedulerContext = true,
-        private readonly ?TraceIdProvider $traceIdProvider = null,
+        private readonly CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider = null,
         /** @var list<class-string> */
         private readonly array $ignoreMessageClasses = [],
         private readonly ?SchedulerRunRegistry $checkInRuns = null,

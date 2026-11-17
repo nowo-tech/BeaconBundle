@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Closure;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
@@ -47,7 +48,7 @@ final class BeaconMessengerRetryListener implements EventSubscriberInterface
         private readonly bool $reportRecovered = false,
         float $sampleRate = 1.0,
         private readonly array $ignoreExceptions = [],
-        private readonly ?TraceIdProvider $traceIdProvider = null,
+        private readonly CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider = null,
         ?Closure $random = null,
         private readonly array $ignoreMessageClasses = [],
     ) {

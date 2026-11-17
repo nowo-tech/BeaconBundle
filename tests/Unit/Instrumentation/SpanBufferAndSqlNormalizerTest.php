@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Instrumentation;
 
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
+use Nowo\Beacon\Span\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\SqlNormalizer;
 use PHPUnit\Framework\TestCase;
 

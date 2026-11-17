@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Envelope;
 
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
 use Nowo\Beacon\Envelope\Envelope;
 use Nowo\Beacon\Envelope\EnvelopeBuilder as CoreEnvelopeBuilder;
 use Nowo\Beacon\Envelope\EnvelopeDsnMode;
 use Nowo\Beacon\Envelope\SendOptions as CoreSendOptions;
+use Nowo\Beacon\Scope\Scope as CoreScope;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClient;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
@@ -80,11 +83,11 @@ final class EnvelopeBuilder
         string $serverName = 'unknown',
         private readonly SendOptions $sendOptions = new SendOptions(),
         ?UserContextProviderInterface $userContextProvider = null,
-        ?BreadcrumbBuffer $breadcrumbBuffer = null,
+        CoreBreadcrumbBuffer|BreadcrumbBuffer|null $breadcrumbBuffer = null,
         ?RequestStack $requestStack = null,
         int $stackContextLines = 5,
-        private readonly ?Scope $scope = null,
-        ?TraceIdProvider $traceIdProvider = null,
+        private readonly CoreScope|Scope|null $scope = null,
+        CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider = null,
         ?ClockInterface $clock = null,
     ) {
         $this->requestProvider = $requestStack instanceof RequestStack
@@ -115,11 +118,11 @@ final class EnvelopeBuilder
                 stackVars: $sendOptions->stackVars,
             ),
             userContextProvider: $userContextProvider,
-            breadcrumbBuffer: $breadcrumbBuffer,
+            breadcrumbBuffer: $breadcrumbBuffer instanceof BreadcrumbBuffer ? $breadcrumbBuffer->getInner() : $breadcrumbBuffer,
             requestProvider: $this->requestProvider,
             stackContextLines: $stackContextLines,
-            scope: $scope,
-            traceIdProvider: $traceIdProvider,
+            scope: $scope instanceof Scope ? $scope->getInner() : $scope,
+            traceIdProvider: $traceIdProvider instanceof TraceIdProvider ? $traceIdProvider->getInner() : $traceIdProvider,
             clock: $clock,
             dsnMode: EnvelopeDsnMode::None,
             framework: class_exists(Kernel::class) ? ['name' => 'symfony', 'version' => Kernel::VERSION] : null,
@@ -170,7 +173,7 @@ final class EnvelopeBuilder
             : null;
         $callerExtra = $extra + ($this->scope?->getExtra() ?? []);
 
-        $envelope = $this->core->eventEnvelope($dsn, $message, $level, $throwable, $extra, $fingerprint);
+        $envelope = $this->core->eventEnvelope($dsn->toCoreDsn(), $message, $level, $throwable, $extra, $fingerprint);
         $payload  = $envelope->payload;
 
         $payload['message'] = SensitiveValueRedactor::redactMessage(
@@ -225,7 +228,7 @@ final class EnvelopeBuilder
         array $spans = [],
         array $extra = [],
     ): Envelope {
-        $envelope = $this->core->transactionEnvelope($dsn, $transactionName, $startTimestamp, $endTimestamp, $spans, $extra);
+        $envelope = $this->core->transactionEnvelope($dsn->toCoreDsn(), $transactionName, $startTimestamp, $endTimestamp, $spans, $extra);
 
         return $envelope->withPayload($this->redactRequest($envelope->payload, $extra));
     }
@@ -241,7 +244,7 @@ final class EnvelopeBuilder
      */
     public function buildQueueSnapshotEnvelope(BeaconDsn $dsn, array $transports): string
     {
-        return self::encode($this->core->queueSnapshotEnvelope($dsn, $transports));
+        return self::encode($this->core->queueSnapshotEnvelope($dsn->toCoreDsn(), $transports));
     }
 
     /**
@@ -251,7 +254,7 @@ final class EnvelopeBuilder
      */
     public function buildDeployEnvelope(BeaconDsn $dsn, array $deploy): string
     {
-        return self::encode($this->core->deployEnvelope($dsn, $deploy));
+        return self::encode($this->core->deployEnvelope($dsn->toCoreDsn(), $deploy));
     }
 
     /**
@@ -264,7 +267,7 @@ final class EnvelopeBuilder
      */
     public function buildScheduleCatalogEnvelope(BeaconDsn $dsn, array $schedules): string
     {
-        return self::encode($this->core->scheduleCatalogEnvelope($dsn, $schedules));
+        return self::encode($this->core->scheduleCatalogEnvelope($dsn->toCoreDsn(), $schedules));
     }
 
     /**
@@ -274,7 +277,7 @@ final class EnvelopeBuilder
      */
     public function buildCheckInEnvelope(BeaconDsn $dsn, array $checkIn): string
     {
-        return self::encode($this->core->checkInEnvelope($dsn, $checkIn));
+        return self::encode($this->core->checkInEnvelope($dsn->toCoreDsn(), $checkIn));
     }
 
     /**

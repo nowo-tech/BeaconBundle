@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Client;
 
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Client\BeaconClient;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;

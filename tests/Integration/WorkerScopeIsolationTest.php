@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Integration;
 
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope;
+use Nowo\Beacon\Span\SpanBuffer;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use Nowo\BeaconBundle\EventListener\BeaconRequestScopeResetListener;
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
-use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Tests\Fixtures\WorkerScope\RecordingBeforeSend;
 use Nowo\BeaconBundle\Tests\Fixtures\WorkerScope\ScopeProbeMessage;
 use Nowo\BeaconBundle\Tests\Fixtures\WorkerScope\WorkerScopeKernel;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;

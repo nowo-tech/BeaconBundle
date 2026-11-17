@@ -229,11 +229,11 @@ final class BeaconCredentialsResolverTest extends TestCase
     {
         $expires = new DateTimeImmutable('2026-11-12T11:00:00+00:00');
         $cases   = [
-            'The previous Beacon DSN has no expiry: it is ignored.'                                                                                                                                                           => new BeaconCredentials(F::NEXT_DSN, null, F::DB_DSN),
-            'The previous Beacon DSN is invalid (DSN secret key is required. Use https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID (Symfony Beacon rejects public-key-only auth when the API key has a secret).): it is ignored.' => new BeaconCredentials(F::NEXT_DSN, null, 'https://pub@beacon.example.invalid/1', $expires),
-            'The previous Beacon DSN targets another Beacon origin or project than the current one: it is ignored.'                                                                                                           => new BeaconCredentials(F::NEXT_DSN, null, F::OTHER_PROJECT_DSN, $expires),
-            'The previous Beacon worker key has no expiry: it is ignored.'                                                                                                                                                    => new BeaconCredentials(F::NEXT_DSN, null, null, null, F::DB_KEY),
-            'The previous Beacon worker key is not a "bwk_…" key: it is ignored.'                                                                                                                                             => new BeaconCredentials(F::NEXT_DSN, null, null, null, 'bwk_short', $expires),
+            'The previous Beacon DSN has no expiry: it is ignored.'                                                                                                                                                   => new BeaconCredentials(F::NEXT_DSN, null, F::DB_DSN),
+            'The previous Beacon DSN is invalid (DSN secret key is required. Use https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID (Beacon rejects public-key-only auth when the API key has a secret).): it is ignored.' => new BeaconCredentials(F::NEXT_DSN, null, 'https://pub@beacon.example.invalid/1', $expires),
+            'The previous Beacon DSN targets another Beacon origin or project than the current one: it is ignored.'                                                                                                   => new BeaconCredentials(F::NEXT_DSN, null, F::OTHER_PROJECT_DSN, $expires),
+            'The previous Beacon worker key has no expiry: it is ignored.'                                                                                                                                            => new BeaconCredentials(F::NEXT_DSN, null, null, null, F::DB_KEY),
+            'The previous Beacon worker key is not a "bwk_…" key: it is ignored.'                                                                                                                                     => new BeaconCredentials(F::NEXT_DSN, null, null, null, 'bwk_short', $expires),
         ];
 
         foreach ($cases as $warning => $record) {

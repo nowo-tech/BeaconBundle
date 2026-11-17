@@ -59,10 +59,11 @@ A bundle that is safe under **B** is safe under **A** and under classic mode / P
 
 | Service | Shared | Mutable state | Scenario A | Scenario B |
 |---------|--------|---------------|------------|------------|
-| `Breadcrumb\BreadcrumbBuffer` | yes (`kernel.reset`) | `$items` (max 50) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
-| `Instrumentation\SpanBuffer` | yes (`kernel.reset`) | `$spans` (max 100) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
-| `Scope\Scope` | yes (`kernel.reset`) | `$tags` (max 32) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
-| `Trace\TraceIdProvider` | yes (`kernel.reset`) | `$traceId` | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Nowo\Beacon\Breadcrumb\BreadcrumbBuffer` (beacon-php, since 1.27) | yes (`kernel.reset`, `method: reset`) | `$items` (max 50) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Nowo\Beacon\Span\SpanBuffer` (beacon-php, since 1.27) | yes (`kernel.reset`, `method: reset`) | `$spans` (max 100) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Nowo\Beacon\Scope\Scope` (beacon-php, since 1.27) | yes (`kernel.reset`, `method: reset`) | `$tags` (max 32) | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| `Nowo\Beacon\Trace\TraceIdProvider` (beacon-php, since 1.27) | yes (`kernel.reset`, `method: reset`) | `$traceId` | ✅ | ✅ (reset per main request, Messenger message and `console.terminate`) |
+| Deprecated `Breadcrumb\BreadcrumbBuffer`, `Instrumentation\SpanBuffer`, `Scope\Scope`, `Trace\TraceIdProvider` (1.27) | yes | none; each wraps the core service above (same instance) | ✅ | ✅ |
 | `Ingest\IngestPathResolver` (1.23) | yes | `$known` — target (origin + project id) → versioned / legacy ingest paths, a server capability (no keys, request, user or tenant data), bounded to 32 targets (`MAX_ENTRIES`), learned only from a Beacon answer, self-healing on a 404; intentionally **not** `kernel.reset` (no request state; a reset per Messenger message would re-probe an older Beacon each time); per-project isolation test; 5,000-target test asserts the bound and flat memory | ✅ | ✅ (process-wide by design, like `RemoteCommandPoller`) |
 | `nowo.beacon.client` (`BeaconClient`, built by `BeaconClientFactory`) | yes | none itself; owns an `EnvelopeBuilder` (bounded source-line cache) and a transport | ✅ | ✅ |
 | `AsyncEnvelopeTransport` (inside the client, `transport.mode: async`) | yes (not a container service) | `$pending` responses, at most 100 (1.23: starting one more completes the oldest), drained on terminate (`-2048`) and again at next main request start | ✅ | ✅ |

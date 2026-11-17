@@ -60,6 +60,17 @@ final class ContainerSnapshot
     ];
 
     /**
+     * 1.27 registers beacon-php's state classes under their own ids (same tags) and keeps the former bundle ids as
+     * deprecated wrapper services: the snapshot maps the core ids back to the 1.24.1 ids and leaves the wrappers out.
+     */
+    public const RENAMED_IN_1_27 = [
+        'Nowo\\Beacon\\Breadcrumb\\BreadcrumbBuffer' => 'Nowo\\BeaconBundle\\Breadcrumb\\BreadcrumbBuffer',
+        'Nowo\\Beacon\\Scope\\Scope'                 => 'Nowo\\BeaconBundle\\Scope\\Scope',
+        'Nowo\\Beacon\\Span\\SpanBuffer'             => 'Nowo\\BeaconBundle\\Instrumentation\\SpanBuffer',
+        'Nowo\\Beacon\\Trace\\TraceIdProvider'       => 'Nowo\\BeaconBundle\\Trace\\TraceIdProvider',
+    ];
+
+    /**
      * @return array<string, mixed>
      */
     public static function take(string $name): array
@@ -70,11 +81,11 @@ final class ContainerSnapshot
 
         $services = [];
         foreach ($container->getDefinitions() as $id => $definition) {
-            if (in_array($id, self::ADDED_IN_1_25['services'], true) || $id === 'service_container') {
+            if (in_array($id, self::ADDED_IN_1_25['services'], true) || in_array($id, self::RENAMED_IN_1_27, true) || $id === 'service_container') {
                 continue;
             }
 
-            $services[$id] = self::definition($definition);
+            $services[self::RENAMED_IN_1_27[$id] ?? $id] = self::definition($definition);
         }
 
         $aliases = [];
@@ -136,7 +147,7 @@ final class ContainerSnapshot
     private static function value(mixed $value): mixed
     {
         if ($value instanceof Reference) {
-            return '@' . $value . '#' . $value->getInvalidBehavior();
+            return '@' . (self::RENAMED_IN_1_27[(string) $value] ?? $value) . '#' . $value->getInvalidBehavior();
         }
 
         if ($value instanceof Definition) {

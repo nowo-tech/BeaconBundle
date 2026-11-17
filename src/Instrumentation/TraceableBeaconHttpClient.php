@@ -6,6 +6,8 @@ namespace Nowo\BeaconBundle\Instrumentation;
 
 use Closure;
 use Generator;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Symfony\Component\HttpClient\AsyncDecoratorTrait;
 use Symfony\Component\HttpClient\Response\AsyncContext;
@@ -41,8 +43,8 @@ final class TraceableBeaconHttpClient implements HttpClientInterface, ResetInter
 
     public function __construct(
         HttpClientInterface $client,
-        private readonly SpanBuffer $spanBuffer,
-        private readonly BreadcrumbBuffer $breadcrumbBuffer,
+        private readonly CoreSpanBuffer|SpanBuffer $spanBuffer,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer $breadcrumbBuffer,
     ) {
         $this->client = $client;
     }

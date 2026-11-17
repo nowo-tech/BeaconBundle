@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Ingest;
 
 use Nowo\Beacon\Dsn\Dsn;
+use Nowo\BeaconBundle\Dsn\BeaconDsn;
 
 use function in_array;
 use function rawurlencode;
@@ -32,7 +33,7 @@ final class IngestPaths
     /**
      * Envelope ingest URL.
      */
-    public static function envelopeUrl(Dsn $dsn, bool $versioned): string
+    public static function envelopeUrl(BeaconDsn|Dsn $dsn, bool $versioned): string
     {
         return self::projectUrl($dsn, $versioned) . '/envelope/';
     }
@@ -40,7 +41,7 @@ final class IngestPaths
     /**
      * Remote Messenger command URL; `$path` is `/messenger/commands/claim` or `/messenger/commands/{id}/result`.
      */
-    public static function projectPathUrl(Dsn $dsn, string $path, bool $versioned): string
+    public static function projectPathUrl(BeaconDsn|Dsn $dsn, string $path, bool $versioned): string
     {
         return self::projectUrl($dsn, $versioned) . $path;
     }
@@ -64,7 +65,7 @@ final class IngestPaths
         return ($status >= 200 && $status < 300) || in_array($status, self::ROUTE_PROOF_STATUSES, true);
     }
 
-    private static function projectUrl(Dsn $dsn, bool $versioned): string
+    private static function projectUrl(BeaconDsn|Dsn $dsn, bool $versioned): string
     {
         return $dsn->getOrigin() . ($versioned ? self::VERSIONED_PREFIX : self::LEGACY_PREFIX) . rawurlencode($dsn->getProjectId());
     }

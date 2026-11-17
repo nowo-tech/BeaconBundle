@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\Envelope;
 
 use InvalidArgumentException;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
 use Nowo\Beacon\Envelope\EnvelopeBuilder as CoreEnvelopeBuilder;
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope;
+use Nowo\Beacon\Trace\TraceIdProvider;
+use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer as DeprecatedBreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
-use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\BeaconBundle\Scope\Scope as DeprecatedScope;
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
+use Nowo\BeaconBundle\Trace\TraceIdProvider as DeprecatedTraceIdProvider;
 use PDOException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -620,6 +623,21 @@ final class EnvelopeBuilderTest extends TestCase
 
         self::assertIsString($payload['extra']['trace_id'] ?? null);
         self::assertSame($payload['extra']['trace_id'], $scope->getTags()['trace_id'] ?? null);
+    }
+
+    public function testAcceptsTheDeprecatedBundleStateWrappers(): void
+    {
+        $dsn                         = (new BeaconDsnParser())->parse('https://pubkey:secret@localhost:9444/1');
+        [$crumbs, $scope, $provider] = @[new DeprecatedBreadcrumbBuffer(), new DeprecatedScope(), new DeprecatedTraceIdProvider()];
+        $crumbs->add('legacy-crumb');
+        $scope->setTag('tenant', 'acme');
+        $builder = new EnvelopeBuilder('test', null, 'ci', new SendOptions(stacktrace: false, request: false), null, $crumbs, null, 5, $scope, $provider);
+
+        [, , $payload] = $this->decodeEnvelope($builder->buildEventEnvelope($dsn, 'legacy'));
+
+        self::assertSame('legacy-crumb', $payload['breadcrumbs']['values'][0]['message']);
+        self::assertSame('acme', $payload['tags']['tenant'] ?? null);
+        self::assertSame($provider->get(), $payload['extra']['trace_id'] ?? null);
     }
 
     public function testAttachesClientContextWhenSendClientEnabled(): void

@@ -781,15 +781,16 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "7be91ae54403e7bc0660bed8fc008a4a1d006bb8"
+                "reference": "b462f6557998be4284b93ec481e3f2fddc276b27"
             },
             "require": {
-                "nowo-tech/beacon-php": "^0.1",
+                "nowo-tech/beacon-php": "^0.3",
                 "php": ">=8.2 <8.6",
                 "psr/clock": "^1.0",
                 "psr/log": "^1.0 || ^2.0 || ^3.0",
                 "symfony/config": "^7.0 || ^8.0",
                 "symfony/dependency-injection": "^7.0 || ^8.0",
+                "symfony/deprecation-contracts": "^3.0",
                 "symfony/framework-bundle": "^7.0 || ^8.0",
                 "symfony/http-client": "^7.0 || ^8.0",
                 "symfony/http-kernel": "^7.0 || ^8.0"
@@ -940,16 +941,16 @@
         },
         {
             "name": "nowo-tech/beacon-php",
-            "version": "v0.1.0",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nowo-tech/beacon-php.git",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520"
+                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/ff16717138d9e039043daa29e7988a8c12874520",
-                "reference": "ff16717138d9e039043daa29e7988a8c12874520",
+                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
+                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
                 "shasum": ""
             },
             "require": {
@@ -967,8 +968,10 @@
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.64",
-                "guzzlehttp/guzzle": "^7.9",
+                "guzzlehttp/guzzle": "^7.9 || ^8.0",
+                "igor-php/igor-php": "^0.11.0",
                 "monolog/monolog": "^3.0",
+                "nowo-tech/phpstan-frankenphp": "^1.4",
                 "nyholm/psr7": "^1.8",
                 "php-http/discovery": "^1.20",
                 "phpstan/phpstan": "^2.1",
@@ -1032,8 +1035,8 @@
                 "security": "https://github.com/nowo-tech/beacon-php/security/policy",
                 "source": "https://github.com/nowo-tech/beacon-php"
             },
-            "time": "2026-11-09T14:03:00+00:00",
-            "published-time": "2026-11-09T14:25:37+00:00"
+            "time": "2026-11-17T08:11:45+00:00",
+            "published-time": "2026-11-17T08:12:25+00:00"
         },
         {
             "name": "nowo-tech/form-kit-bundle",
@@ -1504,7 +1507,8 @@
                 "issues": "https://github.com/php-fig/clock/issues",
                 "source": "https://github.com/php-fig/clock/tree/1.0.0"
             },
-            "time": "2022-11-25T14:36:26+00:00"
+            "time": "2022-11-25T14:36:26+00:00",
+            "published-time": "2022-11-25T14:59:22+00:00"
         },
         {
             "name": "psr/container",

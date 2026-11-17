@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Client;
 
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
 use Nowo\Beacon\Envelope\Envelope;
+use Nowo\Beacon\Scope\Scope as CoreScope;
 use Nowo\Beacon\Scrubber\PayloadScrubber;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
@@ -41,9 +44,9 @@ final class BeaconClient implements BeaconClientInterface, QueueSnapshotCapableI
         private readonly EnvelopeTransportInterface $transport,
         private readonly EnvelopeBuilder $envelopeBuilder,
         private readonly bool $enabled = true,
-        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
-        private readonly ?Scope $scope = null,
-        private readonly ?SpanBuffer $spanBuffer = null,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer|null $breadcrumbBuffer = null,
+        private readonly CoreScope|Scope|null $scope = null,
+        private readonly CoreSpanBuffer|SpanBuffer|null $spanBuffer = null,
         private readonly mixed $beforeSend = null,
     ) {
     }

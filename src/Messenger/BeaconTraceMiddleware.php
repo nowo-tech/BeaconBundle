@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Messenger;
 
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
@@ -20,7 +21,7 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 final class BeaconTraceMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private readonly TraceIdProvider $traceIdProvider,
+        private readonly CoreTraceIdProvider|TraceIdProvider $traceIdProvider,
         private readonly bool $enabled = true,
     ) {
     }

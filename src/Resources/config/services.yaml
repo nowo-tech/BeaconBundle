@@ -6,21 +6,45 @@ services:
 
     Nowo\BeaconBundle\Dsn\BeaconDsnParser: ~
 
-    Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer:
+    # Request-scoped state (1.27.0): beacon-php's own classes, reset between requests / worker jobs by the services
+    # resetter (kernel.reset, method reset) and by BeaconRequestScopeResetListener below.
+    Nowo\Beacon\Breadcrumb\BreadcrumbBuffer:
         tags:
             - { name: kernel.reset, method: reset }
+
+    Nowo\Beacon\Scope\Scope:
+        tags:
+            - { name: kernel.reset, method: reset }
+
+    Nowo\Beacon\Trace\TraceIdProvider:
+        tags:
+            - { name: kernel.reset, method: reset }
+
+    Nowo\Beacon\Span\SpanBuffer:
+        tags:
+            - { name: kernel.reset, method: reset }
+
+    # Deprecated since 1.27.0 (removed in 2.0): the former bundle class names, kept for hosts that type-hint them. Each
+    # is a stateless wrapper around the core service above (same instance, so the same tags, crumbs, spans, trace id).
+    Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer:
+        autowire: false
+        autoconfigure: false
+        arguments: ['@Nowo\Beacon\Breadcrumb\BreadcrumbBuffer']
 
     Nowo\BeaconBundle\Scope\Scope:
-        tags:
-            - { name: kernel.reset, method: reset }
+        autowire: false
+        autoconfigure: false
+        arguments: ['@Nowo\Beacon\Scope\Scope']
 
     Nowo\BeaconBundle\Trace\TraceIdProvider:
-        tags:
-            - { name: kernel.reset, method: reset }
+        autowire: false
+        autoconfigure: false
+        arguments: ['@Nowo\Beacon\Trace\TraceIdProvider']
 
     Nowo\BeaconBundle\Instrumentation\SpanBuffer:
-        tags:
-            - { name: kernel.reset, method: reset }
+        autowire: false
+        autoconfigure: false
+        arguments: ['@Nowo\Beacon\Span\SpanBuffer']
 
     Nowo\BeaconBundle\Envelope\PendingTransportRegistry: ~
 
@@ -31,10 +55,10 @@ services:
         autoconfigure: false
         arguments:
             $scopeState: !iterator
-                - '@!Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer'
-                - '@!Nowo\BeaconBundle\Instrumentation\SpanBuffer'
-                - '@!Nowo\BeaconBundle\Scope\Scope'
-                - '@!Nowo\BeaconBundle\Trace\TraceIdProvider'
+                - '@!Nowo\Beacon\Breadcrumb\BreadcrumbBuffer'
+                - '@!Nowo\Beacon\Span\SpanBuffer'
+                - '@!Nowo\Beacon\Scope\Scope'
+                - '@!Nowo\Beacon\Trace\TraceIdProvider'
             $pendingRegistries: !iterator
                 - '@!Nowo\BeaconBundle\Envelope\PendingTransportRegistry'
         tags:

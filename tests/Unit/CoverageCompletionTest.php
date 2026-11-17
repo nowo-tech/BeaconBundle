@@ -6,6 +6,7 @@ namespace Nowo\BeaconBundle\Tests\Unit;
 
 use DateTimeImmutable;
 use ErrorException;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\EventListener\BeaconFatalErrorHandler;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
@@ -15,7 +16,6 @@ use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
 use Nowo\BeaconBundle\Support\ConsoleInputSnapshot;
 use Nowo\BeaconBundle\Support\HttpRequestSnapshot;
 use Nowo\BeaconBundle\Support\SensitiveValueRedactor;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
@@ -113,12 +113,12 @@ final class CoverageCompletionTest extends TestCase
         $request->headers->set(TraceIdProvider::HEADER, 'abcd1234-abcd1234');
         $listener = new BeaconTraceRequestListener(new TraceIdProvider(), true);
         $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
-        self::assertSame('abcd1234-abcd1234', $request->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE));
+        self::assertSame('abcd1234-abcd1234', $request->attributes->get(BeaconTraceRequestListener::REQUEST_ATTRIBUTE));
         self::assertSame('abcd1234-abcd1234', $request->headers->get(TraceIdProvider::HEADER));
 
         $sub = Request::create('/sub');
         $listener->onKernelRequest(new RequestEvent($kernel, $sub, HttpKernelInterface::SUB_REQUEST));
-        self::assertNull($sub->attributes->get(TraceIdProvider::REQUEST_ATTRIBUTE));
+        self::assertNull($sub->attributes->get(BeaconTraceRequestListener::REQUEST_ATTRIBUTE));
     }
 
     public function testTraceMiddlewareRestoresOrCreatesStamp(): void
