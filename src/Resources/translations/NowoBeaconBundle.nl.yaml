@@ -1,0 +1,14 @@
+settings:
+    section:
+        label: Beacon
+        intro: De Beacon-DSN en de worker-sleutel worden versleuteld in de database bewaard. Ze gaan voor op BEACON_DSN / BEACON_WORKER_KEY, die de terugval blijven. Opgeslagen waarden worden nooit meer getoond; roteer ze met nowo:beacon:credentials:rotate.
+    dsn: Beacon-DSN
+    dsn_help: "https://PUBLIC_KEY:SECRET_KEY@host/PROJECT_ID. Leeg: BEACON_DSN wordt gebruikt."
+    worker_key: Worker-sleutel
+    worker_key_help: "bwk_…-sleutel van Messenger-commando's op afstand. Leeg: BEACON_WORKER_KEY wordt gebruikt."
+    previous_dsn: Vorige DSN
+    previous_worker_key: Vorige worker-sleutel
+    previous_help: Waarde die door de laatste rotatie is vervangen, geaccepteerd tot de vervaldatum. Geschreven door nowo:beacon:credentials:rotate.
+    previous_dsn_expires_at: Vorige DSN verloopt op
+    previous_worker_key_expires_at: Vorige worker-sleutel verloopt op
+    expires_at_help: "Geschreven door nowo:beacon:credentials:rotate (alleen-lezen). ISO 8601, maximaal 30 dagen vooruit; zonder geldige vervaldatum wordt de vorige waarde genegeerd."
