@@ -6,7 +6,8 @@ namespace Nowo\BeaconBundle\Tests\Unit\Credentials;
 
 use DateTimeImmutable;
 use LogicException;
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope;
 use Nowo\BeaconBundle\Client\BeaconClientFactory;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Client\NullBeaconClient;
@@ -23,7 +24,6 @@ use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\Envelope\TransportResult;
-use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Tests\Fixtures\ArrayLogger;
 use Nowo\BeaconBundle\Tests\Fixtures\Credentials\CredentialsFixtures as F;
 use Nowo\BeaconBundle\Tests\Fixtures\Credentials\InMemoryCredentialsStore;

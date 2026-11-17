@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Contract;
 
+use Nowo\Beacon\Scope\Scope;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use Nowo\BeaconBundle\Dsn\BeaconDsn;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\SendOptions;
-use Nowo\BeaconBundle\Scope\Scope;
 use Nowo\BeaconBundle\Tests\Fixtures\Golden\GoldenCases;
 use Nowo\BeaconBundle\Tests\Fixtures\Golden\Legacy\LegacyEnvelopeBuilder;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;

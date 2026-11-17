@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Client;
 
 use Closure;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope as CoreScope;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
 use Nowo\BeaconBundle\Credentials\ResolvedBeaconCredentials;
@@ -32,8 +34,8 @@ final class ResolvingBeaconClient implements BeaconClientInterface, QueueSnapsho
     public function __construct(
         private readonly BeaconCredentialsResolver $resolver,
         private readonly Closure $build,
-        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
-        private readonly ?Scope $scope = null,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer|null $breadcrumbBuffer = null,
+        private readonly CoreScope|Scope|null $scope = null,
     ) {
     }
 

@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.27.0](#to-1270)
 - [To 1.26.0](#to-1260)
 - [To 1.25.3](#to-1253)
 - [To 1.25.2](#to-1252)
@@ -103,6 +104,56 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.27.0
+
+From **1.26.0**:
+
+```bash
+composer update nowo-tech/beacon-bundle nowo-tech/beacon-php
+```
+
+The bundle now requires `nowo-tech/beacon-php` **^0.3** (beacon-php 0.3.0 made its state, DSN and exception classes
+final). No bundle configuration change. If your `composer.json` pins the bundle exactly (for example `"1.26.0"`) or
+requires `nowo-tech/beacon-php` directly with a constraint that excludes 0.3 (for example `"^0.2"`), edit it first,
+for example `"nowo-tech/beacon-bundle": "^1.27"` and `"nowo-tech/beacon-php": "^0.3"`, then run the command above.
+
+**Breaking (catch type):** `Nowo\BeaconBundle\Dsn\InvalidBeaconDsnException` no longer extends beacon-php's
+`Nowo\Beacon\Dsn\InvalidDsnException`. Code that catches `InvalidDsnException` around `BeaconDsnParser::parse()`
+(or around anything that parses the bundle's DSN) must catch `InvalidBeaconDsnException`,
+`Nowo\Beacon\Exception\BeaconExceptionInterface` or `InvalidArgumentException` instead; all three keep working. The
+core exception is available as `getPrevious()`.
+
+Deprecations (removed in 2.0):
+
+- Type-hint beacon-php's state classes instead of the bundle's: `Nowo\Beacon\Scope\Scope` for
+  `Nowo\BeaconBundle\Scope\Scope`, `Nowo\Beacon\Breadcrumb\BreadcrumbBuffer` for
+  `Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer`, `Nowo\Beacon\Span\SpanBuffer` for
+  `Nowo\BeaconBundle\Instrumentation\SpanBuffer`, `Nowo\Beacon\Trace\TraceIdProvider` for
+  `Nowo\BeaconBundle\Trace\TraceIdProvider`. The core classes are the services now (tagged `kernel.reset`). The
+  bundle class names still work as service ids and classes: each is a wrapper around the same core instance (tags,
+  breadcrumbs, spans and trace id are shared) and triggers a deprecation when it is built.
+- Read the trace id request attribute with `BeaconTraceRequestListener::REQUEST_ATTRIBUTE` instead of
+  `TraceIdProvider::REQUEST_ATTRIBUTE` (same value, `_beacon_trace_id`).
+
+Service overrides:
+
+- The bundle now injects the core service ids (`Nowo\Beacon\Scope\Scope`, `Nowo\Beacon\Breadcrumb\BreadcrumbBuffer`,
+  `Nowo\Beacon\Span\SpanBuffer`, `Nowo\Beacon\Trace\TraceIdProvider`). A host that decorated or overrode
+  `Nowo\BeaconBundle\Scope\Scope`, `Nowo\BeaconBundle\Trace\TraceIdProvider`,
+  `Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer` or `Nowo\BeaconBundle\Instrumentation\SpanBuffer` no longer
+  affects what the bundle uses: decorate or override the `Nowo\Beacon\…` ids instead.
+- Remove host aliases written for 1.26 that point a core id at a bundle id, such as
+  `Nowo\Beacon\Scope\Scope: '@Nowo\BeaconBundle\Scope\Scope'`: the bundle id now wraps the core id, so such an
+  alias makes the container compile fail with a `ServiceCircularReferenceException`.
+
+Notes:
+
+- `BeaconDsn` keeps its constructor and methods but wraps a core `Dsn` instead of extending it. To hand it to
+  beacon-php code that takes a `Nowo\Beacon\Dsn\Dsn`, call `$dsn->toCoreDsn()`. Likewise the deprecated wrappers are
+  not instances of the core classes: use `getInner()` or inject the core service.
+- DSN validation is beacon-php's `DsnParser`: same rules and messages, except that the "secret key is required" message
+  says "Beacon" instead of "Symfony Beacon", and keys containing control characters are refused.
 
 ## To 1.26.0
 

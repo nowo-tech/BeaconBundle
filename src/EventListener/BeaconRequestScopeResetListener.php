@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\EventListener;
 
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope as CoreScope;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Envelope\PendingTransportRegistry;
 use Nowo\BeaconBundle\Worker\UnitOfWorkFrames;
 use Symfony\Component\Console\ConsoleEvents;
@@ -43,7 +47,7 @@ use const PHP_INT_MAX;
  * `console.error` listener healed at the next request, message, command or worker stop (before the handler writes its
  * own flag). The clears keep their priorities.
  *
- * The same services are also tagged `kernel.reset` (they implement {@see ResetInterface}); this listener keeps them
+ * The same services are also tagged `kernel.reset` (`method: reset`); this listener keeps them
  * correct where the services resetter does not run: a host that removes or bypasses `services_resetter` (or drives
  * `http_kernel` directly), Messenger consumers started with `--no-reset`, and long-running console commands.
  *
@@ -65,7 +69,7 @@ final class BeaconRequestScopeResetListener implements EventSubscriberInterface,
     private readonly UnitOfWorkFrames $frames;
 
     /**
-     * @param iterable<ResetInterface> $scopeState BreadcrumbBuffer, SpanBuffer, Scope and TraceIdProvider
+     * @param iterable<CoreBreadcrumbBuffer|CoreScope|CoreSpanBuffer|CoreTraceIdProvider|ResetInterface> $scopeState beacon-php's BreadcrumbBuffer, SpanBuffer, Scope and TraceIdProvider (each has a public `reset()`)
      * @param iterable<PendingTransportRegistry> $pendingRegistries
      */
     public function __construct(

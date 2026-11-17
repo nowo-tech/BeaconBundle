@@ -6,10 +6,10 @@ namespace Nowo\BeaconBundle\Tests\Unit\Messenger;
 
 use DateTimeImmutable;
 use LogicException;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\Messenger\BeaconTraceStamp;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Ingest;
 
 use Nowo\Beacon\Dsn\Dsn;
+use Nowo\BeaconBundle\Dsn\BeaconDsn;
 
 use function array_slice;
 use function count;
@@ -72,7 +73,7 @@ final class IngestPathResolver
     /**
      * Whether the first request to the DSN's Beacon target goes to the versioned path.
      */
-    public function useVersioned(Dsn $dsn): bool
+    public function useVersioned(BeaconDsn|Dsn $dsn): bool
     {
         return match ($this->mode) {
             IngestPathMode::Versioned => true,
@@ -84,7 +85,7 @@ final class IngestPathResolver
     /**
      * Whether the DSN's target is still unknown (auto mode, no answer that proves a path yet).
      */
-    public function isProbing(Dsn $dsn): bool
+    public function isProbing(BeaconDsn|Dsn $dsn): bool
     {
         return $this->mode === IngestPathMode::Auto && !isset($this->known[$this->key($dsn)]);
     }
@@ -102,7 +103,7 @@ final class IngestPathResolver
      * Report the HTTP status of a request sent to the versioned path. Returns true when the caller must send the same
      * request once more to the legacy path (auto mode and 404 / 405, including on a target known as versioned).
      */
-    public function versionedAnswered(Dsn $dsn, int $status): bool
+    public function versionedAnswered(BeaconDsn|Dsn $dsn, int $status): bool
     {
         if ($this->mode !== IngestPathMode::Auto) {
             return false;
@@ -126,7 +127,7 @@ final class IngestPathResolver
     /**
      * Report the HTTP status of the legacy retry that followed a 404 / 405 on the versioned path.
      */
-    public function legacyAnswered(Dsn $dsn, int $status): void
+    public function legacyAnswered(BeaconDsn|Dsn $dsn, int $status): void
     {
         if ($this->mode !== IngestPathMode::Auto) {
             return;
@@ -159,7 +160,7 @@ final class IngestPathResolver
     /**
      * Cache key: origin + project id (same as beacon-php). Never the keys or the secret.
      */
-    private function key(Dsn $dsn): string
+    private function key(BeaconDsn|Dsn $dsn): string
     {
         return $dsn->getOrigin() . '/' . rawurlencode($dsn->getProjectId());
     }

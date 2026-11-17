@@ -1,0 +1,28 @@
+{
+  "files": {
+    "src/Breadcrumb/BreadcrumbBuffer.php": [
+      {
+        "message": "Property 'inner' of BreadcrumbBuffer is mutated but not reset in reset().",
+        "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php BreadcrumbBuffer service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
+      }
+    ],
+    "src/Instrumentation/SpanBuffer.php": [
+      {
+        "message": "Property 'inner' of SpanBuffer is mutated but not reset in reset().",
+        "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php SpanBuffer service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
+      }
+    ],
+    "src/Scope/Scope.php": [
+      {
+        "message": "Property 'inner' of Scope is mutated but not reset in reset().",
+        "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php Scope service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
+      }
+    ],
+    "src/Trace/TraceIdProvider.php": [
+      {
+        "message": "Property 'inner' of TraceIdProvider is mutated but not reset in reset().",
+        "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php TraceIdProvider service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
+      }
+    ]
+  }
+}

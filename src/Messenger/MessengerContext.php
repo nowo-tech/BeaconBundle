@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Messenger;
 
 use DateTimeInterface;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\Support\IgnoredException;
 use Nowo\BeaconBundle\Trace\TraceIdProvider;
@@ -160,9 +161,9 @@ final class MessengerContext
     /**
      * Restore the dispatching request's trace id on the worker ({@see BeaconTraceStamp}).
      */
-    public static function restoreTrace(Envelope $envelope, ?TraceIdProvider $traceIdProvider): void
+    public static function restoreTrace(Envelope $envelope, CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider): void
     {
-        if (!$traceIdProvider instanceof TraceIdProvider) {
+        if ($traceIdProvider === null) {
             return;
         }
 

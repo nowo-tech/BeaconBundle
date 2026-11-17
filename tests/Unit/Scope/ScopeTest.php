@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Scope;
 
-use Nowo\BeaconBundle\Scope\Scope;
+use Nowo\Beacon\Scope\Scope;
 use PHPUnit\Framework\TestCase;
 
 final class ScopeTest extends TestCase

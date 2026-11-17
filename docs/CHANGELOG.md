@@ -84,6 +84,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Requires `nowo-tech/beacon-php` **^0.3** (was `^0.1 || ^0.2`). beacon-php 0.3.0 made `Scope`, `Dsn`,
+  `InvalidDsnException`, `SpanBuffer`, `BreadcrumbBuffer` and `TraceIdProvider` final, so the bundle no longer extends
+  them. `^0.2` is not kept: its `Dsn` stores the secret as a plain property, and the core helpers that need the secret
+  (response handler, envelope builder) would then hold it unprotected on long-lived services. The CI "lowest" job
+  runs beacon-php 0.3.0.
+- Request-scoped state: the services are beacon-php's own `Nowo\Beacon\Breadcrumb\BreadcrumbBuffer`,
+  `Nowo\Beacon\Span\SpanBuffer`, `Nowo\Beacon\Scope\Scope` and `Nowo\Beacon\Trace\TraceIdProvider`, tagged
+  `kernel.reset` (`method: reset`) and cleared by `BeaconRequestScopeResetListener` at every request, message and
+  outermost command, as before (FrankenPHP worker mode with `kernel.reset` off included). Bundle constructors that took
+  the bundle classes accept the core class or the deprecated bundle class.
+- `BeaconDsn` wraps a core `Dsn` (composition) instead of extending it, with the same constructor and methods; the
+  secret stays in a `SensitiveParameterValue`, and `serialize()` / `unserialize()` still throw. New
+  `BeaconDsn::toCoreDsn()` returns the wrapped core `Dsn` and `BeaconDsn::fromCoreDsn()` wraps one.
+  `IngestPaths` and `IngestPathResolver` accept either type.
+- `InvalidBeaconDsnException` is a standalone `InvalidArgumentException` implementing beacon-php's
+  `BeaconExceptionInterface`; it is **no longer an `InvalidDsnException`**. `BeaconDsnParser` delegates to beacon-php's
+  `DsnParser` and rethrows its exception with the same message and the core exception as `previous`. Two differences
+  from the bundle's own rules: the "secret key is required" message says "Beacon" instead of "Symfony Beacon", and
+  keys containing control characters (CR, LF, NUL, …) are refused. See [UPGRADING](UPGRADING.md#to-1270).
+
+### Deprecated
+
+- `Nowo\BeaconBundle\Scope\Scope`, `Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer`,
+  `Nowo\BeaconBundle\Instrumentation\SpanBuffer` and `Nowo\BeaconBundle\Trace\TraceIdProvider`: thin wrappers
+  around the core services (same instance, `getInner()`), kept as classes and service ids so code that type-hints them
+  keeps working; constructing one triggers a deprecation. Type-hint the beacon-php class instead. Removed in 2.0.
+- `Nowo\BeaconBundle\Trace\TraceIdProvider::REQUEST_ATTRIBUTE`: use
+  `Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener::REQUEST_ATTRIBUTE` (same value, `_beacon_trace_id`).
+
 ## [1.26.0] - 2026-11-16
 
 ### Changed

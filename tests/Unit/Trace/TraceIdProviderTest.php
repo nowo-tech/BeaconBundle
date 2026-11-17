@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Trace;
 
-use Nowo\BeaconBundle\Trace\TraceIdProvider;
+use Nowo\Beacon\Trace\TraceIdProvider;
 use PHPUnit\Framework\TestCase;
 
 final class TraceIdProviderTest extends TestCase

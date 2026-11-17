@@ -6,6 +6,10 @@ namespace Nowo\BeaconBundle\Client;
 
 use Closure;
 use InvalidArgumentException;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope as CoreScope;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use Nowo\BeaconBundle\Context\UserContextProviderInterface;
 use Nowo\BeaconBundle\Credentials\BeaconCredentialsResolver;
@@ -46,14 +50,14 @@ final class BeaconClientFactory
         private readonly HttpClientInterface $httpClient,
         private readonly ?LoggerInterface $logger = null,
         private readonly ?UserContextProviderInterface $userContextProvider = null,
-        private readonly ?BreadcrumbBuffer $breadcrumbBuffer = null,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer|null $breadcrumbBuffer = null,
         private readonly ?RequestStack $requestStack = null,
-        private readonly ?Scope $scope = null,
-        private readonly ?SpanBuffer $spanBuffer = null,
+        private readonly CoreScope|Scope|null $scope = null,
+        private readonly CoreSpanBuffer|SpanBuffer|null $spanBuffer = null,
         private readonly ?PendingTransportRegistry $pendingRegistry = null,
         private readonly ?object $messageBus = null,
         private readonly ?ClockInterface $clock = null,
-        private readonly ?TraceIdProvider $traceIdProvider = null,
+        private readonly CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider = null,
         private readonly ?HttpClientInterface $syncHttpClient = null,
         ?IngestPathResolver $ingestPaths = null,
     ) {

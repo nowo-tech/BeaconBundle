@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7f449e5a4ea4cd7d8d43e5bf5777e415",
+    "content-hash": "c34ec12ab755357b7a218494c26ea77f",
     "packages": [
         {
             "name": "nowo-tech/beacon-php",
-            "version": "v0.2.0",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nowo-tech/beacon-php.git",
-                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d"
+                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/8657e43ee8b34087b437a17ad85ec780002fa98d",
-                "reference": "8657e43ee8b34087b437a17ad85ec780002fa98d",
+                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
+                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
                 "shasum": ""
             },
             "require": {
@@ -35,8 +35,10 @@
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.64",
-                "guzzlehttp/guzzle": "^7.9",
+                "guzzlehttp/guzzle": "^7.9 || ^8.0",
+                "igor-php/igor-php": "^0.11.0",
                 "monolog/monolog": "^3.0",
+                "nowo-tech/phpstan-frankenphp": "^1.4",
                 "nyholm/psr7": "^1.8",
                 "php-http/discovery": "^1.20",
                 "phpstan/phpstan": "^2.1",
@@ -100,8 +102,8 @@
                 "security": "https://github.com/nowo-tech/beacon-php/security/policy",
                 "source": "https://github.com/nowo-tech/beacon-php"
             },
-            "time": "2026-11-11T10:34:50+00:00",
-            "published-time": "2026-11-11T10:36:11+00:00"
+            "time": "2026-11-17T08:11:45+00:00",
+            "published-time": "2026-11-17T08:12:25+00:00"
         },
         {
             "name": "psr/cache",
@@ -933,7 +935,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-16T14:15:10+00:00"
+            "time": "2026-09-16T14:15:10+00:00",
+            "published-time": "2026-11-04T11:25:34+00:00"
         },
         {
             "name": "symfony/error-handler",
@@ -3903,7 +3906,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T12:14:22+00:00"
+            "time": "2026-11-03T12:14:22+00:00",
+            "published-time": "2026-11-03T12:14:36+00:00"
         },
         {
             "name": "phpstan/phpstan-phpunit",

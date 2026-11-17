@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\Tests\Unit\EventListener;
 
 use LogicException;
+use Nowo\Beacon\Span\SpanBuffer;
 use Nowo\BeaconBundle\Envelope\SendBeaconEnvelopeMessage;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerFailedListener;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerRetryListener;
 use Nowo\BeaconBundle\EventListener\BeaconMessengerTransactionListener;
 use Nowo\BeaconBundle\EventListener\BeaconWorkerMemoryListener;
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Tests\Fixtures\RecordingBeaconClient;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;

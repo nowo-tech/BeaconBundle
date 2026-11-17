@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Nowo\BeaconBundle\Tests\Unit\Client;
 
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Scope\Scope;
+use Nowo\Beacon\Span\SpanBuffer;
 use Nowo\BeaconBundle\Client\BeaconClient;
 use Nowo\BeaconBundle\Dsn\BeaconDsnParser;
 use Nowo\BeaconBundle\Envelope\EnvelopeBuilder;
 use Nowo\BeaconBundle\Envelope\EnvelopeTransport;
 use Nowo\BeaconBundle\Envelope\SendOptions;
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
-use Nowo\BeaconBundle\Scope\Scope;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\HttpClient\MockHttpClient;

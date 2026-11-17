@@ -6,9 +6,9 @@ namespace Nowo\BeaconBundle\Tests\Unit\Instrumentation;
 
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\DriverManager;
-use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer;
+use Nowo\Beacon\Span\SpanBuffer;
 use Nowo\BeaconBundle\Instrumentation\DoctrineSqlMiddleware;
-use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use PHPUnit\Framework\TestCase;
 
 final class DoctrineSqlMiddlewareTest extends TestCase

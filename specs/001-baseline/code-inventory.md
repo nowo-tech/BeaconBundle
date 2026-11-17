@@ -23,9 +23,9 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Dsn/BeaconDsn.php` | DSN value object extending beacon-php `Dsn` (secret wrapped, not serializable) | FR-DSN-003, FR-SEC-001, FR-SDK-002 |
+| `src/Dsn/BeaconDsn.php` | DSN value object wrapping beacon-php `Dsn` (composition since 1.27; secret in `SensitiveParameterValue`, not serializable) | FR-DSN-003, FR-SEC-001, FR-SDK-002 |
 | `src/Dsn/BeaconDsnParser.php` | Parse/validate DSN | FR-DSN-001/002 |
-| `src/Dsn/InvalidBeaconDsnException.php` | Parse errors (extends beacon-php `InvalidDsnException`) | FR-DSN-002, FR-SDK-002 |
+| `src/Dsn/InvalidBeaconDsnException.php` | Parse errors (`InvalidArgumentException` + beacon-php `BeaconExceptionInterface` since 1.27; core exception as previous) | FR-DSN-002, FR-SDK-002 |
 
 ### Client API (11)
 
@@ -40,8 +40,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 | `src/Client/CheckInCapableInterface.php` | Optional `captureScheduleCatalog()` / `captureCheckIn()` capability | FR-SCI-006 |
 | `src/Attribute/BeaconCheckIn.php` | `#[BeaconCheckIn(maxRuntime:, enabled:)]` on scheduled message classes | FR-SCI-002 |
 | `src/Client/ClientUserAgent.php` | Versioned `User-Agent` | FR-TR-001 |
-| `src/Breadcrumb/BreadcrumbBuffer.php` | Request-scoped breadcrumb trail (beacon-php class + `ResetInterface`) | FR-CL-005, FR-SDK-002 |
-| `src/Scope/Scope.php` | Mutable tags / context / extras (beacon-php class + `ResetInterface`) | FR-SCOPE-001, FR-CL-007, FR-SDK-002 |
+| `src/Breadcrumb/BreadcrumbBuffer.php` | Deprecated (1.27) wrapper of beacon-php `BreadcrumbBuffer`, the request-scoped service (`kernel.reset`) | FR-CL-005, FR-SDK-002 |
+| `src/Scope/Scope.php` | Deprecated (1.27) wrapper of beacon-php `Scope`, the request-scoped tags / user / extras service (`kernel.reset`) | FR-SCOPE-001, FR-CL-007, FR-SDK-002 |
 
 ### Envelope and transports (15)
 
@@ -129,8 +129,8 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 
 | Path | Role | FR / notes |
 |------|------|------------|
-| `src/Trace/TraceIdProvider.php` | Request-scoped trace id (beacon-php class + `ResetInterface`) | FR-WK-001, FR-SDK-002 |
-| `src/Instrumentation/SpanBuffer.php` | In-request SQL/HTTP spans (beacon-php class + `ResetInterface`) | FR-INS-001, FR-SDK-002 |
+| `src/Trace/TraceIdProvider.php` | Deprecated (1.27) wrapper of beacon-php `TraceIdProvider`, the request-scoped trace id service (`kernel.reset`) | FR-WK-001, FR-SDK-002 |
+| `src/Instrumentation/SpanBuffer.php` | Deprecated (1.27) wrapper of beacon-php `SpanBuffer`, the in-request SQL/HTTP spans service (`kernel.reset`) | FR-INS-001, FR-SDK-002 |
 | `src/Instrumentation/SqlNormalizer.php` | Normalize SQL for spans | FR-INS-001 |
 | `src/Instrumentation/DoctrineSqlMiddleware.php` | DBAL middleware (+ tracing driver/connection) | FR-INS-001 |
 | `src/Instrumentation/TraceableBeaconHttpClient.php` | HttpClient decorator | FR-INS-001 |

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nowo\BeaconBundle\EventListener;
 
 use Closure;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
+use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\Client\BeaconClientInterface;
 use Nowo\BeaconBundle\Instrumentation\SpanBuffer;
 use Nowo\BeaconBundle\Messenger\MessengerContext;
@@ -53,9 +55,9 @@ final class BeaconMessengerTransactionListener implements EventSubscriberInterfa
      */
     public function __construct(
         private readonly BeaconClientInterface $client,
-        private readonly ?SpanBuffer $spanBuffer = null,
+        private readonly CoreSpanBuffer|SpanBuffer|null $spanBuffer = null,
         float $sampleRate = 1.0,
-        private readonly ?TraceIdProvider $traceIdProvider = null,
+        private readonly CoreTraceIdProvider|TraceIdProvider|null $traceIdProvider = null,
         ?Closure $random = null,
         private readonly array $ignoreMessageClasses = [],
     ) {

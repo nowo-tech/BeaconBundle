@@ -11,6 +11,8 @@ use Doctrine\DBAL\Driver\Middleware\AbstractConnectionMiddleware;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\Driver\Result;
 use Doctrine\DBAL\Driver\Statement;
+use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
+use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
 use Nowo\BeaconBundle\Breadcrumb\BreadcrumbBuffer;
 use SensitiveParameter;
 
@@ -24,8 +26,8 @@ use function microtime;
 final class DoctrineSqlMiddleware implements Middleware
 {
     public function __construct(
-        private readonly SpanBuffer $spanBuffer,
-        private readonly BreadcrumbBuffer $breadcrumbBuffer,
+        private readonly CoreSpanBuffer|SpanBuffer $spanBuffer,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer $breadcrumbBuffer,
     ) {
     }
 
@@ -45,8 +47,8 @@ final class BeaconTracingDriver extends AbstractDriverMiddleware
 {
     public function __construct(
         Driver $driver,
-        private readonly SpanBuffer $spanBuffer,
-        private readonly BreadcrumbBuffer $breadcrumbBuffer,
+        private readonly CoreSpanBuffer|SpanBuffer $spanBuffer,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer $breadcrumbBuffer,
     ) {
         parent::__construct($driver);
     }
@@ -70,8 +72,8 @@ final class BeaconTracingConnection extends AbstractConnectionMiddleware
 {
     public function __construct(
         DriverConnection $connection,
-        private readonly SpanBuffer $spanBuffer,
-        private readonly BreadcrumbBuffer $breadcrumbBuffer,
+        private readonly CoreSpanBuffer|SpanBuffer $spanBuffer,
+        private readonly CoreBreadcrumbBuffer|BreadcrumbBuffer $breadcrumbBuffer,
     ) {
         parent::__construct($connection);
     }
