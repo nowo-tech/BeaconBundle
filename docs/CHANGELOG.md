@@ -105,7 +105,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `DsnParser` and rethrows its exception with the same message and the core exception as `previous`. Two differences
   from the bundle's own rules: the "secret key is required" message says "Beacon" instead of "Symfony Beacon", and
   keys containing control characters (CR, LF, NUL, …) are refused. See [UPGRADING](UPGRADING.md#to-1270).
-- New dependency `symfony/deprecation-contracts` (`^3.0`), already installed with Symfony.
 
 ### Deprecated
 

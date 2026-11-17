@@ -8,7 +8,10 @@ use Nowo\Beacon\Trace\TraceIdProvider as CoreTraceIdProvider;
 use Nowo\BeaconBundle\EventListener\BeaconTraceRequestListener;
 use Symfony\Contracts\Service\ResetInterface;
 
-use function trigger_deprecation;
+use function sprintf;
+use function trigger_error;
+
+use const E_USER_DEPRECATED;
 
 /**
  * Deprecated thin wrapper around beacon-php's {@see CoreTraceIdProvider}, kept so code that type-hints this class (or
@@ -35,7 +38,7 @@ final readonly class TraceIdProvider implements ResetInterface
 
     public function __construct(?CoreTraceIdProvider $inner = null)
     {
-        trigger_deprecation('nowo-tech/beacon-bundle', '1.27.0', 'The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreTraceIdProvider::class);
+        @trigger_error(sprintf('Since nowo-tech/beacon-bundle 1.27.0: The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreTraceIdProvider::class), E_USER_DEPRECATED);
 
         $this->inner = $inner ?? new CoreTraceIdProvider();
     }

@@ -7,7 +7,10 @@ namespace Nowo\BeaconBundle\Breadcrumb;
 use Nowo\Beacon\Breadcrumb\BreadcrumbBuffer as CoreBreadcrumbBuffer;
 use Symfony\Contracts\Service\ResetInterface;
 
-use function trigger_deprecation;
+use function sprintf;
+use function trigger_error;
+
+use const E_USER_DEPRECATED;
 
 /**
  * Deprecated thin wrapper around beacon-php's {@see CoreBreadcrumbBuffer}, kept so code that type-hints this class
@@ -28,7 +31,7 @@ final readonly class BreadcrumbBuffer implements ResetInterface
 
     public function __construct(?CoreBreadcrumbBuffer $inner = null)
     {
-        trigger_deprecation('nowo-tech/beacon-bundle', '1.27.0', 'The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreBreadcrumbBuffer::class);
+        @trigger_error(sprintf('Since nowo-tech/beacon-bundle 1.27.0: The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreBreadcrumbBuffer::class), E_USER_DEPRECATED);
 
         $this->inner = $inner ?? new CoreBreadcrumbBuffer();
     }

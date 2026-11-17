@@ -7,7 +7,10 @@ namespace Nowo\BeaconBundle\Instrumentation;
 use Nowo\Beacon\Span\SpanBuffer as CoreSpanBuffer;
 use Symfony\Contracts\Service\ResetInterface;
 
-use function trigger_deprecation;
+use function sprintf;
+use function trigger_error;
+
+use const E_USER_DEPRECATED;
 
 /**
  * Deprecated thin wrapper around beacon-php's {@see CoreSpanBuffer}, kept so code that type-hints this class keeps
@@ -30,7 +33,7 @@ final readonly class SpanBuffer implements ResetInterface
 
     public function __construct(?CoreSpanBuffer $inner = null)
     {
-        trigger_deprecation('nowo-tech/beacon-bundle', '1.27.0', 'The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreSpanBuffer::class);
+        @trigger_error(sprintf('Since nowo-tech/beacon-bundle 1.27.0: The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreSpanBuffer::class), E_USER_DEPRECATED);
 
         $this->inner = $inner ?? new CoreSpanBuffer();
     }

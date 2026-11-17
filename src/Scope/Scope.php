@@ -7,7 +7,10 @@ namespace Nowo\BeaconBundle\Scope;
 use Nowo\Beacon\Scope\Scope as CoreScope;
 use Symfony\Contracts\Service\ResetInterface;
 
-use function trigger_deprecation;
+use function sprintf;
+use function trigger_error;
+
+use const E_USER_DEPRECATED;
 
 /**
  * Deprecated thin wrapper around beacon-php's {@see CoreScope}, kept so code that type-hints this class keeps working.
@@ -33,7 +36,7 @@ final readonly class Scope implements ResetInterface
 
     public function __construct(?CoreScope $inner = null)
     {
-        trigger_deprecation('nowo-tech/beacon-bundle', '1.27.0', 'The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreScope::class);
+        @trigger_error(sprintf('Since nowo-tech/beacon-bundle 1.27.0: The "%s" class is deprecated, type-hint "%s" instead.', self::class, CoreScope::class), E_USER_DEPRECATED);
 
         $this->inner = $inner ?? new CoreScope();
     }

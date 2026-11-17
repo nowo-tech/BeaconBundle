@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f3cb0a53f60758a3b12dbe014397ba4a",
+    "content-hash": "c34ec12ab755357b7a218494c26ea77f",
     "packages": [
         {
             "name": "nowo-tech/beacon-php",
