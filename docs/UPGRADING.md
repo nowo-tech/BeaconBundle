@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.27.1](#to-1271)
 - [To 1.27.0](#to-1270)
 - [To 1.27.0](#to-1270-1)
 - [To 1.26.0](#to-1260)
@@ -105,6 +106,14 @@
 - [From 1.8.1 to 1.8.2](#from-181-to-182)
 
 ## Unreleased
+
+## To 1.27.1
+
+From **1.27.0**:
+
+```bash
+composer update nowo-tech/beacon-bundle
+```
 
 The bundle requires `nowo-tech/beacon-php` **^0.3.2**: `Support\SensitiveValueRedactor` delegates to beacon-php's
 redactor. No configuration change. If your `composer.json` requires `nowo-tech/beacon-php` directly with a constraint
