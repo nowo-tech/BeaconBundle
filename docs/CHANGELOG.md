@@ -85,6 +85,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Requires `nowo-tech/beacon-php` **^0.3.2** (was `^0.3`). `Support\SensitiveValueRedactor` is now a thin shim that
+  delegates to beacon-php's `Scrubber\SensitiveValueRedactor`, so the bundle and the core client share one set of
+  redaction rules. Public constants and static methods are unchanged. The shared rules are the stricter of the two
+  former copies: a string with URI userinfo also gets the free-text patterns, a PEM private key without its own END
+  marker is filtered to the end of the text, schemes longer than 32 characters are matched, and the 64 KiB cut moves
+  back at most three bytes (a run of invalid UTF-8 is no longer dropped down to the start). The CI "lowest" job runs
+  beacon-php 0.3.2.
+
 ### Added
 
 - Translation catalogues `it`, `fr`, `pt`, `de` and `nl` for the `NowoBeaconBundle` domain, with the same keys as `en`

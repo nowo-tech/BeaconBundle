@@ -313,4 +313,10 @@ final class SensitiveValueRedactorTest extends TestCase
         self::assertSame(str_repeat('a', SensitiveValueRedactor::MAX_MESSAGE_LENGTH - 1) . SensitiveValueRedactor::TRUNCATED, $out);
         self::assertSame($message = str_repeat('b', SensitiveValueRedactor::MAX_MESSAGE_LENGTH), SensitiveValueRedactor::redactMessage($message));
     }
+
+    public function testShimDelegatesToBeaconPhp(): void
+    {
+        self::assertTrue(SensitiveValueRedactor::isSensitiveKey('DB_PASSWORD'));
+        self::assertFalse(SensitiveValueRedactor::isSensitiveKey('passenger'));
+    }
 }
