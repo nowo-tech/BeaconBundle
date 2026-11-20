@@ -90,10 +90,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Requires `nowo-tech/beacon-php` **^0.3.2** (was `^0.3`). `Support\SensitiveValueRedactor` is now a thin shim that
   delegates to beacon-php's `Scrubber\SensitiveValueRedactor`, so the bundle and the core client share one set of
   redaction rules. Public constants and static methods are unchanged. The shared rules are the stricter of the two
-  former copies: a string with URI userinfo also gets the free-text patterns, a PEM private key without its own END
-  marker is filtered to the end of the text, schemes longer than 32 characters are matched, and the 64 KiB cut moves
-  back at most three bytes (a run of invalid UTF-8 is no longer dropped down to the start). The CI "lowest" job runs
-  beacon-php 0.3.2.
+  former copies: a string with URI userinfo also gets the free-text patterns (and its password may contain `@`), a
+  PEM private key without its own END marker is filtered to the end of the text, an unclosed quoted value
+  (`password="…` with no closing quote) is filtered to the end of the text, a `[Filtered]` left inside an unquoted
+  value by an earlier rule no longer ends that value, and schemes longer than 32 characters are matched. At the
+  64 KiB cut, the word that straddles it (up to 4 KiB of non-whitespace) is dropped as well, so a secret cut in half
+  is not sent in part. The CI "lowest" job runs beacon-php 0.3.2.
 
 ### Added
 
@@ -102,6 +104,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `Support\FrameVarsSerializer` redacts strings longer than 1,024 characters before cutting them, so a secret that
+  straddles the cut is not sent in part.
 - Configuration tree split for headroom on PHP 8.3+ thread stacks of 512 KiB (FrankenPHP Alpine images): the tree was one long fluent chain that still compiled at 512 KiB but failed at 384 KiB ("Maximum call stack size ... reached during compilation"). It is now built by one private method per section, with the same builder calls in the same order, so the tree, its defaults, validation and reference dumps are unchanged. A test compiles the sources and builds the tree under a 512 KiB stack.
 
 ## [1.27.0] - 2026-11-17
