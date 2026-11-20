@@ -106,6 +106,10 @@
 
 ## Unreleased
 
+The bundle requires `nowo-tech/beacon-php` **^0.3.2**: `Support\SensitiveValueRedactor` delegates to beacon-php's
+redactor. No configuration change. If your `composer.json` requires `nowo-tech/beacon-php` directly with a constraint
+that excludes 0.3.2, widen it, then run `composer update nowo-tech/beacon-bundle nowo-tech/beacon-php`.
+
 ## To 1.27.0
 
 From **1.26.0**:

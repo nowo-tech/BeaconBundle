@@ -781,10 +781,10 @@
             "dist": {
                 "type": "path",
                 "url": "/var/beacon-bundle",
-                "reference": "74de04a8a3353778097ca95e094431b9a4b5f718"
+                "reference": "f4619a8027a975b7f933809d4d4b15c9d947788c"
             },
             "require": {
-                "nowo-tech/beacon-php": "^0.3",
+                "nowo-tech/beacon-php": "^0.3.2",
                 "php": ">=8.2 <8.6",
                 "psr/clock": "^1.0",
                 "psr/log": "^1.0 || ^2.0 || ^3.0",
@@ -940,16 +940,16 @@
         },
         {
             "name": "nowo-tech/beacon-php",
-            "version": "v0.3.0",
+            "version": "v0.3.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nowo-tech/beacon-php.git",
-                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a"
+                "reference": "ab88bac88706febb76eda49031a4ee1b1bc4c2c3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
-                "reference": "2887bcdc713a99b0e0ea7bc1b9707a23625ba53a",
+                "url": "https://api.github.com/repos/nowo-tech/beacon-php/zipball/ab88bac88706febb76eda49031a4ee1b1bc4c2c3",
+                "reference": "ab88bac88706febb76eda49031a4ee1b1bc4c2c3",
                 "shasum": ""
             },
             "require": {
@@ -1034,8 +1034,8 @@
                 "security": "https://github.com/nowo-tech/beacon-php/security/policy",
                 "source": "https://github.com/nowo-tech/beacon-php"
             },
-            "time": "2026-11-17T08:11:45+00:00",
-            "published-time": "2026-11-17T08:12:25+00:00"
+            "time": "2026-11-20T18:00:17+00:00",
+            "published-time": "2026-11-20T18:01:24+00:00"
         },
         {
             "name": "nowo-tech/form-kit-bundle",

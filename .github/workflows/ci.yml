@@ -175,7 +175,7 @@ jobs:
 
   # Lowest supported nowo-tech/beacon-php (composer.json: ^0.3 since 1.27.0, which needs the final core classes).
   test-beacon-php-lowest:
-    name: PHP 8.4 - Symfony 8.1 - beacon-php 0.3.0
+    name: PHP 8.4 - Symfony 8.1 - beacon-php 0.3.2
     needs: changes
     # Light mode: skipped (a skipped non-matrix job reports its own name as success).
     if: ${{ !cancelled() && needs.changes.outputs.mode != 'light' }}
@@ -196,10 +196,10 @@ jobs:
       - name: Override Composer platform PHP (composer.json pins the minimum PHP for the lock)
         run: composer config platform.php "8.4.99"
 
-      - name: Install dependencies with beacon-php 0.3.0
+      - name: Install dependencies with beacon-php 0.3.2
         run: |
           composer install --prefer-dist --no-progress --no-interaction
-          composer update nowo-tech/beacon-php --with "nowo-tech/beacon-php:0.3.0" --with-all-dependencies --no-interaction --prefer-dist --no-progress
+          composer update nowo-tech/beacon-php --with "nowo-tech/beacon-php:0.3.2" --with-all-dependencies --no-interaction --prefer-dist --no-progress
           composer show nowo-tech/beacon-php | grep -E '^versions'
 
       - name: Run tests

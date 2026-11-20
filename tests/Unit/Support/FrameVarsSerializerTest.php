@@ -170,4 +170,20 @@ final class FrameVarsSerializerTest extends TestCase
         // Closed resources are not is_resource() in PHP 8+ and fall through to FILTERED.
         self::assertSame(SensitiveValueRedactor::FILTERED, $method->invoke(null, $handle, 0));
     }
+
+    /**
+     * Long strings are redacted before the 1,024-character cut.
+     */
+    public function testLongStringsAreRedactedBeforeTheCut(): void
+    {
+        $secret = bin2hex(random_bytes(16));
+        $vars   = FrameVarsSerializer::fromPhpFrame([
+            'function' => 'str_pad',
+            'args'     => [str_repeat('x ', 506) . 'ghp_' . $secret, 1, "-----BEGIN PRIVATE KEY-----\n" . str_repeat('k', 2000)],
+        ]);
+
+        self::assertStringNotContainsString(substr($secret, 0, 6), (string) json_encode($vars));
+        self::assertSame(str_repeat('x ', 506) . '[Filtered]', $vars['string']);
+        self::assertSame(SensitiveValueRedactor::FILTERED, $vars['pad_string']);
+    }
 }

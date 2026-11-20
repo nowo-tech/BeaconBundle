@@ -306,11 +306,21 @@ final class SensitiveValueRedactorTest extends TestCase
 
     public function testLongMessagesAreCutOnAUtf8BoundaryAndTheTailDropped(): void
     {
-        $tail    = 'Fk' . bin2hex(random_bytes(8));
-        $message = str_repeat('a', SensitiveValueRedactor::MAX_MESSAGE_LENGTH - 1) . 'é' . $tail;
-        $out     = SensitiveValueRedactor::redactMessage($message);
+        $tail = 'Fk' . bin2hex(random_bytes(8));
+        $max  = SensitiveValueRedactor::MAX_MESSAGE_LENGTH;
 
-        self::assertSame(str_repeat('a', SensitiveValueRedactor::MAX_MESSAGE_LENGTH - 1) . SensitiveValueRedactor::TRUNCATED, $out);
-        self::assertSame($message = str_repeat('b', SensitiveValueRedactor::MAX_MESSAGE_LENGTH), SensitiveValueRedactor::redactMessage($message));
+        // The cut falls inside a 64 KiB run: the last 4 KiB of the head are dropped too.
+        self::assertSame(str_repeat('a', $max - 4096) . SensitiveValueRedactor::TRUNCATED, SensitiveValueRedactor::redactMessage(str_repeat('a', $max - 1) . 'é' . $tail));
+        // The cut falls inside a word: the word is dropped, up to the whitespace before it.
+        self::assertSame(str_repeat('a', $max - 10) . ' ' . SensitiveValueRedactor::TRUNCATED, SensitiveValueRedactor::redactMessage(str_repeat('a', $max - 10) . ' ' . str_repeat('é', 20) . $tail));
+        // The cut falls on whitespace: nothing straddles it, the head is kept whole.
+        self::assertSame(str_repeat('a', $max) . SensitiveValueRedactor::TRUNCATED, SensitiveValueRedactor::redactMessage(str_repeat('a', $max) . ' ' . $tail));
+        self::assertSame($message = str_repeat('b', $max), SensitiveValueRedactor::redactMessage($message));
+    }
+
+    public function testShimDelegatesToBeaconPhp(): void
+    {
+        self::assertTrue(SensitiveValueRedactor::isSensitiveKey('DB_PASSWORD'));
+        self::assertFalse(SensitiveValueRedactor::isSensitiveKey('passenger'));
     }
 }
