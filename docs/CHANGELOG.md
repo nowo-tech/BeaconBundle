@@ -90,6 +90,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Translation catalogues `it`, `fr`, `pt`, `de` and `nl` for the `NowoBeaconBundle` domain, with the same keys as `en`
   (REQ-I18N-002).
 
+### Fixed
+
+- Configuration tree split for headroom on PHP 8.3+ thread stacks of 512 KiB (FrankenPHP Alpine images): the tree was one long fluent chain that still compiled at 512 KiB but failed at 384 KiB ("Maximum call stack size ... reached during compilation"). It is now built by one private method per section, with the same builder calls in the same order, so the tree, its defaults, validation and reference dumps are unchanged. A test compiles the sources and builds the tree under a 512 KiB stack.
+
 ## [1.27.0] - 2026-11-17
 
 ### Changed

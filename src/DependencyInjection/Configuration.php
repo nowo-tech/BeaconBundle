@@ -7,6 +7,7 @@ namespace Nowo\BeaconBundle\DependencyInjection;
 use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteCommand;
 use Nowo\BeaconBundle\Scheduler\CheckInPolicy;
 use Nowo\BeaconBundle\Support\IgnoredRequestPath;
+use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -34,6 +35,31 @@ final class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder(self::ALIAS);
         $rootNode    = $treeBuilder->getRootNode();
 
+        $this->addEnabledToInstanceSettingsBridgeSections($rootNode);
+        $this->addTransportToRegisterPhpWarningHandlerSections($rootNode);
+        $this->addPhpWarningHandlerToIncludeSchedulerContextSections($rootNode);
+        $this->addMessengerSection($rootNode);
+        $this->addSchedulerToInstrumentationSections($rootNode);
+        $this->addMonologHandlerToSelfTestSections($rootNode);
+        $this->addSendSection($rootNode);
+        $rootNode
+            ->validate()
+                // 1.25: a credentials provider may supply the worker key at runtime.
+                ->ifTrue(static fn (array $v): bool => (bool) ($v['messenger']['remote_retry']['enabled'] ?? false)
+                    && (!is_string($v['messenger']['remote_retry']['worker_key'] ?? null) || trim($v['messenger']['remote_retry']['worker_key']) === '')
+                    && ($v['credentials_provider'] ?? null) === null
+                    && !(bool) ($v['instance_settings_bridge'] ?? false))
+                ->thenInvalid('nowo_beacon.messenger.remote_retry.worker_key is required when remote_retry is enabled (use %%env(BEACON_WORKER_KEY)%%), unless credentials_provider or instance_settings_bridge supplies it.')
+            ->end();
+
+        return $treeBuilder;
+    }
+
+    /**
+     * Adds the `enabled` to `instance_settings_bridge` settings.
+     */
+    private function addEnabledToInstanceSettingsBridgeSections(ArrayNodeDefinition $rootNode): void
+    {
         $rootNode
             ->children()
                 ->booleanNode('enabled')
@@ -98,6 +124,16 @@ final class Configuration implements ConfigurationInterface
                     ->info('Keep the DSN and worker key in the "beacon" InstanceSettings section (encrypted at rest, write-only form, audited) and use it as credentials provider when credentials_provider is null. Requires nowo-tech/instance-settings-bundle.')
                     ->defaultFalse()
                 ->end()
+            ->end();
+    }
+
+    /**
+     * Adds the `transport` to `register_php_warning_handler` settings.
+     */
+    private function addTransportToRegisterPhpWarningHandlerSections(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
                 ->arrayNode('transport')
                     ->info('Outbound Envelope delivery mode.')
                     ->addDefaultsIfNotSet()
@@ -181,6 +217,16 @@ final class Configuration implements ConfigurationInterface
                     ->info('When true, capture PHP warnings/notices as Beacon issues without converting them to exceptions (request continues).')
                     ->defaultTrue()
                 ->end()
+            ->end();
+    }
+
+    /**
+     * Adds the `php_warning_handler` to `include_scheduler_context` settings.
+     */
+    private function addPhpWarningHandlerToIncludeSchedulerContextSections(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
                 ->arrayNode('php_warning_handler')
                     ->info('Options for register_php_warning_handler.')
                     ->addDefaultsIfNotSet()
@@ -204,107 +250,133 @@ final class Configuration implements ConfigurationInterface
                     ->info('When true and a Messenger failure envelope carries Symfony Scheduler ScheduledStamp, attach extra.scheduler (name, recurring id, trigger, triggered_at). Never attaches the message body.')
                     ->defaultTrue()
                 ->end()
-                ->arrayNode('messenger')
-                    ->info('Opt-in Messenger worker observability (requires symfony/messenger). Final failures are always reported by register_messenger_listener.')
+            ->end();
+    }
+
+    /**
+     * Adds the `transactions` to `remote_retry` settings.
+     */
+    private function addMessengerTransactionsToRemoteRetrySections(ArrayNodeDefinition $messenger): void
+    {
+        $messenger
+            ->children()
+                ->booleanNode('transactions')
+                    ->info('Send one performance transaction per handled message (op queue.process, status ok/failed/retry, handler, transport). Doctrine/HttpClient spans are attached when instrumentation is enabled.')
+                    ->defaultFalse()
+                ->end()
+                ->floatNode('transaction_sample_rate')
+                    ->info('Fraction of messages that send a transaction (0.0–1.0).')
+                    ->defaultValue(1.0)
+                    ->min(0.0)
+                    ->max(1.0)
+                ->end()
+                ->booleanNode('report_retries')
+                    ->info('Send a warning event (retry_state will_retry) when a handler fails and Messenger will retry the message.')
+                    ->defaultFalse()
+                ->end()
+                ->booleanNode('report_recovered')
+                    ->info('Send an info event (retry_state recovered) when a message succeeds after at least one retry.')
+                    ->defaultFalse()
+                ->end()
+                ->floatNode('retry_sample_rate')
+                    ->info('Fraction of retry / recovered events that are sent (0.0–1.0).')
+                    ->defaultValue(1.0)
+                    ->min(0.0)
+                    ->max(1.0)
+                ->end()
+                ->floatNode('worker_memory_warning_ratio')
+                    ->info('When set (e.g. 0.8), warn once per worker process when memory usage reaches this fraction of PHP memory_limit. Null disables.')
+                    ->defaultNull()
+                    ->min(0.05)
+                    ->max(1.0)
+                ->end()
+                ->arrayNode('ignore_message_classes')
+                    ->info('Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon\'s own SendBeaconEnvelopeMessage is always skipped.')
+                    ->scalarPrototype()->end()
+                    ->defaultValue([])
+                ->end()
+                ->arrayNode('trace_middleware')
+                    ->info('Messenger trace correlation (1.22+): prepend BeaconTraceMiddleware to these buses so dispatched messages carry a BeaconTraceStamp and consumed ones restore the trace id. Set enabled: false to leave every bus untouched.')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->booleanNode('transactions')
-                            ->info('Send one performance transaction per handled message (op queue.process, status ok/failed/retry, handler, transport). Doctrine/HttpClient spans are attached when instrumentation is enabled.')
-                            ->defaultFalse()
+                        ->booleanNode('enabled')
+                            ->info('Prepend the trace middleware to the buses below (default true, as before 1.22).')
+                            ->defaultTrue()
                         ->end()
-                        ->floatNode('transaction_sample_rate')
-                            ->info('Fraction of messages that send a transaction (0.0–1.0).')
-                            ->defaultValue(1.0)
-                            ->min(0.0)
-                            ->max(1.0)
-                        ->end()
-                        ->booleanNode('report_retries')
-                            ->info('Send a warning event (retry_state will_retry) when a handler fails and Messenger will retry the message.')
-                            ->defaultFalse()
-                        ->end()
-                        ->booleanNode('report_recovered')
-                            ->info('Send an info event (retry_state recovered) when a message succeeds after at least one retry.')
-                            ->defaultFalse()
-                        ->end()
-                        ->floatNode('retry_sample_rate')
-                            ->info('Fraction of retry / recovered events that are sent (0.0–1.0).')
-                            ->defaultValue(1.0)
-                            ->min(0.0)
-                            ->max(1.0)
-                        ->end()
-                        ->floatNode('worker_memory_warning_ratio')
-                            ->info('When set (e.g. 0.8), warn once per worker process when memory usage reaches this fraction of PHP memory_limit. Null disables.')
-                            ->defaultNull()
-                            ->min(0.05)
-                            ->max(1.0)
-                        ->end()
-                        ->arrayNode('ignore_message_classes')
-                            ->info('Message FQCNs (subclasses / interfaces match) that the Messenger failure, retry and transaction listeners never report. Beacon\'s own SendBeaconEnvelopeMessage is always skipped.')
-                            ->scalarPrototype()->end()
-                            ->defaultValue([])
-                        ->end()
-                        ->arrayNode('trace_middleware')
-                            ->info('Messenger trace correlation (1.22+): prepend BeaconTraceMiddleware to these buses so dispatched messages carry a BeaconTraceStamp and consumed ones restore the trace id. Set enabled: false to leave every bus untouched.')
-                            ->addDefaultsIfNotSet()
-                            ->children()
-                                ->booleanNode('enabled')
-                                    ->info('Prepend the trace middleware to the buses below (default true, as before 1.22).')
-                                    ->defaultTrue()
-                                ->end()
-                                ->arrayNode('buses')
-                                    ->info('Bus names (framework.messenger.buses keys) that get the middleware. Default: messenger.bus.default.')
-                                    ->scalarPrototype()->cannotBeEmpty()->end()
-                                    ->defaultValue(['messenger.bus.default'])
-                                    ->requiresAtLeastOneElement()
-                                ->end()
-                            ->end()
-                        ->end()
-                        ->arrayNode('failure_transports')
-                            ->info('Transport names flagged as failure transports by nowo:beacon:messenger-report (and the default of remote_retry.failure_transports).')
-                            ->scalarPrototype()->end()
-                            ->defaultValue(['failed'])
-                        ->end()
-                        ->arrayNode('remote_retry')
-                            ->info('Retry or discard one failed message from the Beacon UI: workers poll Beacon (outbound HTTPS only) for signed, expiring commands. Off by default; needs a Beacon worker key and a Beacon that supports it.')
-                            ->addDefaultsIfNotSet()
-                            ->children()
-                                ->booleanNode('enabled')
-                                    ->info('Poll Beacon for remote Messenger commands (requires symfony/messenger, BEACON_DSN and worker_key).')
-                                    ->defaultFalse()
-                                ->end()
-                                ->scalarNode('worker_key')
-                                    ->info('Beacon worker key (bwk_…, Beacon → Settings → Alerts → Remote Messenger commands). Keep it in an env var; required when enabled.')
-                                    ->defaultValue('%env(default::BEACON_WORKER_KEY)%')
-                                ->end()
-                                ->arrayNode('allowed_actions')
-                                    ->info('Actions this app accepts: retry and / or discard (e.g. [retry] forbids remote discards).')
-                                    ->scalarPrototype()
-                                        ->validate()
-                                            ->ifNotInArray(RemoteCommand::ACTIONS)
-                                            ->thenInvalid('Invalid nowo_beacon.messenger.remote_retry.allowed_actions entry %s (allowed: retry, discard).')
-                                        ->end()
-                                    ->end()
-                                    ->defaultValue(RemoteCommand::ACTIONS)
-                                ->end()
-                                ->arrayNode('failure_transports')
-                                    ->info('Failure transports commands may act on (empty = messenger.failure_transports). They must find messages by id (Doctrine, Redis).')
-                                    ->scalarPrototype()->end()
-                                    ->defaultValue([])
-                                ->end()
-                                ->integerNode('poll_interval')
-                                    ->info('Seconds between polls (10 … 600); Beacon may ask for longer with poll_after.')
-                                    ->defaultValue(30)
-                                    ->min(10)
-                                    ->max(600)
-                                ->end()
-                                ->booleanNode('poll_in_workers')
-                                    ->info('Poll from running messenger:consume workers between messages. False = only nowo:beacon:messenger-commands polls.')
-                                    ->defaultTrue()
-                                ->end()
-                            ->end()
+                        ->arrayNode('buses')
+                            ->info('Bus names (framework.messenger.buses keys) that get the middleware. Default: messenger.bus.default.')
+                            ->scalarPrototype()->cannotBeEmpty()->end()
+                            ->defaultValue(['messenger.bus.default'])
+                            ->requiresAtLeastOneElement()
                         ->end()
                     ->end()
                 ->end()
+                ->arrayNode('failure_transports')
+                    ->info('Transport names flagged as failure transports by nowo:beacon:messenger-report (and the default of remote_retry.failure_transports).')
+                    ->scalarPrototype()->end()
+                    ->defaultValue(['failed'])
+                ->end()
+                ->arrayNode('remote_retry')
+                    ->info('Retry or discard one failed message from the Beacon UI: workers poll Beacon (outbound HTTPS only) for signed, expiring commands. Off by default; needs a Beacon worker key and a Beacon that supports it.')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enabled')
+                            ->info('Poll Beacon for remote Messenger commands (requires symfony/messenger, BEACON_DSN and worker_key).')
+                            ->defaultFalse()
+                        ->end()
+                        ->scalarNode('worker_key')
+                            ->info('Beacon worker key (bwk_…, Beacon → Settings → Alerts → Remote Messenger commands). Keep it in an env var; required when enabled.')
+                            ->defaultValue('%env(default::BEACON_WORKER_KEY)%')
+                        ->end()
+                        ->arrayNode('allowed_actions')
+                            ->info('Actions this app accepts: retry and / or discard (e.g. [retry] forbids remote discards).')
+                            ->scalarPrototype()
+                                ->validate()
+                                    ->ifNotInArray(RemoteCommand::ACTIONS)
+                                    ->thenInvalid('Invalid nowo_beacon.messenger.remote_retry.allowed_actions entry %s (allowed: retry, discard).')
+                                ->end()
+                            ->end()
+                            ->defaultValue(RemoteCommand::ACTIONS)
+                        ->end()
+                        ->arrayNode('failure_transports')
+                            ->info('Failure transports commands may act on (empty = messenger.failure_transports). They must find messages by id (Doctrine, Redis).')
+                            ->scalarPrototype()->end()
+                            ->defaultValue([])
+                        ->end()
+                        ->integerNode('poll_interval')
+                            ->info('Seconds between polls (10 … 600); Beacon may ask for longer with poll_after.')
+                            ->defaultValue(30)
+                            ->min(10)
+                            ->max(600)
+                        ->end()
+                        ->booleanNode('poll_in_workers')
+                            ->info('Poll from running messenger:consume workers between messages. False = only nowo:beacon:messenger-commands polls.')
+                            ->defaultTrue()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end();
+    }
+
+    /**
+     * Adds the `messenger` section; its large children have their own methods.
+     */
+    private function addMessengerSection(ArrayNodeDefinition $rootNode): void
+    {
+        $messenger = $rootNode->children()->arrayNode('messenger');
+        $messenger
+            ->info('Opt-in Messenger worker observability (requires symfony/messenger). Final failures are always reported by register_messenger_listener.')
+            ->addDefaultsIfNotSet();
+        $this->addMessengerTransactionsToRemoteRetrySections($messenger);
+    }
+
+    /**
+     * Adds the `scheduler` to `instrumentation` settings.
+     */
+    private function addSchedulerToInstrumentationSections(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
                 ->arrayNode('scheduler')
                     ->info('Symfony Scheduler integration (requires symfony/scheduler).')
                     ->addDefaultsIfNotSet()
@@ -382,6 +454,16 @@ final class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
+            ->end();
+    }
+
+    /**
+     * Adds the `monolog_handler` to `self_test` settings.
+     */
+    private function addMonologHandlerToSelfTestSections(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
                 ->arrayNode('monolog_handler')
                     ->info('Optional Monolog handler (requires monolog/monolog). Disabled by default.')
                     ->addDefaultsIfNotSet()
@@ -438,6 +520,16 @@ final class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
+            ->end();
+    }
+
+    /**
+     * Adds the `send` section.
+     */
+    private function addSendSection(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
                 ->arrayNode('send')
                     ->info('Opt-in/out switches for categories of context attached to outbound events.')
                     ->addDefaultsIfNotSet()
@@ -488,16 +580,6 @@ final class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
-            ->end()
-            ->validate()
-                // 1.25: a credentials provider may supply the worker key at runtime.
-                ->ifTrue(static fn (array $v): bool => (bool) ($v['messenger']['remote_retry']['enabled'] ?? false)
-                    && (!is_string($v['messenger']['remote_retry']['worker_key'] ?? null) || trim($v['messenger']['remote_retry']['worker_key']) === '')
-                    && ($v['credentials_provider'] ?? null) === null
-                    && !(bool) ($v['instance_settings_bridge'] ?? false))
-                ->thenInvalid('nowo_beacon.messenger.remote_retry.worker_key is required when remote_retry is enabled (use %%env(BEACON_WORKER_KEY)%%), unless credentials_provider or instance_settings_bridge supplies it.')
             ->end();
-
-        return $treeBuilder;
     }
 }
