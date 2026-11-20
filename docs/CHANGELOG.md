@@ -92,10 +92,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   redaction rules. Public constants and static methods are unchanged. The shared rules are the stricter of the two
   former copies: a string with URI userinfo also gets the free-text patterns (and its password may contain `@`), a
   PEM private key without its own END marker is filtered to the end of the text, an unclosed quoted value
-  (`password="…` with no closing quote) is filtered to the end of the text, a `[Filtered]` left inside an unquoted
-  value by an earlier rule no longer ends that value, and schemes longer than 32 characters are matched. At the
-  64 KiB cut, the word that straddles it (up to 4 KiB of non-whitespace) is dropped as well, so a secret cut in half
-  is not sent in part. The CI "lowest" job runs beacon-php 0.3.2.
+  (`password="…` with no closing quote) is filtered to the end of the text, a `[Filtered]`, `[` or `]` inside an
+  unquoted value no longer ends that value (`[token=abc]` loses its final `]`), and schemes longer than 32
+  characters are matched. At the 64 KiB cut, the word that straddles it (up to 4 KiB of non-whitespace) is dropped
+  as well, so a secret cut in half is not sent in part. The CI "lowest" job runs beacon-php 0.3.2.
 
 ### Added
 
