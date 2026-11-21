@@ -86,6 +86,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Demo: runs in UiKit's demo platform shell (`nowo-tech/ui-kit-bundle` ^2.60); its own masthead, flash markup and empty `app.css` are gone, and the demo gains a Playwright rules + axe check (`demo/symfony8/e2e`). Demo only, no bundle change.
+
 ## [1.27.1] - 2026-11-20
 
 ### Changed

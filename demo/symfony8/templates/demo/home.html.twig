@@ -1,44 +1,71 @@
 {% extends 'base.html.twig' %}
 {% block title %}Beacon Bundle demo{% endblock %}
+
+{% block nowo_ui_page_header %}
+    {% set _toolbar %}<a class="nowo-ui-btn nowo-ui-btn--primary" href="{{ path('demo_report') }}">Send a report</a>{% endset %}
+    {{ include(nowo_ui_partial('page_header'), {
+        title: 'Beacon Bundle demo',
+        intro: 'Report events to any Symfony Beacon instance via BEACON_DSN (public and secret required). The matrix below maps each route to the scenario it exercises.',
+        toolbar: _toolbar,
+    }) }}
+{% endblock %}
+
 {% block body %}
-<div>
-    <h1>Beacon Bundle demo</h1>
-    <p>Report events to any Symfony Beacon instance via <code class="nowo-ui-code">BEACON_DSN</code> (public <strong>and</strong> secret required). The matrix below maps each route to the scenario it exercises.</p>
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Messages & exceptions', kind: 'table'} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead><tr><th scope="col">Route</th><th scope="col" class="nowo-ui-cell--wrap">Scenario</th></tr></thead>
+                <tbody>
+                    <tr><td><a href="{{ path('demo_report') }}">GET /report</a></td><td class="nowo-ui-cell--wrap"><code class="nowo-ui-code">captureMessage</code> (info) + send.* contexts</td></tr>
+                    <tr><td><a href="{{ path('demo_report_error') }}">GET /report-error</a></td><td class="nowo-ui-cell--wrap"><code class="nowo-ui-code">captureMessage</code> (error)</td></tr>
+                    <tr><td><a href="{{ path('demo_exception') }}">GET /exception</a></td><td class="nowo-ui-cell--wrap">manual <code class="nowo-ui-code">captureException</code> with previous + rich extra</td></tr>
+                    <tr><td><a href="{{ path('demo_full_context') }}">GET /full-context</a></td><td class="nowo-ui-cell--wrap">densest sample (breadcrumbs, nested exception, fingerprint, checkout extra)</td></tr>
+                    <tr><td><a href="{{ path('demo_boom') }}">GET /boom</a></td><td class="nowo-ui-cell--wrap">HTTP listener capture (Symfony 500; event sent with request)</td></tr>
+                    <tr><td><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a></td><td class="nowo-ui-cell--wrap">ignored by listener (500, <strong>not</strong> sent)</td></tr>
+                    <tr><td><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a></td><td class="nowo-ui-cell--wrap">custom fingerprint + breadcrumbs + stacktrace</td></tr>
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
 
-    <h2>Messages &amp; exceptions</h2>
-    <ul>
-        <li><a href="{{ path('demo_report') }}">GET /report</a> — <code class="nowo-ui-code">captureMessage</code> (info) + send.* contexts</li>
-        <li><a href="{{ path('demo_report_error') }}">GET /report-error</a> — <code class="nowo-ui-code">captureMessage</code> (error)</li>
-        <li><a href="{{ path('demo_exception') }}">GET /exception</a> — manual <code class="nowo-ui-code">captureException</code> with previous + rich extra</li>
-        <li><a href="{{ path('demo_full_context') }}">GET /full-context</a> — densest sample (breadcrumbs, nested exception, fingerprint, checkout extra)</li>
-        <li><a href="{{ path('demo_boom') }}">GET /boom</a> — HTTP listener capture (Symfony 500; event sent with request)</li>
-        <li><a href="{{ path('demo_boom_ignored') }}">GET /boom-ignored</a> — ignored by listener (500, <strong>not</strong> sent)</li>
-        <li><a href="{{ path('demo_fingerprint') }}">GET /fingerprint</a> — custom fingerprint + breadcrumbs + stacktrace</li>
-    </ul>
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Context & performance', kind: 'table'} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead><tr><th scope="col">Route</th><th scope="col" class="nowo-ui-cell--wrap">Scenario</th></tr></thead>
+                <tbody>
+                    <tr><td><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a></td><td class="nowo-ui-cell--wrap">breadcrumbs attached to the next event</td></tr>
+                    <tr><td><a href="{{ path('demo_user') }}">GET /user</a></td><td class="nowo-ui-cell--wrap">authenticated user context (<code class="nowo-ui-code">send.user</code>; log in first)</td></tr>
+                    <tr><td><a href="{{ path('demo_transaction') }}">GET /transaction</a></td><td class="nowo-ui-cell--wrap">performance transaction + spans (no N+1)</td></tr>
+                    <tr><td><a href="{{ path('demo_transaction_nplus1') }}">GET /transaction-nplus1</a></td><td class="nowo-ui-cell--wrap">6 similar DB spans, Beacon N+1 group</td></tr>
+                    <tr><td><a href="{{ path('demo_auto_http') }}">GET /auto-http</a></td><td class="nowo-ui-cell--wrap">message + <code class="nowo-ui-code">auto_http_transaction</code> on terminate</td></tr>
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
 
-    <h2>Context &amp; performance</h2>
-    <ul>
-        <li><a href="{{ path('demo_breadcrumbs') }}">GET /breadcrumbs</a> — breadcrumbs attached to the next event</li>
-        <li><a href="{{ path('demo_user') }}">GET /user</a> — authenticated user context (<code class="nowo-ui-code">send.user</code>; log in first)</li>
-        <li><a href="{{ path('demo_transaction') }}">GET /transaction</a> — performance transaction + spans (no N+1)</li>
-        <li><a href="{{ path('demo_transaction_nplus1') }}">GET /transaction-nplus1</a> — 6 similar DB spans → Beacon N+1 group</li>
-        <li><a href="{{ path('demo_auto_http') }}">GET /auto-http</a> — message + <code class="nowo-ui-code">auto_http_transaction</code> on terminate</li>
-    </ul>
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Integrations', kind: 'table'} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead><tr><th scope="col">Route</th><th scope="col" class="nowo-ui-cell--wrap">Scenario</th></tr></thead>
+                <tbody>
+                    <tr><td><a href="{{ path('demo_monolog') }}">GET /monolog</a></td><td class="nowo-ui-cell--wrap">Monolog error, <code class="nowo-ui-code">monolog_handler</code></td></tr>
+                    <tr><td><a href="{{ path('demo_messenger_fail') }}">GET /messenger-fail</a></td><td class="nowo-ui-cell--wrap">simulated final Messenger worker failure</td></tr>
+                    <tr><td><a href="{{ path('demo_messenger_remote_retry') }}">GET /messenger-remote-retry</a></td><td class="nowo-ui-cell--wrap">real Doctrine failure for remote Retry / Discard from Beacon (<code class="nowo-ui-code">make worker</code>, then <a href="{{ path('demo_messenger_remote_retry', {fix: 1}) }}">fix the gateway</a>)</td></tr>
+                    <tr><td><code class="nowo-ui-code">app:demo-console-boom</code></td><td class="nowo-ui-cell--wrap">console listener (<code class="nowo-ui-code">register_console_listener</code>): <code class="nowo-ui-code">php bin/console app:demo-console-boom</code></td></tr>
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
 
-    <h2>Integrations</h2>
-    <ul>
-        <li><a href="{{ path('demo_monolog') }}">GET /monolog</a> — Monolog error → <code class="nowo-ui-code">monolog_handler</code></li>
-        <li><a href="{{ path('demo_messenger_fail') }}">GET /messenger-fail</a> — simulated final Messenger worker failure</li>
-        <li><a href="{{ path('demo_messenger_remote_retry') }}">GET /messenger-remote-retry</a> — real Doctrine failure for remote Retry / Discard from Beacon (<code class="nowo-ui-code">make worker</code>, then <a href="{{ path('demo_messenger_remote_retry', {fix: 1}) }}">fix the gateway</a>)</li>
-        <li><code class="nowo-ui-code">php bin/console app:demo-console-boom</code> — console listener (<code class="nowo-ui-code">register_console_listener</code>)</li>
-    </ul>
-
-    <h2>Status</h2>
-    <ul>
-        <li><a href="{{ path('demo_status') }}">GET /status</a> — JSON <code class="nowo-ui-code">enabled</code> / DSN secret / environment / release</li>
-        <li><a href="{{ path('login') }}">GET /login</a> — demo user for <code class="nowo-ui-code">send.user</code> (<code class="nowo-ui-code">debugger</code> / <code class="nowo-ui-code">debug</code>)</li>
-    </ul>
-
-    <p class="nowo-ui-muted">Set <code class="nowo-ui-code">BEACON_DSN=http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID</code> from the FrankenPHP container (or <code class="nowo-ui-code">https://PUBLIC:SECRET@localhost:9444/…</code> from the host). After Beacon <code class="nowo-ui-code">make bootstrap</code>, run <code class="nowo-ui-code">make sync-beacon</code> here. Empty DSN disables reporting. Auth: <code class="nowo-ui-code">X-Beacon-Auth</code> with <code class="nowo-ui-code">beacon_key</code> + <code class="nowo-ui-code">beacon_secret</code>.</p>
-</div>
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Status', intro: 'Set BEACON_DSN from the FrankenPHP container (http://PUBLIC:SECRET@host.docker.internal:9081/PROJECT_ID) or from the host (https://PUBLIC:SECRET@localhost:9444/…). After Beacon make bootstrap, run make sync-beacon here. Empty DSN disables reporting. Auth: X-Beacon-Auth with beacon_key + beacon_secret.', kind: 'table'} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead><tr><th scope="col">Route</th><th scope="col" class="nowo-ui-cell--wrap">Scenario</th></tr></thead>
+                <tbody>
+                    <tr><td><a href="{{ path('demo_status') }}">GET /status</a></td><td class="nowo-ui-cell--wrap">JSON <code class="nowo-ui-code">enabled</code> / DSN secret / environment / release</td></tr>
+                    <tr><td><a href="{{ path('login') }}">GET /login</a></td><td class="nowo-ui-cell--wrap">demo user for <code class="nowo-ui-code">send.user</code> (<code class="nowo-ui-code">debugger</code> / <code class="nowo-ui-code">debug</code>)</td></tr>
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
 {% endblock %}

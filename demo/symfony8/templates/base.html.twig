@@ -1,45 +1,27 @@
-{#- REQ-DEMO-014: the demo shell is UiKit's admin layout with UiKit's default theme (nowo-ui.css from the bundle's own
-    asset package, no CSS framework, no CDN). -#}
-{% extends '@NowoUiKit/layout/admin.html.twig' %}
+{#- REQ-DEMO-014: the demo runs inside UiKit's shared demo platform shell (@NowoUiKit/demo_platform/layout.html.twig):
+    the same top bar, aside, content width, theme and footer as every other nowo-tech bundle demo. This file only
+    declares the demo (nowo_ui_demo_platform). -#}
+{% extends '@NowoUiKit/demo_platform/layout.html.twig' %}
+{% set nowo_ui_demo_platform = {
+    bundle: 'Beacon',
+    home_route: 'homepage',
+    repository: 'https://github.com/nowo-tech/BeaconBundle',
+    translation_domain: false,
+    locales: [],
+    auth: {login_route: 'login', logout_route: 'logout'},
+    nav: [
+        {label: 'Home', route: 'homepage'},
+        {label: 'Report', route: 'demo_report', section: 'Scenarios'},
+        {label: 'Status (JSON)', route: 'demo_status', section: 'Diagnostics'},
+    ],
+} %}
 
 {% block nowo_ui_document_title %}{% block title %}Beacon Bundle Demo{% endblock %}{% endblock %}
 
 {% block nowo_ui_styles %}
     {{ parent() }}
     <link rel="stylesheet" href="{{ asset('bundles/nowopasswordtoggle/css/toggle_password.css') }}">
-    {{ vite_entry_link_tags('app') }}
 {% endblock %}
-
-{% block nowo_ui_navigation %}
-    {% set _route = app.request.attributes.get('_route') %}
-    <header class="nowo-ui-header" data-testid="demo-masthead">
-        <a class="nowo-ui-brand" href="{{ path('homepage') }}">Beacon Bundle</a>
-        <nav class="nowo-ui-menu" aria-label="Beacon Bundle">
-            <a class="nowo-ui-link" href="{{ path('homepage') }}"{% if _route == 'homepage' %} aria-current="page"{% endif %}>Home</a>
-            <a class="nowo-ui-link" href="{{ path('demo_report') }}"{% if _route == 'demo_report' %} aria-current="page"{% endif %}>Report</a>
-            <a class="nowo-ui-link" href="{{ path('demo_status') }}">Status</a>
-        </nav>
-        <div class="nowo-ui-header__end">
-            {% if app.user %}
-                <span class="nowo-ui-badge nowo-ui-badge--primary">{{ app.user.userIdentifier }}</span>
-                <a class="nowo-ui-link" href="{{ path('logout') }}">Logout</a>
-            {% elseif _route != 'login' %}
-                <a class="nowo-ui-link" href="{{ path('login') }}">Login</a>
-            {% endif %}
-            {{ include('@NowoUiKitBundle/partials/_theme_toggle.html.twig', { compact: true }, false) }}
-        </div>
-    </header>
-{% endblock %}
-
-{% block nowo_ui_flashes %}
-    {% for type, css in {success: 'success', error: 'error', warning: 'warning', info: 'info'} %}
-        {% for message in app.flashes(type) %}
-            <div class="nowo-ui-flash nowo-ui-flash--{{ css }}" role="{{ type == 'error' ? 'alert' : 'status' }}">{{ message }}</div>
-        {% endfor %}
-    {% endfor %}
-{% endblock %}
-
-{% block nowo_ui_content %}{% block body %}{% endblock %}{% endblock %}
 
 {% block nowo_ui_scripts %}
     {{ parent() }}
