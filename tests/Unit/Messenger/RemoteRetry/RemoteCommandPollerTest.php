@@ -116,7 +116,7 @@ final class RemoteCommandPollerTest extends TestCase
 
         $this->responses = [$this->claimResponse([], 30)];
         $poller->poll();
-        $this->responses = [static fn () => throw new TransportException('down')];
+        $this->responses = [static fn (): never => throw new TransportException('down')];
         self::assertSame(30.0, $poller->poll()->nextPollIn);
     }
 
@@ -307,7 +307,7 @@ final class RemoteCommandPollerTest extends TestCase
         self::assertSame('failed (internal_error, LogicException)', $report->commands[0]['result']);
 
         $brokenDescribe = new FailedMessageCommandExecutor(RemoteRetryFixtures::credentials(), $this->locator(), ['retry'], ['failed']);
-        $client         = new RemoteCommandClient(new MockHttpClient(static fn () => throw new LogicException('bug')), RemoteRetryFixtures::credentials(), 'w', 'prod');
+        $client         = new RemoteCommandClient(new MockHttpClient(static fn (): never => throw new LogicException('bug')), RemoteRetryFixtures::credentials(), 'w', 'prod');
         $poller         = new RemoteCommandPoller($client, $brokenDescribe, RemoteRetryFixtures::credentials(), 30, null, fn (): float => $this->now);
         $report         = $poller->poll();
         self::assertSame(PollReport::STATUS_UNAVAILABLE, $report->status);

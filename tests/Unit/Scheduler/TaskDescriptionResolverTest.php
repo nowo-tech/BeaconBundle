@@ -87,7 +87,7 @@ final class TaskDescriptionResolverTest extends TestCase
 
     public function testBrokenLoaderAndCacheBound(): void
     {
-        $resolver = new TaskDescriptionResolver(new CheckInPolicy(), static fn () => throw new RuntimeException('container down'));
+        $resolver = new TaskDescriptionResolver(new CheckInPolicy(), static fn (): never => throw new RuntimeException('container down'));
         self::assertNull($resolver->describe(new RunCommandMessage('app:x')));
 
         $null = new TaskDescriptionResolver(new CheckInPolicy(), static fn (): ?CommandLoaderInterface => null);

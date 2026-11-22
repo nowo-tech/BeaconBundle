@@ -88,6 +88,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- CI: new `release-gates` job in `.github/workflows/ci.yml` runs the `make release-check` gates (`rector-dry`, `validate-phpdoc`, `validate-translations`, `check-twig-extra`) on every full-mode push and PR, so they no longer fail only at release time. CI only, no bundle change.
+- `EnvelopeTransport::handlerFor()` (private) tests the logger with `instanceof`, and five test files get the return types / instance helper Rector asked for (`make rector-dry` passes again). No behaviour change.
+- `rector.php` skips `EventSubscriberToAttributeRector` for the eleven event listeners/subscribers and `RemoveUnusedPublicMethodParameterRector` for `BeaconSchedulerCheckInListener` and `RemoteCommandPoller`, each with a written reason: both rules would change the public API (drop `getSubscribedEvents()`/`EventSubscriberInterface`, drop a public method parameter), which does not ship in a minor. Revisit at the next major.
 - Demo: runs in UiKit's demo platform shell (`nowo-tech/ui-kit-bundle` ^2.60); its own masthead, flash markup and empty `app.css` are gone, and the demo gains a Playwright rules + axe check (`demo/symfony8/e2e`). Demo only, no bundle change.
 
 ## [1.27.1] - 2026-11-20

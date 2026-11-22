@@ -251,7 +251,7 @@ final class EnvelopeTransport implements EnvelopeTransportInterface
      */
     private function handlerFor(?string $url): IngestResponseHandler
     {
-        if ($url === null || $this->logger === null) {
+        if ($url === null || !$this->logger instanceof LoggerInterface) {
             return $this->responses;
         }
 

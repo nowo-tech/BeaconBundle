@@ -150,8 +150,8 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
         self::assertSame(['onConsoleError', PHP_INT_MAX], $events[ConsoleEvents::ERROR]);
         self::assertSame([['onConsoleTerminateStarted', PHP_INT_MAX], ['onConsoleTerminate', -4096]], $events[ConsoleEvents::TERMINATE]);
         // The failed-message capture, Scheduler check-in and message transaction run first and keep the scope.
-        $failedPriority  = self::listenerPriority($events, WorkerMessageFailedEvent::class);
-        $handledPriority = self::listenerPriority($events, WorkerMessageHandledEvent::class);
+        $failedPriority  = $this->listenerPriority($events, WorkerMessageFailedEvent::class);
+        $handledPriority = $this->listenerPriority($events, WorkerMessageHandledEvent::class);
         self::assertLessThan(BeaconMessengerFailedListener::PRIORITY, $failedPriority);
         self::assertLessThan(-1024, $failedPriority);
         self::assertLessThan(-2048, $handledPriority, 'after the pending flush');
@@ -162,7 +162,7 @@ final class BeaconRequestScopeResetListenerTest extends TestCase
      *
      * @param array<string, mixed> $events
      */
-    private static function listenerPriority(array $events, string $event): int
+    private function listenerPriority(array $events, string $event): int
     {
         return (int) $events[$event][1][1];
     }
