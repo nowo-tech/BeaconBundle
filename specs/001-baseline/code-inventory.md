@@ -1,6 +1,6 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-11-16  
+**Last audited:** 2026-11-22  
 **Aligned with:** **v1.25.x** (credentials provider and rotation 1.25, versioned ingest paths 1.23, Messenger / console worker boundaries 1.24, Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`, Messenger remote retry `specs/008`, ingest retries `FR-TR-003`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
@@ -206,20 +206,25 @@ Every production PHP unit under `src/` is listed. Demos are out of scope.
 |------|------|------------|
 | `src/Worker/UnitOfWorkFrames.php` | Outermost request / message / command tracking for the scope reset listener | FR-WK-007 |
 
-### Translations (1.25) (2)
+### Translations (1.25, 1.27) (7)
 
 | Path | Role | FR / notes |
 |------|------|------------|
 | `src/Resources/translations/NowoBeaconBundle.en.yaml` | Labels of the `beacon` settings section (reference catalogue) | FR-CRD-006 |
 | `src/Resources/translations/NowoBeaconBundle.es.yaml` | Spanish labels | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.de.yaml` | German labels (1.27) | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.fr.yaml` | French labels (1.27) | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.it.yaml` | Italian labels (1.27) | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.nl.yaml` | Dutch labels (1.27) | FR-CRD-006 |
+| `src/Resources/translations/NowoBeaconBundle.pt.yaml` | Portuguese labels (1.27) | FR-CRD-006 |
 
 ## Coverage summary
 
 | Metric | Value |
 |--------|-------|
 | PHP production files (`find src -name '*.php' \| wc -l`) | 118 |
-| Other production files (`services.yaml` + 2 translation catalogues) | 3 |
-| **Total production sources** (`find src -type f \| wc -l`) | **121** |
-| Rows mapped in this inventory | **121** |
+| Other production files (`services.yaml` + 7 translation catalogues) | 8 |
+| **Total production sources** (`find src -type f \| wc -l`) | **126** |
+| Rows mapped in this inventory | **126** |
 | Unmapped files | 0 (no placeholder IDs) |
 | Success criteria in `spec.md` | SC-001 … SC-007 |
