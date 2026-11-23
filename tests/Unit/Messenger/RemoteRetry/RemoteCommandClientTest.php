@@ -80,7 +80,7 @@ final class RemoteCommandClientTest extends TestCase
     public function testClaimFailures(MockResponse|array|TransportException $response, string $kind, ?int $retryAfter): void
     {
         $http = $response instanceof TransportException
-            ? new MockHttpClient(static fn () => throw $response)
+            ? new MockHttpClient(static fn (): never => throw $response)
             : new MockHttpClient($response);
 
         try {
@@ -185,7 +185,7 @@ final class RemoteCommandClientTest extends TestCase
 
     public function testMissingCredentialsNeverCallBeacon(): void
     {
-        $http   = new MockHttpClient(static fn () => throw new LogicException('must not be called'));
+        $http   = new MockHttpClient(static fn (): never => throw new LogicException('must not be called'));
         $client = new RemoteCommandClient($http, RemoteRetryFixtures::credentials(key: 'not-a-key'), 'w', 'prod');
 
         $this->expectException(RemoteCommandException::class);

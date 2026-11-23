@@ -76,7 +76,7 @@ final class MessengerReportCommandTest extends TestCase
             'failed'                    => static fn (): CountingReceiver => $failed,
             'broken'                    => static fn (): Stub => $broken,
             'sync'                      => fn (): Stub => $this->createStub(ReceiverInterface::class),
-            'unknown'                   => static fn () => throw new RuntimeException('cannot build'),
+            'unknown'                   => static fn (): never => throw new RuntimeException('cannot build'),
         ]);
     }
 
