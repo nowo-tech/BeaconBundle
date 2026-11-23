@@ -93,6 +93,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `rector.php` skips `EventSubscriberToAttributeRector` for the eleven event listeners/subscribers and `RemoveUnusedPublicMethodParameterRector` for `BeaconSchedulerCheckInListener` and `RemoteCommandPoller`, each with a written reason: both rules would change the public API (drop `getSubscribedEvents()`/`EventSubscriberInterface`, drop a public method parameter), which does not ship in a minor. Revisit at the next major.
 - Demo: runs in UiKit's demo platform shell (`nowo-tech/ui-kit-bundle` ^2.60); its own masthead, flash markup and empty `app.css` are gone, and the demo gains a Playwright rules + axe check (`demo/symfony8/e2e`). Demo only, no bundle change.
 
+### Fixed
+
+- Worker mode (REQ-RUNTIME-002, Igor 0.11): `BeaconRequestTransactionListener` no longer keeps the main `Request` on the shared service between `kernel.request` and `kernel.terminate`; it keeps the start time only and reads the request from the `TerminateEvent`. Transactions are unchanged (same name, method and status code). Dev: `igor-php/igor-php` accepts `^0.11.0` (supersedes #71).
+
 ## [1.27.1] - 2026-11-20
 
 ### Changed
