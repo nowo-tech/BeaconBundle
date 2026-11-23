@@ -29,9 +29,11 @@ use function str_starts_with;
  */
 final class BeaconRequestTransactionListener implements EventSubscriberInterface, ResetInterface
 {
+    /**
+     * Start time of the main request being timed. The request itself is read from the terminate event, never kept on
+     * this shared service (REQ-RUNTIME-002, Igor 0.11).
+     */
     private ?float $startedAt = null;
-
-    private ?Request $request = null;
 
     private readonly float $sampleRate;
 
@@ -71,7 +73,7 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
      * Start timing for main requests that are not skipped.
      *
      * Always clears leftover state first so FrankenPHP workers without services_resetter
-     * cannot carry a previous Request into an ignored path or the next terminate.
+     * cannot carry a previous start time into an ignored path or the next terminate.
      */
     public function onKernelRequest(RequestEvent $event): void
     {
@@ -95,7 +97,6 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
         }
 
         $this->startedAt = microtime(true);
-        $this->request   = $request;
     }
 
     /**
@@ -103,14 +104,12 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
      */
     public function onKernelTerminate(TerminateEvent $event): void
     {
-        if ($this->startedAt === null || !$this->request instanceof Request) {
-            $this->reset();
-
+        if ($this->startedAt === null) {
             return;
         }
 
         $end     = microtime(true);
-        $request = $this->request;
+        $request = $event->getRequest();
         $start   = $this->startedAt;
         $this->reset();
 
@@ -161,6 +160,5 @@ final class BeaconRequestTransactionListener implements EventSubscriberInterface
     public function reset(): void
     {
         $this->startedAt = null;
-        $this->request   = null;
     }
 }

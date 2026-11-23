@@ -23,6 +23,7 @@ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Scheduler\Generator\MessageContext;
 use Symfony\Component\Scheduler\Messenger\ScheduledStamp;
 use Symfony\Component\Scheduler\Trigger\TriggerInterface;
+use WeakReference;
 
 use function is_array;
 
@@ -172,6 +173,26 @@ final class BeaconListenersTest extends TestCase
 
         $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
         $listener->onKernelTerminate(new TerminateEvent($kernel, $request, new Response('ok', 200)));
+    }
+
+    /** REQ-RUNTIME-002 (Igor 0.11): the shared listener keeps the start time only, never the request. */
+    public function testRequestTransactionListenerNeverKeepsTheRequest(): void
+    {
+        $client = $this->createMock(BeaconClientInterface::class);
+        $client->method('isEnabled')->willReturn(true);
+        $client->expects(self::once())->method('captureTransaction')->with('GET /second', self::anything(), self::anything(), [], self::isType('array'));
+
+        $listener = new BeaconRequestTransactionListener($client, true);
+        $kernel   = $this->createMock(HttpKernelInterface::class);
+        $request  = Request::create('/first');
+        $weak     = WeakReference::create($request);
+
+        $listener->onKernelRequest(new RequestEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST));
+        unset($request);
+        self::assertNull($weak->get());
+
+        $second = Request::create('/second');
+        $listener->onKernelTerminate(new TerminateEvent($kernel, $second, new Response('ok', 200)));
     }
 
     public function testRequestTransactionListenerUsesMethodPathWhenRouteMissing(): void
