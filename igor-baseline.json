@@ -6,10 +6,32 @@
         "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php BreadcrumbBuffer service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
       }
     ],
+    "src/EventListener/BeaconFatalErrorHandler.php": [
+      {
+        "message": "Function 'register_shutdown_function' registers a process-level shutdown handler.",
+        "reason": "Intentional: fatal errors never reach kernel.exception or ConsoleEvents::ERROR. Registered once per process (static flag) with a static closure that retains no handler or container."
+      }
+    ],
+    "src/EventListener/BeaconPhpWarningHandler.php": [
+      {
+        "message": "Function 'set_error_handler' modifies global process error handlers.",
+        "reason": "Intentional and guarded: the handler is installed once per process, only the top of the handler stack is peeked (set_error_handler then restore_error_handler) to decide whether to uninstall it, and unregister() restores it on kernel shutdown."
+      }
+    ],
     "src/Instrumentation/SpanBuffer.php": [
       {
         "message": "Property 'inner' of SpanBuffer is mutated but not reset in reset().",
         "reason": "Deprecated 1.27 wrapper: 'inner' is a readonly reference to the beacon-php SpanBuffer service, which is tagged kernel.reset (method reset) and cleared by BeaconRequestScopeResetListener; reset() delegates to it. The wrapper holds no state."
+      }
+    ],
+    "src/Instrumentation/TraceableBeaconHttpClient.php": [
+      {
+        "message": "Property 'spanBuffer' of TraceableBeaconHttpClient is mutated but not reset in reset().",
+        "reason": "Collaborator, not state: 'spanBuffer' is a readonly reference to the SpanBuffer service, which is tagged kernel.reset and cleared by BeaconRequestScopeResetListener; the decorator's reset() (AsyncDecoratorTrait) resets the inner client and the decorator keeps no spans itself."
+      },
+      {
+        "message": "Property 'breadcrumbBuffer' of TraceableBeaconHttpClient is mutated but not reset in reset().",
+        "reason": "Collaborator, not state: 'breadcrumbBuffer' is a readonly reference to the BreadcrumbBuffer service, which is tagged kernel.reset and cleared by BeaconRequestScopeResetListener; the decorator keeps no breadcrumbs itself."
       }
     ],
     "src/Scope/Scope.php": [
