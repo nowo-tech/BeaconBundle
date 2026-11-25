@@ -1,6 +1,6 @@
 # Code inventory — baseline (100% of production `src/`)
 
-**Last audited:** 2026-11-22  
+**Last audited:** 2026-11-27 (126/126 re-verified)  
 **Aligned with:** **v1.25.x** (credentials provider and rotation 1.25, versioned ingest paths 1.23, Messenger / console worker boundaries 1.24, Messenger observability `specs/004`, deploy markers `specs/005`, self-test `specs/006`, Scheduler check-ins `specs/007`, Messenger remote retry `specs/008`, ingest retries `FR-TR-003`)
 
 Every production PHP unit under `src/` is listed. Demos are out of scope.
