@@ -88,6 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- PHP 8.6: `composer.json` allows PHP below 8.7 (was below 8.6). CI adds a forward-compatibility workflow with a
+  PHP 8.6 cell and a Symfony 8.2 cell (release candidates, allowed to fail until 8.2.0 is stable).
 - Igor 0.11: `igor-baseline.json` documents the `spanBuffer` / `breadcrumbBuffer` collaborators of `TraceableBeaconHttpClient` (own `kernel.reset` services) and the intentional `set_error_handler` / `register_shutdown_function` calls of the two PHP error handlers. No code change.
 - CI: new `release-gates` job in `.github/workflows/ci.yml` runs the `make release-check` gates (`rector-dry`, `validate-phpdoc`, `validate-translations`, `check-twig-extra`) on every full-mode push and PR, so they no longer fail only at release time. CI only, no bundle change.
 - `EnvelopeTransport::handlerFor()` (private) tests the logger with `instanceof`, and five test files get the return types / instance helper Rector asked for (`make rector-dry` passes again). No behaviour change.
