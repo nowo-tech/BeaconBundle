@@ -13,6 +13,7 @@ use Nowo\BeaconBundle\Messenger\RemoteRetry\RemoteRetryCredentials;
 use Nowo\BeaconBundle\Tests\Fixtures\ArrayLogger;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\DoctrineTransports;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\InvoiceMessage;
+use Nowo\BeaconBundle\Tests\Fixtures\Messenger\NonListableTransport;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\RemoteRetryFixtures;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\ScriptedListableTransport;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -33,7 +34,6 @@ use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Stamp\SentToFailureTransportStamp;
 use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
-use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 use function json_encode;
 
@@ -359,7 +359,7 @@ final class FailedMessageCommandExecutorTest extends TestCase
         return new ServiceLocator([
             'failed'      => static fn (): ScriptedListableTransport => $failed,
             'async'       => static fn (): ScriptedListableTransport => $async,
-            'amqp_failed' => static fn (): InMemoryTransport => new InMemoryTransport(),
+            'amqp_failed' => static fn (): NonListableTransport => new NonListableTransport(),
         ]);
     }
 }
