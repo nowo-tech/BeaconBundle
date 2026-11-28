@@ -11,7 +11,7 @@
 
 ## Requirements
 
-- PHP `>=8.2 <8.6`
+- PHP `>=8.2 <8.7`
 - Symfony components compatible with `^7.0 || ^8.0`
 - Officially covered Symfony minors include `7.0`, `7.4`, `8.0`, and `8.1`
 

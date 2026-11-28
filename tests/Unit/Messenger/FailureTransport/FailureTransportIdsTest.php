@@ -9,6 +9,7 @@ use Nowo\BeaconBundle\Messenger\FailureTransport\FailureTransportRecorder;
 use Nowo\BeaconBundle\Messenger\FailureTransport\RecordingFailureSender;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\DoctrineTransports;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\InvoiceMessage;
+use Nowo\BeaconBundle\Tests\Fixtures\Messenger\NonListableTransport;
 use Nowo\BeaconBundle\Tests\Fixtures\Messenger\ScriptedListableTransport;
 use Nowo\BeaconBundle\Tests\Fixtures\RecordingBeaconClient;
 use PHPUnit\Framework\TestCase;
@@ -22,7 +23,6 @@ use Symfony\Component\Messenger\EventListener\SendFailedMessageToFailureTranspor
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\SentToFailureTransportStamp;
 use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
-use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 
 use function str_repeat;
@@ -59,7 +59,7 @@ final class FailureTransportIdsTest extends TestCase
 
     public function testNonListableFailureTransportSendsNoIds(): void
     {
-        [$client, $dispatcher] = $this->worker(new InMemoryTransport());
+        [$client, $dispatcher] = $this->worker(new NonListableTransport());
 
         $envelope = $this->received();
         $dispatcher->dispatch(new WorkerMessageReceivedEvent($envelope, 'async'));
